@@ -1,3 +1,5 @@
+import importlib.util
+
 import numpy as np
 import pandas as pd
 
@@ -49,9 +51,12 @@ def test_core_models_fit_and_predict():
         make_elastic_net(alpha=0.05, l1_ratio=0.5),
         make_kernel_ridge(alpha=1.0, gamma=0.1),
         make_random_forest(n_estimators=20, n_jobs=1),
-        make_xgboost(n_estimators=20, n_jobs=1),
-        make_lightgbm(n_estimators=20, n_jobs=1),
     ]
+
+    if importlib.util.find_spec("xgboost") is not None:
+        models.append(make_xgboost(n_estimators=20, n_jobs=1))
+    if importlib.util.find_spec("lightgbm") is not None:
+        models.append(make_lightgbm(n_estimators=20, n_jobs=1))
 
     for model in models:
         model.fit(X, y)
