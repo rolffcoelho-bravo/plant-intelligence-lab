@@ -18,13 +18,39 @@ The project uses established public plant-genomics resources, including:
 
 These resources provide a real setting for studying genomic prediction and phenotype forecasting without relying on synthetic biological results.
 
+## Core prediction framework
+
+The central modelling problem can be written as:
+
+**Future plant phenotype = f(genomic information, treatment, environment, early biological observations) + uncertainty**
+
+In compact mathematical notation:
+
+**Ŷ(t+h) = f(G, P, E, X(t))**
+
+where:
+
+- **Ŷ(t+h)** = predicted biological outcome at a future time
+- **G** = genomic information
+- **P** = protocol or treatment
+- **E** = environmental information
+- **X(t)** = biological observations available at the current time
+
+The practical objective is straightforward: use information already available about a plant or accession to estimate a later biological outcome, while also reporting how reliable that estimate is.
+
+For example:
+
+**Genomic profile + regeneration treatment + early growth measurements → predicted regeneration outcome**
+
+The system is therefore designed to produce not only a forecast, but also an estimate of predictive uncertainty and, where appropriate, a warning when the available evidence is insufficient for a reliable prediction.
+
 ## Core capabilities
 
 Plant Intelligence Lab develops and evaluates methods for:
 
 - genomic prediction
 - phenotype forecasting
-- high-dimensional modelling where `p >> n`
+- high-dimensional genomic modelling
 - quantitative-genetics baselines
 - machine-learning prediction
 - genotype × environment analysis
@@ -37,19 +63,70 @@ Plant Intelligence Lab develops and evaluates methods for:
 - experimental decision support
 - scientific AI interfaces grounded in validated outputs
 
-## Scientific focus
+## High-dimensional genomic modelling
 
-A central statistical challenge in genomic prediction is that the number of molecular features can be far larger than the number of observed plants:
+Genomic datasets commonly contain far more molecular markers than observed plants. This is usually described as a **p > n problem**, where:
 
-\[
-p \gg n
-\]
+- **p** = number of genomic features or molecular markers
+- **n** = number of observed plants or accessions
 
-The repository therefore evaluates models under validation schemes designed to measure generalization rather than simply maximize in-sample fit.
+When **p is much larger than n**, a model can easily fit noise instead of learning biological patterns that generalize to new plants.
+
+Plant Intelligence Lab therefore evaluates models under validation schemes designed to answer a more useful question:
+
+> **Can the model make reliable predictions for genotypes it has not already seen?**
 
 Classical quantitative-genetics approaches provide scientific baselines, while regularized and nonlinear machine-learning models are evaluated for additional predictive value.
 
 Performance assessment focuses on RMSE, MAE, predictive correlation, out-of-sample reliability, and uncertainty estimates where appropriate.
+
+## Genotype × Environment
+
+Plant performance can change when the same genotype is exposed to different environments. Rather than assuming a genotype has one fixed expected performance, the project explicitly studies **genotype × environment interaction**.
+
+Conceptually:
+
+**Observed phenotype = genotype effect + environment effect + genotype-environment interaction + unexplained variation**
+
+The corresponding prediction problem is:
+
+**Predicted phenotype = f(genotype, environment, genotype × environment interaction)**
+
+This allows the project to investigate whether a model trained under one set of biological conditions remains informative when conditions change.
+
+## Early biological forecasting
+
+A second forecasting problem asks whether observations collected early in a biological process can help predict its later outcome.
+
+For example:
+
+**Genomic information + treatment + Day-15 observations → Day-21 regeneration outcome**
+
+This can be compared with:
+
+**Genomic information + treatment → Day-21 regeneration outcome**
+
+The comparison measures whether early biological information provides meaningful additional forecasting value.
+
+Instead of reporting only a single predicted number, the system can estimate a probability or prediction interval around the future outcome.
+
+## Uncertainty-aware prediction
+
+A prediction is more useful when its uncertainty is explicit.
+
+Rather than reporting only:
+
+**Predicted outcome: 8.4**
+
+the system should aim to report information such as:
+
+**Predicted outcome: 8.4 | 90% prediction interval: 6.9–9.8**
+
+The exact uncertainty method depends on the model and empirical setting and may include conformal prediction, bootstrap-based intervals, Bayesian approaches, or calibrated predictive distributions.
+
+When a new genotype or biological condition is too different from the evidence used to train the model, the system can abstain rather than provide unjustified precision:
+
+> **LOW CONFIDENCE — insufficient evidence for reliable prediction**
 
 ## Public applications
 
