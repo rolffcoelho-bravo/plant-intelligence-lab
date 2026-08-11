@@ -52,6 +52,11 @@ jobs:
       - name: 02 — Download genomics, intersect accessions and build genomic structure
         run: python -m plant_intelligence.genetics.genomic_structure
 
+      - name: Prepare GBLUP phenotype input
+        run: |
+          cp data/interim/case_study_a/shoot_regeneration_accession_summary.csv \
+             data/interim/case_study_a/accession_summary.csv
+
       - name: 03 — Fit GBLUP baseline on real matched data
         working-directory: notebooks
         run: |
