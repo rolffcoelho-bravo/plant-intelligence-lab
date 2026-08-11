@@ -53,7 +53,7 @@ The comparison measures whether early biological observations add predictive inf
 A classical genomic prediction benchmark is represented by the linear mixed model
 
 $$
-\mathbf{y}=\mathbf{X}\boldsymbol{\beta}+\mathbf{Z}\mathbf{u}+\boldsymbol{\varepsilon},
+\mathbf{y}=\mathbf{X}\boldsymbol{\beta}+\mathbf{Z}\mathbf{u}+\boldsymbol{\varepsilon}
 $$
 
 with
@@ -61,7 +61,7 @@ with
 $$
 \mathbf{u}\sim\mathcal{N}\left(\mathbf{0},\mathbf{K}\sigma_g^2\right),
 \qquad
-\boldsymbol{\varepsilon}\sim\mathcal{N}\left(\mathbf{0},\mathbf{I}\sigma_e^2\right),
+\boldsymbol{\varepsilon}\sim\mathcal{N}\left(\mathbf{0},\mathbf{I}\sigma_e^2\right)
 $$
 
 where $\mathbf{K}$ is the genomic relationship matrix. This provides the classical quantitative-genetics reference point for comparison with regularized and nonlinear machine-learning methods.
@@ -71,7 +71,7 @@ where $\mathbf{K}$ is the genomic relationship matrix. This provides the classic
 Genomic prediction frequently operates in the regime
 
 $$
-p\gg n,
+p\gg n
 $$
 
 where $p$ is the number of genomic markers and $n$ is the number of observed plants or accessions.
@@ -80,22 +80,22 @@ This creates a high-dimensional estimation problem in which naive fitting can ca
 
 Candidate approaches include regularized linear models, tree ensembles, gradient boosting, kernel methods, and carefully regularized neural networks.
 
-Performance assessment focuses on quantities such as
+Performance assessment focuses on quantities such as root mean squared error,
 
 $$
-\operatorname{RMSE}
-=\sqrt{\frac{1}{n}\sum_{i=1}^{n}\left(y_i-\widehat{y}_i\right)^2},
+\mathrm{RMSE}=\sqrt{\frac{1}{n}\sum_{i=1}^{n}\left(y_i-\widehat{y}_i\right)^2}
 $$
 
-$$
-\operatorname{MAE}
-=\frac{1}{n}\sum_{i=1}^{n}\left|y_i-\widehat{y}_i\right|,
-$$
-
-and predictive correlation
+mean absolute error,
 
 $$
-\rho\left(y,\widehat{y}\right).
+\mathrm{MAE}=\frac{1}{n}\sum_{i=1}^{n}\left|y_i-\widehat{y}_i\right|
+$$
+
+and predictive correlation,
+
+$$
+\rho\left(y,\widehat{y}\right)
 $$
 
 ## Genotype × Environment forecasting
@@ -103,7 +103,7 @@ $$
 Plant performance can change when the same genotype is exposed to different environments. A standard decomposition is
 
 $$
-Y_{ij}=\mu+G_i+E_j+\left(G\times E\right)_{ij}+\varepsilon_{ij},
+Y_{ij}=\mu+G_i+E_j+\left(G\times E\right)_{ij}+\varepsilon_{ij}
 $$
 
 where $G_i$ is the genotype effect, $E_j$ is the environment effect, and $(G\times E)_{ij}$ captures their interaction.
@@ -111,7 +111,7 @@ where $G_i$ is the genotype effect, $E_j$ is the environment effect, and $(G\tim
 A flexible predictive extension is
 
 $$
-\widehat{Y}=f\left(G,E,G\times E\right).
+\widehat{Y}=f\left(G,E,G\times E\right)
 $$
 
 The objective is to evaluate whether biological performance can be forecast under environmental change rather than assuming a stable response across conditions.
@@ -123,7 +123,7 @@ Where longitudinal measurements are available, the project evaluates whether ear
 A general formulation is
 
 $$
-P\left(Y_T\mid G,P,E,X_{0:t}\right),
+P\left(Y_T\mid G,P,E,X_{0:t}\right)
 $$
 
 where $X_{0:t}$ contains the information observed from the beginning of the experiment through time $t$, and $Y_T$ is the later biological outcome of interest.
@@ -135,7 +135,7 @@ Predictions are accompanied by uncertainty rather than reported as isolated poin
 A predictive interval can be represented as
 
 $$
-P\left(L_{1-\alpha}(x)\leq Y_{\mathrm{new}}\leq U_{1-\alpha}(x)\right)\approx 1-\alpha,
+P\left(L_{1-\alpha}(x)\leq Y_{\mathrm{new}}\leq U_{1-\alpha}(x)\right)\approx 1-\alpha
 $$
 
 where $L_{1-\alpha}(x)$ and $U_{1-\alpha}(x)$ are the lower and upper predictive bounds for a new observation $x$.
