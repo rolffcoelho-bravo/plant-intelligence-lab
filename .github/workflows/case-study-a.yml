@@ -8,6 +8,8 @@ on:
       - 'notebooks/01_data_discovery.ipynb'
       - 'notebooks/02_genomic_structure.ipynb'
       - 'notebooks/03_genomic_prediction.ipynb'
+      - 'src/plant_intelligence/data/**'
+      - 'tests/test_data_contracts.py'
       - 'pyproject.toml'
       - '.github/workflows/case-study-a.yml'
 
@@ -33,7 +35,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-          python -m pip install jupyter nbconvert
+          python -m pip install jupyter nbconvert pytest
+
+      - name: Validate repository tests
+        run: pytest -q
 
       - name: Execute 01 — Data Discovery
         working-directory: notebooks
@@ -44,6 +49,19 @@ jobs:
             --output 01_data_discovery.executed.ipynb \
             --ExecutePreprocessor.timeout=1800 \
             --ExecutePreprocessor.kernel_name=python3
+
+      - name: Validate 01 → 02 artifact contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          from plant_intelligence.data.contracts import validate_case_study_a_interim
+
+          manifest = validate_case_study_a_interim(
+              Path('data/interim/case_study_a')
+          )
+          print(json.dumps(manifest, indent=2))
+          PY
 
       - name: Execute 02 — Genomic Structure
         working-directory: notebooks
@@ -79,6 +97,8 @@ jobs:
               'generated_at_utc': datetime.now(timezone.utc).isoformat(),
               'result_files': sorted(str(p) for p in (root/'reports'/'results').glob('*') if p.is_file()),
               'figure_files': sorted(str(p) for p in (root/'reports'/'figures').glob('*') if p.is_file()),
+              'interim_files': sorted(str(p) for p in (root/'data'/'interim'/'case_study_a').glob('*') if p.is_file()),
+              'processed_files': sorted(str(p) for p in (root/'data'/'processed'/'case_study_a').glob('*') if p.is_file()),
               'executed_notebooks': sorted(str(p) for p in (root/'notebooks').glob('*.executed.ipynb')),
           }
           (root/'reports'/'results'/'case_study_a_execution_inventory.json').write_text(
