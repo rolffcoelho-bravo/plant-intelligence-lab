@@ -1,11 +1,26 @@
 from __future__ import annotations
 
-from lightgbm import LGBMRegressor
-from xgboost import XGBRegressor
 
-
-def make_xgboost(*, n_estimators: int = 500, learning_rate: float = 0.03, max_depth: int = 4, subsample: float = 0.8, colsample_bytree: float = 0.8, reg_alpha: float = 0.0, reg_lambda: float = 1.0, random_state: int = 42, n_jobs: int = -1) -> XGBRegressor:
+def make_xgboost(
+    *,
+    n_estimators: int = 500,
+    learning_rate: float = 0.03,
+    max_depth: int = 4,
+    subsample: float = 0.8,
+    colsample_bytree: float = 0.8,
+    reg_alpha: float = 0.0,
+    reg_lambda: float = 1.0,
+    random_state: int = 42,
+    n_jobs: int = -1,
+):
     """Create a regularized XGBoost regressor for high-dimensional genomic prediction."""
+    try:
+        from xgboost import XGBRegressor
+    except ImportError as exc:
+        raise ImportError(
+            "XGBoost is optional. Install Plant Intelligence Lab with the 'ml' extra."
+        ) from exc
+
     return XGBRegressor(
         n_estimators=n_estimators,
         learning_rate=learning_rate,
@@ -20,8 +35,27 @@ def make_xgboost(*, n_estimators: int = 500, learning_rate: float = 0.03, max_de
     )
 
 
-def make_lightgbm(*, n_estimators: int = 500, learning_rate: float = 0.03, num_leaves: int = 15, min_child_samples: int = 10, subsample: float = 0.8, colsample_bytree: float = 0.8, reg_alpha: float = 0.0, reg_lambda: float = 1.0, random_state: int = 42, n_jobs: int = -1) -> LGBMRegressor:
+def make_lightgbm(
+    *,
+    n_estimators: int = 500,
+    learning_rate: float = 0.03,
+    num_leaves: int = 15,
+    min_child_samples: int = 10,
+    subsample: float = 0.8,
+    colsample_bytree: float = 0.8,
+    reg_alpha: float = 0.0,
+    reg_lambda: float = 1.0,
+    random_state: int = 42,
+    n_jobs: int = -1,
+):
     """Create a conservative LightGBM regressor for high-dimensional genomic prediction."""
+    try:
+        from lightgbm import LGBMRegressor
+    except ImportError as exc:
+        raise ImportError(
+            "LightGBM is optional. Install Plant Intelligence Lab with the 'ml' extra."
+        ) from exc
+
     return LGBMRegressor(
         n_estimators=n_estimators,
         learning_rate=learning_rate,
