@@ -1,0 +1,20 @@
+{
+  "phenotype_accessions": 170,
+  "genomic_accessions": 1135,
+  "matched_accessions": 152,
+  "p_raw": 10709949,
+  "p_qc": 1257793,
+  "p_ml": 50000,
+  "maf_threshold": 0.05,
+  "max_marker_missingness": 0.1,
+  "accession_dataset": "accessions",
+  "matrix_datasets": [
+    "snps"
+  ],
+  "hdf5_file": "imputed_snps_binary.hdf5",
+  "archive_sha256": "015fec67d8de2048f8a46d7f3abac848ecb1e002340cbdc98eccaae5fc69ca0a",
+  "n_validation_folds": 5,
+  "accession_overlap_probe": 152,
+  "relationship_matrix_markers": "all QC-passing markers",
+  "ml_feature_policy": "deterministic maximum 50,000 QC markers"
+}

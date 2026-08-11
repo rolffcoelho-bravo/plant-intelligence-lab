@@ -1,0 +1,2 @@
+phenotype_accessions,genomic_accessions,matched_accessions,p_raw,p_qc,p_ml,maf_threshold,max_marker_missingness,accession_dataset,matrix_datasets,hdf5_file,archive_sha256,n_validation_folds,accession_overlap_probe,relationship_matrix_markers,ml_feature_policy
+170,1135,152,10709949,1257793,50000,0.05,0.1,accessions,['snps'],imputed_snps_binary.hdf5,015fec67d8de2048f8a46d7f3abac848ecb1e002340cbdc98eccaae5fc69ca0a,5,152,all QC-passing markers,"deterministic maximum 50,000 QC markers"

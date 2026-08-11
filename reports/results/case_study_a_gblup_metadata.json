@@ -1,0 +1,13 @@
+{
+  "model": "GBLUP",
+  "variance_estimation": "profile REML within each training fold",
+  "validation": "genotype-aware folds from genomic PCA/KMeans structure",
+  "n_model_accessions": 152,
+  "targets": [
+    "shoots 15d protocol a",
+    "shoots 15d protocol b",
+    "shoots 21d protocol a",
+    "shoots 21d protocol b"
+  ],
+  "variance_boundary_note": "Boundary estimates are reported rather than hidden; they indicate weak variance-component identification and must not be interpreted as precise heritability estimates."
+}

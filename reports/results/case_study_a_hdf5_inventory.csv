@@ -1,0 +1,4 @@
+name,shape,dtype,ndim
+accessions,"(1135,)",|S5,1
+positions,"(10709949,)",int32,1
+snps,"(10709949, 1135)",int8,2
