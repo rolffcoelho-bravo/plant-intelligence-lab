@@ -5,8 +5,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
+from sklearn.decomposition import PCA
 from sklearn.dummy import DummyRegressor
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
+from .boosting import make_lightgbm, make_xgboost
 from .evaluation import evaluate_predictions
 from .kernel import make_kernel_ridge
 from .linear import make_elastic_net
@@ -34,13 +38,42 @@ def _load_inputs():
 
 
 def _models():
-    # Fixed, conservative specifications make the first benchmark fully out-of-sample.
-    # Any future hyperparameter tuning must be nested inside the training folds.
+    # Fixed, conservative specifications keep the outer genotype-aware folds untouched.
+    # PCA is fitted inside each training fold by the sklearn pipeline, preventing leakage.
     return {
         "Mean baseline": DummyRegressor(strategy="mean"),
         "Elastic Net": make_elastic_net(alpha=0.1, l1_ratio=0.5),
         "Kernel Ridge": make_kernel_ridge(alpha=1.0, gamma=1e-4, kernel="rbf"),
         "Random Forest": make_random_forest(n_estimators=500, min_samples_leaf=3, max_features="sqrt"),
+        "XGBoost": make_xgboost(
+            n_estimators=500,
+            learning_rate=0.03,
+            max_depth=3,
+            subsample=0.8,
+            colsample_bytree=0.35,
+            reg_alpha=0.1,
+            reg_lambda=5.0,
+        ),
+        "LightGBM": make_lightgbm(
+            n_estimators=500,
+            learning_rate=0.03,
+            num_leaves=7,
+            min_child_samples=12,
+            subsample=0.8,
+            colsample_bytree=0.35,
+            reg_alpha=0.1,
+            reg_lambda=5.0,
+        ),
+        "PCA + Elastic Net": make_pipeline(
+            StandardScaler(),
+            PCA(n_components=0.90, svd_solver="full"),
+            make_elastic_net(alpha=0.1, l1_ratio=0.5),
+        ),
+        "PCA + Kernel Ridge": make_pipeline(
+            StandardScaler(),
+            PCA(n_components=0.90, svd_solver="full"),
+            make_kernel_ridge(alpha=1.0, gamma=1e-3, kernel="rbf"),
+        ),
     }
 
 
