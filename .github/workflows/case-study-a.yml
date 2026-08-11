@@ -83,6 +83,9 @@ jobs:
       - name: 05 — Quantify genotype-specific protocol response
         run: python -u -m plant_intelligence.forecasting.protocol_response
 
+      - name: 06 — Forecast Day-21 regeneration from early biological observations
+        run: python -u -m plant_intelligence.forecasting.early_forecasting
+
       - name: Build execution inventory
         if: always()
         run: |
