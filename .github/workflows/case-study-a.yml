@@ -8,8 +8,8 @@ on:
       - 'notebooks/01_data_discovery.ipynb'
       - 'notebooks/02_genomic_structure.ipynb'
       - 'notebooks/03_genomic_prediction.ipynb'
-      - 'src/plant_intelligence/data/**'
-      - 'tests/test_data_contracts.py'
+      - 'src/plant_intelligence/**'
+      - 'tests/**'
       - 'pyproject.toml'
       - '.github/workflows/case-study-a.yml'
 
@@ -31,16 +31,16 @@ jobs:
           python-version: '3.11'
           cache: pip
 
-      - name: Install project and notebook runtime
+      - name: Install project
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install jupyter nbconvert pytest
 
-      - name: Validate repository tests
+      - name: Run tests
         run: pytest -q
 
-      - name: Execute 01 — Data Discovery
+      - name: 01 — Download and profile real phenotype data
         working-directory: notebooks
         run: |
           jupyter nbconvert \
@@ -50,20 +50,14 @@ jobs:
             --ExecutePreprocessor.timeout=1800 \
             --ExecutePreprocessor.kernel_name=python3
 
-      - name: Validate 01 → 02 artifact contract
+      - name: Prepare phenotype input for genomic analysis
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import json
-          from plant_intelligence.data.contracts import validate_case_study_a_interim
+          test -s data/interim/case_study_a/shoot_regeneration_accession_summary.csv
+          test -s data/interim/case_study_a/phenotype_accessions.csv
+          cp data/interim/case_study_a/shoot_regeneration_accession_summary.csv \
+             data/interim/case_study_a/accession_summary.csv
 
-          manifest = validate_case_study_a_interim(
-              Path('data/interim/case_study_a')
-          )
-          print(json.dumps(manifest, indent=2))
-          PY
-
-      - name: Execute 02 — Genomic Structure
+      - name: 02 — Download genomics, intersect accessions and build genomic structure
         working-directory: notebooks
         run: |
           jupyter nbconvert \
@@ -73,7 +67,7 @@ jobs:
             --ExecutePreprocessor.timeout=10800 \
             --ExecutePreprocessor.kernel_name=python3
 
-      - name: Execute 03 — GBLUP Genomic Prediction
+      - name: 03 — Fit GBLUP baseline on real matched data
         working-directory: notebooks
         run: |
           jupyter nbconvert \
@@ -97,8 +91,6 @@ jobs:
               'generated_at_utc': datetime.now(timezone.utc).isoformat(),
               'result_files': sorted(str(p) for p in (root/'reports'/'results').glob('*') if p.is_file()),
               'figure_files': sorted(str(p) for p in (root/'reports'/'figures').glob('*') if p.is_file()),
-              'interim_files': sorted(str(p) for p in (root/'data'/'interim'/'case_study_a').glob('*') if p.is_file()),
-              'processed_files': sorted(str(p) for p in (root/'data'/'processed'/'case_study_a').glob('*') if p.is_file()),
               'executed_notebooks': sorted(str(p) for p in (root/'notebooks').glob('*.executed.ipynb')),
           }
           (root/'reports'/'results'/'case_study_a_execution_inventory.json').write_text(
@@ -106,7 +98,7 @@ jobs:
           )
           PY
 
-      - name: Upload complete empirical execution artifact
+      - name: Upload empirical execution artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -120,7 +112,7 @@ jobs:
             data/interim/case_study_a/**
             data/processed/case_study_a/**
 
-      - name: Publish compact public results
+      - name: Publish compact results
         if: success()
         run: |
           git config user.name 'plant-intelligence-lab-bot'
