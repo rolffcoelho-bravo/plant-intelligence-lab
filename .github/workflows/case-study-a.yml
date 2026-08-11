@@ -67,24 +67,15 @@ jobs:
           echo 'Starting 1001 Genomes acquisition and genomic QC.'
           python -u -m plant_intelligence.genetics.genomic_structure
 
-      - name: Prepare GBLUP phenotype input
+      - name: Verify Model 1 inputs
         run: |
           test -s data/interim/case_study_a/shoot_regeneration_accession_summary.csv
           test -s data/processed/case_study_a/genomic_relationship_matrix.npy
           test -s data/processed/case_study_a/model_accessions.csv
           test -s data/processed/case_study_a/genotype_aware_folds.csv
-          cp data/interim/case_study_a/shoot_regeneration_accession_summary.csv \
-             data/interim/case_study_a/accession_summary.csv
 
       - name: 03 — Fit GBLUP baseline on real matched data
-        working-directory: notebooks
-        run: |
-          jupyter nbconvert \
-            --to notebook \
-            --execute 03_genomic_prediction.ipynb \
-            --output 03_genomic_prediction.executed.ipynb \
-            --ExecutePreprocessor.timeout=7200 \
-            --ExecutePreprocessor.kernel_name=python3
+        run: python -u -m plant_intelligence.genetics.genomic_prediction
 
       - name: Build execution inventory
         if: always()
