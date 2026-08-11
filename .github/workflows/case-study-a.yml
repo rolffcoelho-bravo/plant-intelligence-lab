@@ -30,10 +30,10 @@ jobs:
           python-version: '3.11'
           cache: pip
 
-      - name: Install core research environment
+      - name: Install research environment with boosting
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e '.[notebooks]'
+          python -m pip install -e '.[notebooks,ml]'
           python -m pip install pytest
 
       - name: Run tests
@@ -77,7 +77,7 @@ jobs:
       - name: 03 — Fit GBLUP baseline on real matched data
         run: python -u -m plant_intelligence.genetics.genomic_prediction
 
-      - name: 04 — Benchmark high-dimensional genomic ML
+      - name: 04 — Benchmark high-dimensional genomic ML and boosting
         run: python -u -m plant_intelligence.models.ml_benchmark
 
       - name: Build execution inventory
