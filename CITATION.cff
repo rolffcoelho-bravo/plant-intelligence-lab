@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite it using the metadata below."
+title: "Plant Intelligence Lab"
+type: software
+authors:
+  - family-names: "Pereira"
+    given-names: "Rodolfo"
+repository-code: "https://github.com/rolffcoelho-bravo/plant-intelligence-lab"
+abstract: "A computational plant biotechnology project for genomic prediction, phenotype forecasting, uncertainty-aware modelling, and AI-assisted experimental design."
+keywords:
+  - genomic prediction
+  - quantitative genetics
+  - plant biotechnology
+  - machine learning
+  - phenotype forecasting
+  - uncertainty quantification
+  - active learning
+  - Bayesian optimization
+  - GenAI
