@@ -6,7 +6,6 @@ on:
     branches: [main]
     paths:
       - 'notebooks/01_data_discovery.ipynb'
-      - 'notebooks/02_genomic_structure.ipynb'
       - 'notebooks/03_genomic_prediction.ipynb'
       - 'src/plant_intelligence/**'
       - 'tests/**'
@@ -50,22 +49,8 @@ jobs:
             --ExecutePreprocessor.timeout=1800 \
             --ExecutePreprocessor.kernel_name=python3
 
-      - name: Prepare phenotype input for genomic analysis
-        run: |
-          test -s data/interim/case_study_a/shoot_regeneration_accession_summary.csv
-          test -s data/interim/case_study_a/phenotype_accessions.csv
-          cp data/interim/case_study_a/shoot_regeneration_accession_summary.csv \
-             data/interim/case_study_a/accession_summary.csv
-
       - name: 02 — Download genomics, intersect accessions and build genomic structure
-        working-directory: notebooks
-        run: |
-          jupyter nbconvert \
-            --to notebook \
-            --execute 02_genomic_structure.ipynb \
-            --output 02_genomic_structure.executed.ipynb \
-            --ExecutePreprocessor.timeout=10800 \
-            --ExecutePreprocessor.kernel_name=python3
+        run: python -m plant_intelligence.genetics.genomic_structure
 
       - name: 03 — Fit GBLUP baseline on real matched data
         working-directory: notebooks
