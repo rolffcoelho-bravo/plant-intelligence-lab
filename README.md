@@ -207,11 +207,26 @@ Public datasets are used for reproducibility and benchmarking. Performance claim
 
 ```text
 plant-intelligence-lab/
+│
 ├── README.md
+├── LICENSE
 ├── CITATION.cff
 ├── pyproject.toml
+│
 ├── data/
+│   ├── README.md
+│   ├── raw/
+│   ├── interim/
+│   └── processed/
+│
 ├── notebooks/
+│   ├── 01_data_discovery.ipynb
+│   ├── 02_genomic_structure.ipynb
+│   ├── 03_genomic_prediction.ipynb
+│   ├── 04_gxe_forecasting.ipynb
+│   ├── 05_uncertainty.ipynb
+│   └── 06_active_learning.ipynb
+│
 ├── src/
 │   └── plant_intelligence/
 │       ├── data/
@@ -221,11 +236,27 @@ plant-intelligence-lab/
 │       ├── uncertainty/
 │       ├── optimization/
 │       └── explainability/
+│
 ├── experiments/
+│   ├── baselines/
+│   ├── ml/
+│   └── genomic/
+│
 ├── reports/
+│   ├── figures/
+│   ├── model_cards/
+│   └── results/
+│
 ├── app/
+│   └── dashboard/
+│
 ├── tests/
+│
 └── docs/
+    ├── methodology.md
+    ├── biological_context.md
+    ├── limitations.md
+    └── transferability.md
 ```
 
 ## PhytoForecast
