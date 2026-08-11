@@ -50,7 +50,16 @@ The comparison measures whether early biological observations add predictive inf
 
 ## Quantitative-genetics baseline
 
-A classical genomic prediction benchmark is represented by the linear mixed model
+The first genomic benchmark is **GBLUP: Genomic Best Linear Unbiased Prediction**. It is a standard quantitative-genetics method that uses genome-wide markers to construct a genomic relationship matrix and predict genetic values or biological outcomes from realized genomic similarity.
+
+The name describes the estimator directly:
+
+- **Genomic** — genome-wide marker information is used to quantify genetic relatedness;
+- **Best Linear** — under the mixed-model assumptions, the predictor minimizes prediction-error variance within the class of linear unbiased predictors;
+- **Unbiased** — the prediction rule does not systematically shift random genetic effects upward or downward under the model;
+- **Prediction** — the fitted genetic structure is used to predict outcomes for held-out genotypes.
+
+The model is represented by
 
 $$
 \mathbf{y}=\mathbf{X}\boldsymbol{\beta}+\mathbf{Z}\mathbf{u}+\boldsymbol{\varepsilon}
@@ -61,10 +70,12 @@ with
 $$
 \mathbf{u}\sim\mathcal{N}\left(\mathbf{0},\mathbf{K}\sigma_g^2\right),
 \qquad
-\boldsymbol{\varepsilon}\sim\mathcal{N}\left(\mathbf{0},\mathbf{I}\sigma_e^2\right)
+\boldsymbol{\varepsilon}\sim\mathcal{N}\left(\mathbf{0},\mathbf{I}\sigma_e^2\right),
 $$
 
-where $\mathbf{K}$ is the genomic relationship matrix. This provides the classical quantitative-genetics reference point for comparison with regularized and nonlinear machine-learning methods.
+where $\mathbf{K}$ is the genomic relationship matrix, $\sigma_g^2$ is the genomic variance component, and $\sigma_e^2$ is the residual variance component.
+
+In the regeneration case study, GBLUP asks a concrete question: **can genome-wide relatedness predict shoot-regeneration performance for genotypes that were not used to fit the model?** It provides a serious classical reference point against which regularized and nonlinear machine-learning models can be evaluated under the same genotype-aware validation folds.
 
 ## High-dimensional genomic modelling
 
@@ -95,7 +106,7 @@ $$
 and predictive correlation,
 
 $$
-\rho\left(y,\widehat{y}\right)
+\rho\left(y,\widehat{y}\right).
 $$
 
 ## Genotype × Environment forecasting
@@ -111,7 +122,7 @@ where $G_i$ is the genotype effect, $E_j$ is the environment effect, and $(G\tim
 A flexible predictive extension is
 
 $$
-\widehat{Y}=f\left(G,E,G\times E\right)
+\widehat{Y}=f\left(G,E,G\times E\right).
 $$
 
 The objective is to evaluate whether biological performance can be forecast under environmental change rather than assuming a stable response across conditions.
