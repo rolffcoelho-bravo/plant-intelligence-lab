@@ -1,39 +1,66 @@
 # Data
 
-This repository uses public biological datasets for reproducible demonstration of genomic prediction, phenotype forecasting, uncertainty-aware modelling, and experiment selection.
+Plant Intelligence Lab uses public biological datasets to support reproducible genomic prediction, phenotype forecasting, uncertainty-aware modelling, and experimental decision support.
 
-Large raw datasets should not be committed directly unless their licences and size make that appropriate. Prefer reproducible acquisition scripts and documented provenance.
+Large raw datasets are not committed unless their size, licence, and redistribution terms make that appropriate. The preferred pattern is reproducible acquisition from documented public sources, with provenance and checksums recorded when data are retrieved.
 
-## Planned public sources
+## Case Study A — In-Vitro Regeneration Intelligence
 
-### Case Study A — In-vitro Regeneration Intelligence
+The first empirical case study uses public *Arabidopsis thaliana* resources that connect genetic variation with shoot-regeneration phenotypes.
 
-Primary target resources:
+### AraPheno Study 80
 
-- AraPheno phenotype data for *Arabidopsis thaliana*
-- 1001 Genomes genomic resources for compatible accessions
+**Genetic dissection of shoot regeneration from root explants in Arabidopsis (Lardon et al., 2020)**
 
-The first task is to verify:
+- Study DOI: `10.21958/study:80`
+- Original article DOI: `10.1038/s42003-020-01274-9`
+- Study design: 170 natural *Arabidopsis thaliana* accessions subjected to two shoot-regeneration protocol variants
+- Public source: AraPheno REST API and phenotype pages
 
-- exact phenotype identifiers and definitions
-- accession identifiers
-- genotype/phenotype intersection
-- protocol or treatment variables
-- sample size after matching
-- genomic dimensionality
-- missingness
-- population structure
-- licensing and redistribution conditions
+The focal regenerated-shoot endpoints are:
 
-No modelling result should be published until these checks are complete.
+| Endpoint | AraPheno phenotype ID |
+|---|---:|
+| shoots 15d protocol a | 1267 |
+| shoots 15d protocol b | 1274 |
+| shoots 21d protocol a | 1281 |
+| shoots 21d protocol b | 1288 |
 
-### Case Study B — Genotype × Environment Forecasting
+These endpoints support the early biological forecasting comparison
 
-Planned public resource:
+$$
+G + P + X_{15d} \rightarrow \widehat{Y}_{21d}
+$$
 
-- multi-environment wheat data available through the `sommer` ecosystem and associated source material
+against the genomic-treatment baseline
 
-The objective is to demonstrate environment-aware genomic prediction and biological generalization under changing conditions.
+$$
+G + P \rightarrow \widehat{Y}_{21d}.
+$$
+
+The first reproducible analysis is implemented in [`notebooks/01_data_discovery.ipynb`](../notebooks/01_data_discovery.ipynb).
+
+### 1001 Genomes
+
+The genomic layer is based on the public 1001 Genomes resource for *Arabidopsis thaliana*. The 2016 major phase reports 1,135 genomes and provides public genomic resources, including variant data and accession-level tools.
+
+The modelling population is defined only after phenotype accessions are intersected with compatible genomic accessions:
+
+$$
+\mathcal{A}_{\mathrm{model}}
+=
+\mathcal{A}_{\mathrm{phenotype}}
+\cap
+\mathcal{A}_{\mathrm{genomic}}.
+$$
+
+The genomic intersection, relatedness structure, marker dimensionality, and genotype-aware validation design belong to `02_genomic_structure.ipynb`.
+
+## Case Study B — Genotype × Environment Forecasting
+
+A later public case study will use multi-environment plant data to evaluate genomic prediction under environmental heterogeneity and distribution shift.
+
+The objective is to test whether predictive information survives changes in biological context, rather than simply maximizing performance under random train-test splits.
 
 ## Directory convention
 
@@ -44,24 +71,22 @@ data/
 └── processed/   # modelling-ready datasets produced by code
 ```
 
-## Reproducibility rule
+## Reproducibility
 
-Every processed dataset must be reproducible from documented public sources using repository code. Manual undocumented edits to modelling datasets are not acceptable.
-
-## Data integrity
-
-For each source, the repository should record:
+For each source, the repository records or generates where practical:
 
 - source URL or DOI
 - retrieval date
 - licence or usage terms
-- original file names
-- checksums when practical
+- original identifiers
+- checksums
 - filtering rules
 - identifier transformations
 - exclusions
 - final sample counts
 
-## Important boundary
+Processed datasets must be reproducible from documented public sources using repository code. Manual undocumented changes to modelling datasets are not part of the workflow.
 
-Public datasets demonstrate methodology. They do not establish performance on proprietary commercial biological systems.
+## Scientific boundary
+
+Public datasets demonstrate methodology and empirical behaviour on the evaluated evidence. They do not establish validated performance on proprietary commercial biological systems.
