@@ -80,6 +80,9 @@ jobs:
       - name: 04 — Benchmark high-dimensional genomic ML and boosting
         run: python -u -m plant_intelligence.models.ml_benchmark
 
+      - name: 05 — Quantify genotype-specific protocol response
+        run: python -u -m plant_intelligence.forecasting.protocol_response
+
       - name: Build execution inventory
         if: always()
         run: |
