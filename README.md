@@ -4,28 +4,13 @@
 
 > **Can we predict a plant phenotype from genomic information, environmental variables and early biological observations, while quantifying uncertainty?**
 
-That gives the project genetics + machine learning + statistics + forecasting + optimization in one coherent system.
+Plant Intelligence Lab is a public computational plant biotechnology project focused on genomic prediction, phenotype forecasting, uncertainty-aware machine learning, and AI-assisted experimental decision support.
 
-Public plant-genomics resources make this feasible without inventing synthetic data. The **1001 Genomes Project** contains genomic variation for more than 1,100 *Arabidopsis thaliana* accessions, while **AraPheno** provides public phenotype datasets linked to those accessions. Of particular interest, AraPheno contains a study of **shoot regeneration from root explants**, involving 170 natural accessions tested under two protocol variants and measuring regenerated shoots and other *in vitro* traits.
+The project uses public plant-genomics resources to develop reproducible methods with direct relevance to research and biotechnology applications. The **1001 Genomes Project** provides genomic variation across more than 1,100 *Arabidopsis thaliana* accessions, while **AraPheno** provides phenotype datasets linked to those accessions. A particularly relevant public study examines **shoot regeneration from root explants** across 170 natural accessions under two protocol variants, with regenerated shoots and related *in vitro* traits measured.
 
-This makes the first case study substantially more relevant to computational plant biotechnology than a generic yield-prediction exercise.
+This creates a realistic setting for evaluating how genomic information, treatment conditions, environmental variation, and early biological observations can be integrated into predictive systems.
 
-The project begins with the biological forecasting problem:
-
-```text
-GENETICS + ENVIRONMENT + PROTOCOL + EARLY OBSERVATIONS
-                         |
-                         v
-               PLANT INTELLIGENCE ENGINE
-                         |
-                         v
-      PHENOTYPE FORECAST | UNCERTAINTY | RISK
-                         |
-                         v
-              RECOMMENDED EXPERIMENT
-```
-
-The core modelling target is:
+## Core modelling problem
 
 \[
 G + P + E + X_t \rightarrow \widehat{Y}_{t+h}
@@ -39,187 +24,151 @@ where:
 - `X_t` = observations available at time `t`
 - `Y_(t+h)` = future biological outcome
 
-The first public demonstration does not require every component simultaneously. Development begins with genomic, phenotype, and protocol information and progressively extends the architecture to environmental and longitudinal observations.
+The project is designed around four capabilities:
 
-The guiding scientific question is not simply whether an algorithm can fit historical data. The objective is to determine whether biological outcomes can be predicted for genuinely unseen biological conditions while representing uncertainty honestly.
+```text
+Genomic & Biological Data
+          ↓
+Predictive Modelling
+          ↓
+Uncertainty Quantification
+          ↓
+Decision Support
+```
 
-## Model 1 — Classical Quantitative Genetics
+## Quantitative genetics
 
-The project does not begin with neural networks.
-
-A serious quantitative-genetics baseline is established first:
+A classical quantitative-genetics baseline is established with mixed-model methods such as GBLUP:
 
 \[
 y = X\beta + Zu + \epsilon
 \]
 
-using genomic relationship matrices and methods such as GBLUP.
-
 This provides a scientifically meaningful benchmark before comparison with modern machine-learning approaches.
 
-## Model 2 — High-Dimensional Machine Learning
+## High-dimensional machine learning
 
-A central statistical challenge is:
+Genomic prediction is frequently a high-dimensional problem:
 
 \[
 p \gg n
 \]
 
-There may be thousands or potentially millions of genomic markers but comparatively few biological samples. This high-dimensional structure is treated as a core methodological feature rather than ignored.
+The repository evaluates regularized and nonlinear models including Elastic Net, Random Forest, gradient boosting, kernel methods, and carefully regularized neural networks.
 
-Candidate models include:
+Performance is evaluated with RMSE, MAE, R², predictive correlation, and biologically meaningful out-of-sample validation. Particular attention is given to generalization across unseen genotypes and to preventing relatedness leakage between training and test data.
 
-**Elastic Net → Random Forest → XGBoost/LightGBM → kernel methods → carefully regularized neural networks**
+## Genotype × environment forecasting
 
-The project is not an algorithmic horse race for the most attractive `R²`. Evaluation includes RMSE, MAE, R², predictive correlation and, critically, **generalization to unseen genotypes**.
-
-Naive random train/test splitting can create misleading performance estimates because genetically related plants may leak information between training and test sets. Validation is therefore genotype-aware and designed around the biological generalization question.
-
-## Genotype × Environment Forecasting
-
-The second module asks:
-
-> **A genotype performed well under environment A. What happens in environment B?**
-
-A classical representation is:
+Biological performance can vary substantially across environmental conditions. The project models this through genotype × environment interactions:
 
 \[
 Y_{ij}=\mu+G_i+E_j+(G\times E)_{ij}+\epsilon_{ij}
 \]
 
-Machine learning extends this into:
+and machine-learning extensions of the form:
 
 \[
 \widehat{Y}=f(G,E,G\times E)
 \]
 
-Biological performance is not necessarily stable across environmental conditions. The scientific question becomes:
+The objective is to forecast biological performance under environmental change rather than assuming stable responses across conditions.
 
-> **Can we forecast biological performance when the environment changes?**
+## Early biological forecasting
 
-This module provides a natural setting for studying nonstationarity, distribution shift, genotype-environment interaction, and robust out-of-sample forecasting.
-
-## Early Biological Forecasting
-
-This module investigates whether final biological outcomes can be anticipated from information available earlier in the biological process.
+Where longitudinal measurements are available, the project evaluates whether early observations can improve prediction of later biological outcomes.
 
 ```text
-Day 5 → Day 10 → Day 15 → Day 30 → Final Outcome
+Early observation → Updated forecast → Final biological outcome
 ```
 
-The model observes only information available up to time `t` and forecasts the probability or distribution of a later biological outcome.
+This supports applications where earlier identification of likely outcomes can improve experimental planning, resource allocation, and biological decision-making.
 
-A future decision-support interface could report a predicted probability of successful development, a prediction interval, and the primary predictive drivers such as genomic profile, early growth, treatment, and environmental condition.
+## Uncertainty-aware prediction
 
-The point is the **decision architecture**: early biological observations become probabilistic forecasts rather than merely descriptive measurements.
+Predictions are accompanied by uncertainty estimates rather than reported as isolated point values.
 
-## Uncertainty, Not Just Predictions
+Methods may include:
 
-A scientific prediction system should not report a point forecast without communicating uncertainty.
+- bootstrapping
+- conformal prediction
+- Bayesian modelling
+- calibrated prediction intervals
+- out-of-distribution detection
 
-Outputs should include predictive intervals or, preferably, predictive distributions:
+When evidence is insufficient, the system can abstain rather than return false precision.
 
-\[
-p(Y_{future}\mid G,E,X)
-\]
+## AI-assisted experimental decision support
 
-Candidate approaches include bootstrapping, conformal prediction, Bayesian modelling, and calibrated predictive intervals.
+Validated predictive models can be extended to rank candidate experiments under limited experimental capacity.
 
-### Abstention
+The objective is to identify experiments that offer high expected biological value, high information value, or both.
 
-If a genotype, environment, protocol, or combination is sufficiently different from the training distribution, the system should be capable of returning:
+```text
+Prediction → Uncertainty → Experiment Ranking → Decision Support
+```
 
-> **LOW CONFIDENCE — insufficient evidence for reliable prediction**
+This creates a bridge between predictive modelling and experimental optimization.
 
-Abstention is treated as a scientific capability rather than a failure. A trustworthy system should know when it does not know.
+## GenAI scientific interface
 
-## AI-Assisted Experiment Selection
-
-This module moves beyond prediction toward experimental decision intelligence.
-
-Suppose researchers can test only another 20 combinations. Instead of choosing genotype, protocol, and environment combinations arbitrarily, the system asks:
-
-> **Which experiment would provide the greatest expected information or improvement?**
-
-A Bayesian-optimization or active-learning framework can prioritize experiments according to expected improvement and information value.
-
-A future application could recommend the next genotype-treatment-environment combination to test and explain whether the recommendation is driven by high predicted potential, high uncertainty, or both.
-
-This demonstrates how machine learning can potentially change not only how experiments are analysed, but also how subsequent experiments are selected.
-
-## GenAI Scientific Interface
-
-GenAI is deliberately developed **after** the quantitative engine.
-
-The project does not place a generic chatbot at its centre. GenAI becomes an interface to validated scientific data, model outputs, uncertainty estimates, and experimental information.
+Generative AI is used as an interface to validated data and model outputs rather than as a replacement for scientific modelling.
 
 ```text
 Scientist ↔ GenAI ↔ Models + Database
 ```
 
-A researcher might ask which genotypes show unusually high regeneration under a treatment or why a model downgraded a particular accession. The language model should query the underlying data and modelling layer and summarize verified outputs rather than invent scientific answers.
+Natural-language queries can be grounded in reproducible model results, uncertainty estimates, and traceable data sources.
 
-## Case Studies
+## Public case studies
 
 ### Case Study A — In-Vitro Regeneration Intelligence
 
-The first case study investigates whether genetic information and protocol variation contain sufficient predictive signal to model regeneration-related phenotypes.
+Uses public *Arabidopsis thaliana* genomic and phenotype resources to evaluate regeneration-related prediction across accessions and protocol variants.
 
-The public AraPheno setting provides the key structure:
-
-**Genetic variation + in-vitro propagation + different protocols + measured regeneration outcome**
-
-Core questions include:
+Key questions:
 
 - Can regeneration outcomes be predicted for unseen accessions?
-- How much predictive information is contained in genomic structure?
-- Does protocol information materially improve prediction?
-- Are genotype × protocol interactions identifiable?
-- How much uncertainty surrounds predictions?
-- When should the system abstain?
-- Which biological observations drive model predictions?
+- Does protocol information improve prediction?
+- Are genotype × protocol interactions informative?
+- How reliable are the resulting predictions?
 
 ### Case Study B — Genotype × Environment Forecasting
 
-The second case study demonstrates generalization across environmental conditions using public multi-environment plant data.
-
-The objective is not simply to predict yield. It is to demonstrate genomic prediction, genotype × environment interaction, environment-aware validation, forecasting under distribution shift, uncertainty, and biological generalization.
+Uses public multi-environment plant data to evaluate genomic prediction under changing environmental conditions.
 
 ### Case Study C — AI-Guided Experiment Selection
 
-The third case study extends validated predictive models into experimental decision support under constrained experimental capacity.
+Extends validated predictive models into experimental prioritization under constrained testing capacity.
 
-```text
-Prediction → Uncertainty → Information Value → Experiment Selection
-```
+## Industrial relevance
 
-The purpose is to show how quantitative modelling can potentially reduce inefficient experimentation and prioritize informative biological experiments.
+The methods demonstrated here are applicable to plant biotechnology problems involving genomic selection, phenotype prediction, treatment-response modelling, environmental adaptation, experimental prioritization, and uncertainty-aware biological decision support.
 
-## Industrial Transferability
+Potential application areas include:
 
-This repository uses public biological datasets and does not use proprietary company information. It demonstrates methodological capabilities that could potentially be adapted to commercial plant biotechnology where suitable genotype, phenotype, protocol, environmental, longitudinal, or production information exists.
+- genomic selection and breeding support
+- plant propagation and regeneration analysis
+- genotype × environment prediction
+- early outcome forecasting
+- experimental prioritization
+- uncertainty-aware decision systems
+- scientific data and AI interfaces
 
-```text
-Public Dataset
-      ↓
-Genomic / Phenotypic Modelling
-      ↓
-Prediction
-      ↓
-Uncertainty
-      ↓
-Experiment Selection
-      ↓
-Decision Support
-```
+Public datasets are used for reproducibility and benchmarking. Performance claims in this repository apply only to the evaluated public datasets and should not be interpreted as validated performance on proprietary industrial processes.
 
-> **The appropriate industrial application can only be defined after understanding the biological process, available data, operational constraints, and business objective.**
+## Scientific principles
 
-A public-data proof of concept does not automatically establish performance on a proprietary commercial biological system.
+1. **Real public data before synthetic demonstrations**
+2. **Prediction is not biological causation**
+3. **Generalization matters more than in-sample performance**
+4. **Genetic leakage must be prevented**
+5. **Uncertainty is part of the prediction**
+6. **Models should abstain when evidence is insufficient**
+7. **GenAI operates over verified scientific outputs**
+8. **Results should be reproducible**
 
-See [`docs/industrial_transferability.md`](docs/industrial_transferability.md) for the detailed industrial perspective.
-
-## Repository Structure
+## Repository structure
 
 ```text
 plant-intelligence-lab/
@@ -227,17 +176,7 @@ plant-intelligence-lab/
 ├── CITATION.cff
 ├── pyproject.toml
 ├── data/
-│   ├── README.md
-│   ├── raw/
-│   ├── interim/
-│   └── processed/
 ├── notebooks/
-│   ├── 01_data_discovery.ipynb
-│   ├── 02_genomic_structure.ipynb
-│   ├── 03_genomic_prediction.ipynb
-│   ├── 04_gxe_forecasting.ipynb
-│   ├── 05_uncertainty.ipynb
-│   └── 06_active_learning.ipynb
 ├── src/
 │   └── plant_intelligence/
 │       ├── data/
@@ -248,58 +187,17 @@ plant-intelligence-lab/
 │       ├── optimization/
 │       └── explainability/
 ├── experiments/
-│   ├── baselines/
-│   ├── ml/
-│   └── genomic/
 ├── reports/
-│   ├── figures/
-│   ├── model_cards/
-│   └── results/
 ├── app/
-│   └── dashboard/
 ├── tests/
 └── docs/
-    ├── methodology.md
-    ├── biological_context.md
-    ├── limitations.md
-    └── industrial_transferability.md
 ```
 
-## Scientific and Engineering Principles
-
-1. **Real public data before synthetic demonstrations.** Public biological data support the principal empirical claims.
-2. **Prediction is not biological causation.** Predictive associations are not presented as causal mechanisms without appropriate experimental evidence.
-3. **Generalization matters more than in-sample performance.** Validation reflects the intended biological deployment problem.
-4. **Prevent genetic leakage.** Relatedness must not make the test set unrealistically easy.
-5. **Quantify uncertainty.** Point predictions alone are insufficient for scientific decision support.
-6. **Allow abstention.** The model must recognize observations outside its reliable evidence base.
-7. **GenAI does not generate scientific truth.** Language models operate over verified data and model outputs.
-8. **Reproducibility.** Data provenance, preprocessing, random seeds, environments, model configuration, validation protocols, and reported results should be reproducible.
-9. **Industrial claims remain conditional.** Transferable methodology is not equivalent to validated performance on an unobserved proprietary process.
-
-## Project Direction
-
-Plant Intelligence Lab is an independent initiative in **computational plant biotechnology**.
-
-A future forecasting component may use the identity:
+## Project identity
 
 ### PhytoForecast
 **Genomic Intelligence for Plant Performance**
 
-The completed repository is intended to demonstrate competence across high-dimensional genomics (`p >> n`), quantitative genetics, genomic prediction, statistical learning, machine learning, nonstationarity and distribution shift, genotype × environment effects, probabilistic forecasting, uncertainty quantification, model abstention, optimization, active learning, Bayesian experimental design, explainability, GenAI, scientific data architecture, reproducible computational research, and biological decision science.
+PhytoForecast is the forecasting component within Plant Intelligence Lab, combining genomic information, biological observations, environmental context, and uncertainty-aware prediction.
 
-These capabilities are connected by a genuine biological problem rather than presented as a disconnected collection of algorithms.
-
-The intended progression is:
-
-```text
-Biological Data
-    → Quantitative Genetics
-    → Machine Learning
-    → Forecasting
-    → Uncertainty
-    → Experiment Optimization
-    → Decision Intelligence
-```
-
-> *An open-source proof of concept exploring how quantitative genetics, machine learning, probabilistic forecasting and AI-assisted experimental design can support decision-making in plant biotechnology.*
+> *An open-source computational biotechnology project exploring how quantitative genetics, machine learning, probabilistic forecasting, and AI-assisted experimental analysis can support plant science and biotechnology.*
