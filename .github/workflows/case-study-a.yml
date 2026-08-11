@@ -44,7 +44,6 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import nbformat
-
           for name in ('01_data_discovery.ipynb', '03_genomic_prediction.ipynb'):
               path = Path('notebooks') / name
               nb = nbformat.read(path, as_version=4)
@@ -67,15 +66,19 @@ jobs:
           echo 'Starting 1001 Genomes acquisition and genomic QC.'
           python -u -m plant_intelligence.genetics.genomic_structure
 
-      - name: Verify Model 1 inputs
+      - name: Verify genomic modelling inputs
         run: |
           test -s data/interim/case_study_a/shoot_regeneration_accession_summary.csv
           test -s data/processed/case_study_a/genomic_relationship_matrix.npy
+          test -s data/processed/case_study_a/genotype_matrix_qc.npy
           test -s data/processed/case_study_a/model_accessions.csv
           test -s data/processed/case_study_a/genotype_aware_folds.csv
 
       - name: 03 — Fit GBLUP baseline on real matched data
         run: python -u -m plant_intelligence.genetics.genomic_prediction
+
+      - name: 04 — Benchmark high-dimensional genomic ML
+        run: python -u -m plant_intelligence.models.ml_benchmark
 
       - name: Build execution inventory
         if: always()
@@ -85,7 +88,6 @@ jobs:
           from pathlib import Path
           from datetime import datetime, timezone
           import json
-
           root = Path('.')
           payload = {
               'generated_at_utc': datetime.now(timezone.utc).isoformat(),
