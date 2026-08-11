@@ -19,18 +19,31 @@ dependencies = [
   "statsmodels>=0.14",
   "matplotlib>=3.8",
   "requests>=2.31",
-  "h5py>=3.10",
+  "h5py>=3.10"
+]
+
+[project.optional-dependencies]
+ml = [
+  "xgboost>=2.0",
+  "lightgbm>=4.3"
+]
+notebooks = [
+  "pyarrow>=15.0",
+  "jupyterlab>=4.1",
+  "ipykernel>=6.29",
+  "nbconvert>=7.16"
+]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.4"
+]
+full = [
   "xgboost>=2.0",
   "lightgbm>=4.3",
   "pyarrow>=15.0",
   "jupyterlab>=4.1",
-  "ipykernel>=6.29"
-]
-
-[project.optional-dependencies]
-dev = [
-  "pytest>=8.0",
-  "ruff>=0.4"
+  "ipykernel>=6.29",
+  "nbconvert>=7.16"
 ]
 
 [tool.setuptools.packages.find]
