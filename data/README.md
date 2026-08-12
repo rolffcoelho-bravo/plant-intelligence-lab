@@ -58,11 +58,13 @@ The genomic intersection, relatedness structure, marker dimensionality, and geno
 
 ## Case Study B — Wheat Genotype × Environment Forecasting
 
-Case Study B is now locked to the open Dryad dataset:
+The executable Case Study B data lock uses the canonical **BGLR wheat dataset** distributed through CRAN and sourced from CIMMYT's Global Wheat Program.
 
-> Lopez-Cruz, Marco; de los Campos, Gustavo. (2025). *Data for: Multi-trait/environment sparse genomic prediction using the SFSI R-package*. Dryad. DOI: `10.5061/dryad.vx0k6dk3p`.
+The version-locked source contains **599 historical wheat lines**, **1,279 edited DArT markers**, and standardized average grain-yield phenotypes in **four mega-environments** (`ME1`–`ME4`). The line-level genomic problem remains high-dimensional:
 
-The locked public subset contains **3,731 CIMMYT wheat lines**, **9,045 filtered SNP markers**, and adjusted grain-yield records in four managed environments: `B2I`, `B5I`, `MEL`, and `LHT`.
+$$
+p=1{,}279 > n=599.
+$$
 
 The Case Study B target is:
 
@@ -70,9 +72,9 @@ $$
 G + E + G\times E \rightarrow Y_{yield}.
 $$
 
-Primary validation uses whole-genotype holdout (**CV-G / CV1**) and sparse multi-environment masking (**CV2**). Leave-one-environment-out (**CV-E**) and strict genotype-plus-environment cold start (**CV-GE**) are retained as diagnostic stress tests because only four environments are available and the source does not contain a rich continuous weather/soil descriptor vector.
+Primary validation uses whole-genotype holdout (**CV-G / CV1**) and sparse multi-environment masking (**CV2**). Leave-one-mega-environment-out (**CV-E**) and strict genotype-plus-environment cold start (**CV-GE**) are retained as diagnostic stress tests because the source does not include a transferable continuous weather/soil descriptor vector for the four environment categories.
 
-The complete source lock, environment definitions, limitations, and split design are documented in [`docs/case_study_b_data_lock.md`](../docs/case_study_b_data_lock.md). Reproducible acquisition and audit are implemented in `src/plant_intelligence/data/wheat_gxe.py`.
+The complete source lock, information boundary, limitations, and split design are documented in [`docs/case_study_b_data_lock.md`](../docs/case_study_b_data_lock.md). Reproducible acquisition and audit are implemented in `src/plant_intelligence/data/wheat_gxe.py`.
 
 ## Directory convention
 
