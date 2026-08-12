@@ -1,0 +1,2 @@
+provider,n_cases,grounded_scientific_answer_rate,supported_case_pass_rate,unsupported_safe_response_rate,source_traceability_rate,n_numeric_claims_checked,n_verification_failures
+grounded-template-reference,11,1.0,1.0,1.0,1.0,49,0
