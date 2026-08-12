@@ -1,0 +1,2 @@
+n_primary_scenarios,legacy_upper_boundary_scenarios,expanded_upper_boundary_scenarios,boundary_resolved,expanded_gamma_min_selected,expanded_gamma_median_selected,expanded_gamma_max_selected,expanded_grid_max,mean_inner_rmse_gain_expanded_vs_legacy
+6,5,1,False,8.0,96.0,128.0,128.0,0.006851839281874513
