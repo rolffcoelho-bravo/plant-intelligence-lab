@@ -8,6 +8,7 @@ from typing import Any
 
 _NUMBER_RE = re.compile(r"(?<![A-Za-z0-9_])-?\d+(?:\.\d+)?%?")
 _SOURCE_RE = re.compile(r"\[source:\s*([^\]]+)\]")
+_KEY_NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
 
 
 @dataclass(frozen=True)
@@ -35,16 +36,16 @@ class ScientificClaimVerifier:
     def _numeric_tokens(text: str) -> list[float]:
         values: list[float] = []
         for token in _NUMBER_RE.findall(text):
-            is_percent = token.endswith("%")
-            value = float(token.rstrip("%"))
-            values.append(value if not is_percent else value)
+            values.append(float(token.rstrip("%")))
         return values
 
     @staticmethod
     def _evidence_numeric_values(packet: dict[str, Any]) -> list[float]:
         allowed: list[float] = []
         for item in packet.get("evidence", []):
-            for value in item.get("values", {}).values():
+            for key, value in item.get("values", {}).items():
+                for token in _KEY_NUMBER_RE.findall(str(key)):
+                    allowed.append(float(token))
                 if isinstance(value, bool):
                     continue
                 if isinstance(value, (int, float)) and math.isfinite(float(value)):
@@ -58,7 +59,10 @@ class ScientificClaimVerifier:
 
     def _matches_allowed(self, claim: float, allowed: list[float]) -> bool:
         for expected in allowed:
-            tolerance = max(0.01, self.numeric_relative_tolerance * max(1.0, abs(expected)))
+            tolerance = max(
+                0.01,
+                self.numeric_relative_tolerance * max(1.0, abs(expected)),
+            )
             if abs(claim - expected) <= tolerance:
                 return True
         return False
@@ -90,7 +94,10 @@ class ScientificClaimVerifier:
                 issues.append(
                     VerificationIssue(
                         code=code,
-                        message=f"Generated answer contains unsupported {code.replace('_', ' ')}.",
+                        message=(
+                            "Generated answer contains unsupported "
+                            f"{code.replace('_', ' ')}."
+                        ),
                     )
                 )
         return issues
@@ -158,7 +165,9 @@ class ScientificClaimVerifier:
                 )
 
         expected_sources = {
-            item.get("source", "") for item in packet.get("evidence", []) if item.get("source")
+            item.get("source", "")
+            for item in packet.get("evidence", [])
+            if item.get("source")
         }
         cited_sources = set(_SOURCE_RE.findall(answer))
         traceable = len(expected_sources.intersection(cited_sources))
