@@ -158,16 +158,31 @@ Interpretation methods should be selected according to the model and biological 
 
 Interpretability outputs are treated as predictive evidence, not proof of biological causation.
 
-## 12. GenAI interface
+## 12. Grounded GenAI scientific interface
 
-GenAI is developed only after the scientific model and data layer are validated.
+The scientific interface is built only after validated quantitative outputs exist. The first implemented layer is an **evidence boundary**: user questions are mapped to committed result tables, relevant validated records are selected, and a structured grounding packet is built before any generative rendering is allowed.
 
-Its role is to provide natural-language access to:
+The implemented flow is:
 
-- verified experiment history
-- model outputs
-- uncertainty estimates
-- interpretable feature contributions
-- traceable source records
+\[
+\text{question}
+\rightarrow
+\text{validated result tables}
+\rightarrow
+\text{evidence packet}
+\rightarrow
+\text{scientific answer or downstream LLM}
+\]
 
-A language model should never invent experimental results or replace statistical validation.
+The grounding packet contains:
+
+- the user question;
+- selected quantitative evidence;
+- the exact repository source file for each evidence item;
+- instructions that preserve retrospective/prospective distinctions;
+- instructions that prohibit unsupported causality claims;
+- instructions that require explicit uncertainty when relevant.
+
+The current deterministic interface can answer repository-level questions directly from the validated evidence and can also emit the structured packet intended for a future generative model. No external language-model dependency is required at this stage.
+
+A downstream generative model, when added, must remain a rendering layer rather than a source of scientific facts. It must not invent experimental results, hide abstention states, convert retrospective evidence into prospective claims, or replace statistical validation.
