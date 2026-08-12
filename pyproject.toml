@@ -28,6 +28,9 @@ ml = [
   "xgboost>=2.0",
   "lightgbm>=4.3"
 ]
+case-study-b = [
+  "pyreadr>=0.5.3"
+]
 notebooks = [
   "pyarrow>=15.0",
   "jupyterlab>=4.1",
@@ -41,6 +44,7 @@ dev = [
 full = [
   "xgboost>=2.0",
   "lightgbm>=4.3",
+  "pyreadr>=0.5.3",
   "pyarrow>=15.0",
   "jupyterlab>=4.1",
   "ipykernel>=6.29",
