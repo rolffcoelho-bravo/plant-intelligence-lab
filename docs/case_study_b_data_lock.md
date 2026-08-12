@@ -2,107 +2,90 @@
 
 ## Scientific question
 
-**Can genomic information retain predictive value when wheat lines are evaluated across materially different environmental and management conditions?**
+**Can genomic information retain predictive value when wheat lines are evaluated across different target environments, and does explicit genotype × environment structure improve prediction?**
 
-Case Study B extends the repository from the longitudinal regeneration problem in Case Study A to a true multi-environment genomic-prediction problem:
+Case Study B extends the repository from the longitudinal regeneration problem in Case Study A to a genuine multi-environment genomic-prediction problem:
 
 \[
 G + E + G\times E \rightarrow Y,
 \]
 
-where `G` is genomic information, `E` is environmental or management context, and `Y` is grain yield.
+where `G` is genomic information, `E` is target-environment context, and `Y` is grain yield.
 
-## Locked public dataset
+## Executable public data lock
 
-The primary data source is:
+The reproducible source is the canonical `wheat` dataset distributed with **BGLR** on CRAN. The source documentation identifies the data as historical material from CIMMYT's Global Wheat Program.
 
-> Lopez-Cruz, Marco; de los Campos, Gustavo. (2025). *Data for: Multi-trait/environment sparse genomic prediction using the SFSI R-package*. Dryad. DOI: `10.5061/dryad.vx0k6dk3p`.
-
-Public landing page:
-
-`https://datadryad.org/dataset/doi:10.5061/dryad.vx0k6dk3p`
-
-Dryad publishes research datasets under a CC0 instrument, allowing reproducible reuse. Large source files are acquired at execution time and are not committed to this repository.
+The acquisition pipeline locks BGLR version `1.1.4` and downloads the CRAN source package at execution time. Raw package files are not committed to this repository.
 
 ### Dataset dimensions
 
-The published data contain:
-
 | Component | Locked value |
 |---|---:|
-| Wheat lines | **3,731** |
-| Filtered SNP markers | **9,045** |
-| Managed environments | **4** |
-| Complete line × environment yield cells | **14,924** |
+| Historical wheat lines | **599** |
+| Edited DArT markers | **1,279** |
+| Mega-environments | **4** |
+| Line × environment phenotype cells | **2,396** |
 | Crop | *Triticum aestivum* |
-| Target | Adjusted grain yield, ton/ha |
+| Target | Standardized average grain yield |
 
-The marker matrix is therefore high-dimensional at the line level:
+The marker matrix remains high-dimensional at the line level:
 
 \[
-p=9{,}045 > n=3{,}731.
+p=1{,}279 > n=599.
 \]
 
-The full source described by the data authors contains 29,484 lines evaluated under six environmental conditions. The locked public subset contains the 3,731 lines with complete records in four conditions and their 9,045 filtered SNPs.
+BGLR documentation describes the four phenotype columns as grain yield in four target sets of environments representing CIMMYT mega-environments. The dataset also contains a pedigree-derived relationship matrix, although the first Case Study B data lock centers on markers and phenotypes.
 
-## Environmental conditions
+## Why this source is used for the executable lock
 
-The four environments are not arbitrary labels. They correspond to materially different field-management or stress conditions used by CIMMYT in Ciudad Obregon, Mexico:
+Case Study B requires more than a scientifically attractive dataset: a public repository must also be able to rebuild its evidence automatically without private credentials. The BGLR wheat data satisfy that requirement through a versioned CRAN package while preserving the core multi-environment genomic-prediction problem.
 
-| Environment | Source description | Interpretable context |
-|---|---|---|
-| `B2I` | bed planting and two irrigations | water-limited / drought context |
-| `B5I` | bed planting and five irrigations | optimal irrigation context |
-| `MEL` | melgas flat planting and five irrigations | optimal irrigation with different planting system |
-| `LHT` | late heat | heat-stress context |
+The source provides a canonical breeding dataset, a real crop-yield target, four target environments, and a marker dimension larger than the number of lines. It is therefore appropriate for testing whether G×E structure earns predictive value beyond simpler genomic baselines.
 
-Only descriptors explicitly supported by the source are encoded. For example, the public source does not provide a consistently specified irrigation count or planting system for `LHT`; those fields remain missing rather than being inferred.
+## Environmental information boundary
 
-## Why this dataset is locked
+The four environments are encoded as `ME1`–`ME4`. They represent target sets of environments / major agroclimatic regions in the source documentation, but the distributed dataset does not provide a transferable continuous weather, soil, or management vector for each mega-environment.
 
-This dataset materially strengthens the repository relative to Case Study A because it provides a larger genomic population, a real crop-breeding target, complete multi-environment phenotypes, and environments spanning water, planting-system, and heat differences.
-
-It is also directly reproducible from an open repository without requiring the Plant Intelligence Lab repository to redistribute proprietary or access-restricted source data.
+This matters for validation. The project can test prediction across observed environment categories and sparse line × environment cells, but it must not claim universal transfer to arbitrary future climates from four categorical environment labels alone.
 
 ## Validation design
 
-Random line-level splitting is not sufficient for the deployment questions of interest. Four complementary validation regimes are therefore defined.
-
 ### CV-G / CV1 — unseen genotypes
 
-Entire genotypes are held out across all four environments.
+Entire genotypes are held out across all four environments:
 
 \[
 G_{test}\cap G_{train}=\varnothing.
 \]
 
-This tests the core breeding problem: predicting new genomic lines in environments represented during training.
+This tests prediction of new genomic lines in environment categories represented during training.
 
 **Status: primary validation.**
 
 ### CV2 — sparse multi-environment testing
 
-Each genotype is observed in three environments and withheld in one. The held-out environment is balanced across genotypes.
+Each genotype is observed in three environments and withheld in one, with held-out cells balanced across environments.
 
-This tests whether information from the same line in related environments improves prediction of its missing environment-specific response.
+This tests whether observations from the same line in other environments improve its missing environment-specific prediction.
 
 **Status: primary validation.**
 
 ### CV-E — unseen environment
 
-One complete environment is withheld.
+One complete mega-environment is withheld:
 
 \[
 E_{test}\cap E_{train}=\varnothing.
 \]
 
-This is a scientifically harder question, but the locked dataset contains only four managed environments and does not provide a rich continuous weather/soil covariate vector for each environment. Environment identity alone cannot support a strong claim of generalization to genuinely new environmental conditions.
+Because no continuous environmental descriptor vector is available, a model based only on categorical environment identity has no strong basis for interpolation into a never-seen category.
 
 **Status: diagnostic stress test, not headline evidence.**
 
 ### CV-GE — unseen genotype in unseen environment
 
-Both an entire genotype fold and one environment are excluded from training. Test observations are the Cartesian intersection of those withheld genotypes and the withheld environment.
+Both an entire genotype fold and one environment are excluded from training:
 
 \[
 G_{test}\cap G_{train}=\varnothing,
@@ -110,13 +93,13 @@ G_{test}\cap G_{train}=\varnothing,
 E_{test}\cap E_{train}=\varnothing.
 \]
 
-This is the strict double-cold-start problem. It is retained because it is operationally important, but interpretation must respect the same environmental-descriptor limitation as CV-E.
+This double-cold-start scenario is retained to expose failure rather than manufacture claims of universal environmental transfer.
 
 **Status: diagnostic stress test, not headline evidence.**
 
-## Model sequence
+## Locked model sequence
 
-The modelling stage should make complexity earn its place under the same splits. The locked comparison is:
+The modelling stage should compare increasing information and interaction structure under identical splits:
 
 \[
 \text{Environment mean}
@@ -127,29 +110,30 @@ G+E
 \rightarrow
 G+E+G\times E
 \rightarrow
-\text{nonlinear genomic/environment interaction}.
+\text{nonlinear G×E model if justified}.
 \]
 
-The first benchmark should include a classical genomic relationship model before nonlinear ML. Model selection must not use held-out validation outcomes.
+A classical genomic relationship baseline comes before nonlinear ML. Hyperparameters must be selected only inside training data; held-out outcomes cannot be used for model choice.
 
 ## What Case Study B can and cannot establish
 
-Case Study B can test genomic prediction across multiple managed environments, quantify whether explicit G×E improves held-out prediction, compare performance under unseen-genotype and sparse-environment scenarios, and expose failure under environmental distribution shift.
+Case Study B can quantify whether explicit G×E improves held-out prediction, compare whole-genotype and sparse multi-environment prediction, characterize cross-environment phenotype structure, and expose performance degradation under environment cold-start stress tests.
 
-It cannot by itself establish universal prediction in arbitrary future climates. With only four managed conditions and incomplete continuous environmental descriptors, CV-E and CV-GE are intentionally treated as stress tests rather than proof of general unseen-environment transfer.
+It cannot establish universal prediction in arbitrary future climates or external breeding programs without richer environment descriptors and external validation.
 
 ## Reproducible acquisition
 
-The executable data lock is implemented in:
+The executable lock is implemented in:
 
 `src/plant_intelligence/data/wheat_gxe.py`
 
-Running
+Install its small optional reader dependency and execute with:
 
 ```bash
+python -m pip install -e '.[case-study-b]'
 python -m plant_intelligence.data.wheat_gxe --output-root .
 ```
 
-downloads the source archive, records its SHA-256 checksum, validates the expected dimensions and identifiers, and writes compact audit and split manifests under `reports/results/`.
+The pipeline downloads the version-locked CRAN source archive, records its SHA-256 checksum, loads `wheat.Y` and `wheat.X`, validates dimensions, and writes compact audit and split manifests under `reports/results/`.
 
-The raw archive and extracted matrices remain under ignored `data/raw/` and `data/interim/` paths and are not committed.
+Raw source and extracted package files remain under ignored `data/raw/` and `data/interim/` paths and are not committed.
