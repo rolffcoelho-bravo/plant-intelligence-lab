@@ -8,7 +8,7 @@ Plant Intelligence Lab is an open computational biotechnology project built arou
 
 The repository combines quantitative genetics, high-dimensional machine learning, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, multi-environment genomic prediction, and a grounded scientific interface using real public plant data.
 
-**Case Study A** is the validated longitudinal decision-intelligence demonstration using *Arabidopsis thaliana*. **Case Study B** now has a verified wheat genotype × environment data lock and validation design; predictive model results for Case Study B are not claimed until that modelling stage is executed.
+**Case Study A** is the validated longitudinal decision-intelligence demonstration using *Arabidopsis thaliana*. **Case Study B** is the validated multi-environment wheat demonstration: its classical benchmark shows that an explicit genomic G×E interaction kernel improves prediction in represented environments while strict unseen-environment tests expose the current categorical-environment transfer limit.
 
 ## Validated Case Study A
 
@@ -199,42 +199,58 @@ At an experimental budget of 10 observations, predicted-response ranking retrosp
 
 **This is a retrospective acquisition benchmark, not a prospective laboratory trial.** It demonstrates enrichment within the evaluated public dataset; it does not establish that a real laboratory would reduce experiments by the same percentage.
 
-## Case Study B — Wheat Genotype × Environment
+## Validated Case Study B — Wheat Genotype × Environment
 
-Case Study B introduces the missing multi-environment dimension of the original architecture:
+Case Study B introduces the multi-environment dimension of the original architecture:
 
 $$
-\boxed{G+E+G\times E\rightarrow Y_{yield}}.
+\boxed{G+E+G\times E\rightarrow Y}.
 $$
 
 The executable data lock uses the canonical BGLR wheat dataset distributed through CRAN and sourced from CIMMYT's Global Wheat Program.
 
-| Component | Verified data-lock result |
+| Component | Verified result |
 |---|---:|
 | Wheat lines | **599** |
 | DArT markers | **1,279** |
 | Mega-environments | **4** |
 | Line × environment phenotype cells | **2,396** |
-| Phenotype missing cells | **0** |
-| Genotype missing cells | **0** |
 | Marker-to-line ratio $p/n$ | **2.135** |
+| CV-G G+E+G×E RMSE | **0.8949** |
+| CV-G G+E+G×E $R^2$ | **0.1978** |
+| CV2 G+E+G×E RMSE | **0.8469** |
+| CV2 G+E+G×E $R^2$ | **0.2444** |
 
-The four phenotype environments are represented as `ME1`–`ME4`. Cross-environment phenotype association is heterogeneous: `ME2` and `ME3` correlate at about **0.661**, while `ME1` has near-zero or negative correlations with the other three environments. This makes explicit environment-aware modelling scientifically meaningful without presuming that every environment shares the same response structure.
+The four phenotype environments are represented as `ME1`–`ME4`. Cross-environment phenotype association is heterogeneous: `ME2` and `ME3` correlate at about **0.661**, while `ME1` has near-zero or negative correlations with the other three environments.
 
-The validation design is locked before model fitting:
+The validation design was locked before model fitting:
 
 - **CV-G / CV1 — primary:** whole genotypes are held out across all environments.
 - **CV2 — primary:** each line has one environment masked while remaining observed in the others.
 - **CV-E — diagnostic stress test:** one complete mega-environment is withheld.
 - **CV-GE — diagnostic stress test:** a genotype fold and an environment are both unseen during training.
 
-`CV-E` and `CV-GE` are deliberately not headline validation because the four categorical mega-environments do not include a transferable continuous weather/soil covariate vector. The project will expose failure under this cold-start condition rather than manufacture unseen-climate claims.
+The classical information ablation compares
 
-**No Case Study B prediction-performance claim is made yet.** The current evidence is the verified data lock, environment structure, and leakage-aware validation design.
+$$
+\text{Environment mean}
+\rightarrow G
+\rightarrow G+E
+\rightarrow G+E+G\times E.
+$$
 
-- [`docs/case_study_b_data_lock.md`](docs/case_study_b_data_lock.md) — source lock and scientific design
-- [`reports/results/case_study_b_data_lock_summary.csv`](reports/results/case_study_b_data_lock_summary.csv) — executed data audit
-- [`reports/results/case_study_b_environment_correlations.csv`](reports/results/case_study_b_environment_correlations.csv) — empirical environment correlations
+In CV-G, adding the explicit G×E interaction structure to G+E reduces RMSE from **0.9608 to 0.8949**. In CV2 it reduces RMSE from **0.9173 to 0.8469**. Genotype-cluster bootstrap intervals for both RMSE improvements remain below zero, supporting a measurable incremental predictive contribution from the interaction structure in the represented environments.
+
+The stress tests impose a different conclusion. In strict CV-GE the G+E+G×E specification has RMSE **1.0021** and $R^2=-0.0058$, essentially failing to outperform the environment-mean baseline. The project therefore distinguishes **G×E value within represented environmental structure** from **environmental extrapolation**, which is not solved by four categorical environment identifiers.
+
+The BGLR yield phenotypes are standardized by environment. Consequently, the near-zero incremental value of an environment-mean term should not be generalized into a claim that additive environmental effects are unimportant; location shifts have already been largely removed by source preprocessing.
+
+- [`docs/case_study_b_data_lock.md`](docs/case_study_b_data_lock.md) — source lock and validation design
+- [`docs/case_study_b_modeling.md`](docs/case_study_b_modeling.md) — classical G×E methodology, primary evidence, and stress-test interpretation
+- [`reports/results/case_study_b_model_summary.csv`](reports/results/case_study_b_model_summary.csv) — pooled validation results
+- [`reports/results/case_study_b_gxe_bootstrap.csv`](reports/results/case_study_b_gxe_bootstrap.csv) — paired genotype-cluster uncertainty for incremental model value
+
+![Case Study B GxE information ablation](reports/figures/case_study_b_gxe_ablation.png)
 
 ## Decision engine
 
@@ -326,21 +342,22 @@ No proprietary biotechnology data are used in the repository.
 
 ## Validation design
 
-The project avoids naive random splitting when biological structure can leak between training and test observations. Case Study A uses genotype-aware folds consistently across the quantitative comparison. Case Study B pre-registers whole-genotype and sparse multi-environment validation as primary evidence, with full environment cold starts separated as stress tests.
+The project avoids naive random splitting when biological structure can leak between training and test observations. Case Study A uses genotype-aware folds consistently across the quantitative comparison. Case Study B locks whole-genotype and sparse multi-environment validation as primary evidence, with full environment cold starts separated as stress tests.
 
-Feature transformations that learn from data are fitted inside training folds where applicable. Downstream uncertainty and decision analyses operate on validated out-of-fold forecasts.
+Feature transformations and hyperparameters that learn from data are fitted or selected inside training folds where applicable. Downstream uncertainty and decision analyses operate on validated out-of-fold forecasts.
 
-Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval coverage, interval width, retained-versus-abstained error, retrospective selection efficiency, environment-specific performance, and grounded-answer verification.
+Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval coverage, interval width, retained-versus-abstained error, retrospective selection efficiency, environment-specific performance, paired incremental-model uncertainty, and grounded-answer verification.
 
 ## Reproducibility
 
-The repository contains five complementary GitHub Actions workflows:
+The repository contains six complementary GitHub Actions workflows:
 
 - **Unit Tests** — lightweight validation for core code, uncertainty, optimization, grounded-interface logic, and validation manifests.
 - **Grounded AI Evaluation** — runs the scientific grounding benchmark and publishes compact evaluation evidence.
 - **Case Study A — Full real-data execution** — rebuilds the Arabidopsis empirical pipeline from public phenotype and genomic inputs through forecasting.
 - **Case Study A — Downstream analysis** — reuses validated compact outputs for uncertainty, experiment selection, and decision-engine reporting.
 - **Case Study B — Wheat G×E Data Lock** — acquires the version-locked public wheat source, validates dimensions, and publishes the pre-model validation manifests.
+- **Case Study B — Classical G×E Modeling** — executes the locked information ablation, primary CV-G/CV2 evidence, CV-E/CV-GE stress diagnostics, and paired genotype-cluster bootstrap.
 
 Install the core package with:
 
@@ -358,6 +375,7 @@ python -m plant_intelligence.ai.grounded_interface "What should I know about thi
 python -m plant_intelligence.ai.evaluation --output-dir reports/results
 python -m pip install -e '.[case-study-b]'
 python -m plant_intelligence.data.wheat_gxe --output-root .
+python -m plant_intelligence.models.wheat_gxe_baseline --output-root .
 ```
 
 ## Repository structure
@@ -367,6 +385,7 @@ plant-intelligence-lab/
 ├── .github/workflows/
 │   ├── case-study-a.yml
 │   ├── case-study-b-data-lock.yml
+│   ├── case-study-b-modeling.yml
 │   ├── ci.yml
 │   ├── downstream-analysis.yml
 │   └── grounded-ai-evaluation.yml
@@ -376,6 +395,7 @@ plant-intelligence-lab/
 │   ├── Plant_Intelligence_Lab_Technical_Architecture.pdf
 │   ├── biological_context.md
 │   ├── case_study_b_data_lock.md
+│   ├── case_study_b_modeling.md
 │   ├── limitations.md
 │   ├── methodology.md
 │   └── transferability.md
@@ -412,7 +432,7 @@ The relevant industrial question is not whether one model can be copied unchange
 
 ## Limits on interpretation
 
-Performance claims currently apply to the evaluated public **Case Study A** data and validation design. Case Study B currently has a validated data lock and split design, **not validated prediction-performance results**.
+Performance claims apply only to the evaluated public datasets, target definitions, and locked validation designs. Case Study A supports its longitudinal forecasting and retrospective decision claims. Case Study B supports improved prediction from explicit G×E structure under represented-environment CV-G and CV2; its CV-E/CV-GE results do **not** validate universal unseen-environment transfer.
 
 The project does **not** claim:
 
@@ -432,6 +452,7 @@ See [`docs/limitations.md`](docs/limitations.md) for the full limitation framewo
 - [`docs/methodology.md`](docs/methodology.md) — quantitative methodology and grounded-interface design
 - [`docs/biological_context.md`](docs/biological_context.md) — biological context
 - [`docs/case_study_b_data_lock.md`](docs/case_study_b_data_lock.md) — wheat G×E source and validation design
+- [`docs/case_study_b_modeling.md`](docs/case_study_b_modeling.md) — validated classical wheat G×E benchmark and stress-test interpretation
 - [`docs/limitations.md`](docs/limitations.md) — interpretation boundaries
 - [`docs/transferability.md`](docs/transferability.md) — transfer from public demonstrations to biotechnology applications
 - [`docs/Plant_Intelligence_Lab_Technical_Architecture.pdf`](docs/Plant_Intelligence_Lab_Technical_Architecture.pdf) — technical architecture document
