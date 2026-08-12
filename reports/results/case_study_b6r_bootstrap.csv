@@ -1,0 +1,7 @@
+regime,challenger,reference,metric,delta_challenger_minus_reference,ci95_low,ci95_high,improvement_frequency,bootstrap_clusters,bootstrap_reps
+CV-E-continuous-B6R,Selected-G+E,Selected-G,RMSE,-0.11834608130522906,-0.2593792549476746,0.03362474700401969,0.935,environment,2000
+CV-E-continuous-B6R,Selected-G+E+GxE,Selected-G+E,RMSE,-0.0026211589398590363,-0.1188744824450699,0.11807104659696672,0.503,environment,2000
+CV-E-continuous-B6R,Selected-G+E,B6-fixed-G+E,RMSE,-0.08024661382672171,-0.18454042944621304,0.013927720531460802,0.949,environment,2000
+CV-GE-continuous-B6R,Selected-G+E,Selected-G,RMSE,-0.11902869340572542,-0.2644555159689098,0.027980153138828737,0.9415,environment,2000
+CV-GE-continuous-B6R,Selected-G+E+GxE,Selected-G+E,RMSE,-0.00028636514719293515,-0.1167352929650306,0.1114934807134917,0.494,environment,2000
+CV-GE-continuous-B6R,Selected-G+E,B6-fixed-G+E,RMSE,-0.08007066731190582,-0.18807910834465358,0.012584892305943512,0.957,environment,2000
