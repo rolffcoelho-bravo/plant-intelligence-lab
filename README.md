@@ -223,38 +223,63 @@ The purpose is not to automate biological judgement. It is to expose prediction,
 
 ## Grounded scientific interface
 
-The first GenAI-facing layer is now implemented as an **evidence-first scientific interface**. It does not allow a language model to discover or invent scientific facts from free text. Instead, a question is resolved against committed, validated result tables before any generative rendering is allowed:
+The GenAI-facing layer is implemented as an **evidence-first scientific interface**. A question is resolved against committed, validated result tables before any generative rendering is allowed:
 
 $$
 \boxed{
 \text{Question}
 \rightarrow
-\text{validated repository evidence}
+\text{validated evidence}
 \rightarrow
 \text{grounding packet}
 \rightarrow
-\text{scientific answer / downstream LLM}
+\text{provider adapter}
+\rightarrow
+\text{claim verification}
+\rightarrow
+\text{answer / withholding}
 }
 $$
 
-The grounding packet carries the selected quantitative evidence, exact source files, and instructions that preserve uncertainty, retrospective-versus-prospective distinctions, and causality limits.
+The grounding packet carries selected quantitative evidence, exact source files, an answerability state, and instructions preserving uncertainty, retrospective-versus-prospective distinctions, and causality limits.
 
-The current implementation can answer directly from the evidence without an external LLM:
+A provider-independent adapter contract allows an external API, local model, or callable generation function to be connected without changing the evidence layer. The repository includes a deterministic reference adapter for CI and reproducible evaluation; it is **not** presented as an external-LLM performance result.
+
+Generated drafts are checked before release. Current verification covers numerical fidelity, source traceability, uncertainty omission, abstention omission, retrospective-boundary omission, causality inflation, and prospective/commercial-performance inflation. Drafts that fail verification are withheld.
+
+The repository also runs an adversarial grounding benchmark covering supported scientific questions and unsupported causal, prospective, transfer, and overgeneralization traps.
+
+### Grounding benchmark — deterministic reference adapter
+
+| Metric | Result |
+|---|---:|
+| Benchmark cases | **11** |
+| Grounded Scientific Answer Rate | **100%** |
+| Supported-case pass rate | **100%** |
+| Unsupported safe-response rate | **100%** |
+| Source traceability rate | **100%** |
+| Numerical claims checked | **49** |
+| Verification failures | **0** |
+
+The committed benchmark is a **software-validation baseline for the deterministic reference adapter**. It demonstrates that the grounding and verification machinery behaves as specified; it does not establish 100% performance for a real external language model.
+
+Benchmark outputs:
+
+- [`reports/results/grounded_ai_evaluation_summary.csv`](reports/results/grounded_ai_evaluation_summary.csv)
+- [`reports/results/grounded_ai_evaluation_cases.csv`](reports/results/grounded_ai_evaluation_cases.csv)
+
+The evidence interface can be queried directly:
 
 ```bash
 python -m plant_intelligence.ai.grounded_interface \
   "How accurate is the Day-21 forecast?"
 ```
 
-It can also emit the structured packet intended for a future generative model:
+and the grounding benchmark can be reproduced with:
 
 ```bash
-python -m plant_intelligence.ai.grounded_interface \
-  "How well calibrated is the 90% prediction interval?" \
-  --packet
+python -m plant_intelligence.ai.evaluation --output-dir reports/results
 ```
-
-This phase deliberately keeps the language model downstream of the quantitative evidence boundary. The generative model is a future rendering layer, not a source of experimental truth.
 
 ## Public data foundation
 
@@ -272,13 +297,14 @@ The project avoids naive random splitting when genomic relatedness can leak biol
 
 Feature transformations that learn from data are fitted inside training folds where applicable. Downstream uncertainty and decision analyses operate on validated out-of-fold forecasts.
 
-Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval coverage, interval width, retained-versus-abstained error, and retrospective selection efficiency.
+Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval coverage, interval width, retained-versus-abstained error, retrospective selection efficiency, and grounded-answer verification.
 
 ## Reproducibility
 
-The repository contains three complementary GitHub Actions workflows:
+The repository contains four complementary GitHub Actions workflows:
 
 - **Unit Tests** — lightweight validation for core code, uncertainty, optimization, and grounded-interface logic.
+- **Grounded AI Evaluation** — runs the scientific grounding benchmark and publishes compact evaluation evidence.
 - **Full real-data execution** — rebuilds the Case Study A empirical pipeline from public phenotype and genomic inputs through genomic modelling and forecasting.
 - **Downstream analysis** — reuses validated compact outputs for uncertainty, experiment selection, and decision-engine reporting without unnecessarily recomputing the full genomic stack.
 
@@ -288,13 +314,14 @@ Install the core package with:
 python -m pip install -e .
 ```
 
-Run the current downstream quantitative modules with:
+Run the current downstream modules with:
 
 ```bash
 python -m plant_intelligence.uncertainty.conformal
 python -m plant_intelligence.optimization.active_learning
 python -m plant_intelligence.optimization.decision_engine
 python -m plant_intelligence.ai.grounded_interface "What should I know about this case study?"
+python -m plant_intelligence.ai.evaluation --output-dir reports/results
 ```
 
 ## Repository structure
@@ -304,7 +331,8 @@ plant-intelligence-lab/
 ├── .github/workflows/
 │   ├── case-study-a.yml
 │   ├── ci.yml
-│   └── downstream-analysis.yml
+│   ├── downstream-analysis.yml
+│   └── grounded-ai-evaluation.yml
 ├── data/
 │   └── README.md
 ├── docs/
@@ -355,7 +383,8 @@ The project does **not** claim:
 - validated performance on proprietary commercial processes;
 - automatic transfer of fitted models across species, laboratories, or production conditions;
 - that genomic information is generally unimportant because it did not improve this particular early forecast;
-- that a language model may override, extrapolate beyond, or replace the validated quantitative evidence.
+- that a language model may override, extrapolate beyond, or replace the validated quantitative evidence;
+- that the deterministic grounding benchmark measures a real external LLM's scientific accuracy.
 
 See [`docs/limitations.md`](docs/limitations.md) for the full limitation framework.
 
@@ -380,7 +409,8 @@ See [`docs/limitations.md`](docs/limitations.md) for the full limitation framewo
 8. **Experimental recommendations must remain traceable to validated quantitative outputs.**
 9. **Retrospective evidence must not be presented as prospective validation.**
 10. **GenAI must remain downstream of verified evidence.**
-11. **Results should be reproducible.**
+11. **Generated scientific claims must pass traceability and boundary checks before release.**
+12. **Results should be reproducible.**
 
 ## License
 
