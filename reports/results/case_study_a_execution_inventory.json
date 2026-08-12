@@ -1,7 +1,11 @@
 {
-  "generated_at_utc": "2026-08-11T23:32:12.759721+00:00",
+  "generated_at_utc": "2026-08-12T00:09:57.697553+00:00",
   "result_files": [
+    "reports/results/case_study_a_early_forecasting_fold_metrics.csv",
     "reports/results/case_study_a_early_forecasting_overlap.csv",
+    "reports/results/case_study_a_early_forecasting_pca.csv",
+    "reports/results/case_study_a_early_forecasting_predictions.csv",
+    "reports/results/case_study_a_early_forecasting_summary.csv",
     "reports/results/case_study_a_execution_inventory.json",
     "reports/results/case_study_a_gblup_fold_metrics.csv",
     "reports/results/case_study_a_gblup_metadata.json",
@@ -19,6 +23,7 @@
     "reports/results/case_study_a_protocol_response_summary.csv"
   ],
   "figure_files": [
+    "reports/figures/case_study_a_early_forecasting.png",
     "reports/figures/case_study_a_genomic_structure.png",
     "reports/figures/case_study_a_protocol_response.png",
     "reports/figures/case_study_a_shoot_distributions.png"
