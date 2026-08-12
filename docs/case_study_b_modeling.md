@@ -70,9 +70,52 @@ Because the delta is defined as candidate minus reference, negative values favor
 
 Adding categorical environment means to G alone does not improve the primary predictions. This must be interpreted in light of the source preprocessing: the BGLR wheat yield phenotypes are standardized by environment, so environment-specific location shifts have already been largely removed. The near-zero incremental value of the additive environment-mean term is therefore expected and should not be generalized into a claim that additive environmental effects are biologically unimportant. The incremental signal in this benchmark is the environment-dependent genomic response captured by the interaction structure.
 
+## Step B2-R — interaction-weight robustness and boundary resolution
+
+The first classical run selected the largest allowed raw interaction weight, \(\gamma=4\), in five of the six primary outer scenarios. That required a robustness check before nonlinear models could be allowed to challenge the classical baseline.
+
+A widened raw grid from \(\gamma=0.25\) through \(128\) improved training-only inner-CV scores, but one primary fold still selected the upper boundary and several selections moved jointly to large \(\gamma\) and large ridge \(\alpha\). The raw parameterization therefore exposed a scale dependence rather than a clean biological optimum: multiplying the interaction kernel and changing the ridge can create nearly equivalent regularization regimes.
+
+To remove that ambiguity, the robustness layer was reparameterized as a bounded normalized kernel mixture
+
+\[
+K_{\eta}=(1-\eta)K_G+\eta K_{G\times E},
+\qquad 0\leq\eta\leq1,
+\]
+
+with an independent ridge parameter \(\lambda\). The full interaction-share domain is therefore represented explicitly: \(\eta=0\) is cross-environment genomic main-effect sharing and \(\eta=1\) is a pure environment-specific genomic kernel. Selecting \(\eta=1\) is a valid endpoint result, not an unresolved search boundary.
+
+The normalized search is resolved. Across the five CV-G folds plus CV2, selected \(\eta\) values range from 0.90 to 1.00, with median 0.9875. Five of six primary scenarios select \(\eta\geq0.95\), and three CV-G folds select the pure interaction endpoint \(\eta=1\). Selected ridge values range from 0.75 to 1.00, with no upper or lower ridge-grid boundary selections.
+
+These values are predictive regularization choices. In particular, \(\eta=0.9875\) must **not** be interpreted as 98.75% of genetic variance being caused by G×E. The result says that, under this standardized benchmark and leakage-aware validation, prediction usually prefers environment-specific genomic covariance over a large shared genomic main component.
+
+### Normalized robustness results
+
+| Validation | Model | RMSE | MAE | R² | Correlation |
+|---|---|---:|---:|---:|---:|
+| CV-G | G+E normalized reference | 0.960487 | 0.751200 | 0.075921 | 0.277761 |
+| CV-G | **Normalized G×E mixture** | **0.890109** | **0.688560** | **0.206380** | **0.456270** |
+| CV2 | G+E normalized reference | 0.914113 | 0.705816 | 0.119769 | 0.347033 |
+| CV2 | **Normalized G×E mixture** | **0.855236** | **0.656597** | **0.229506** | **0.480383** |
+
+Relative to its normalized G+E reference, the mixture reduces RMSE by 0.070378 under CV-G and 0.058877 under CV2. The 2,000-replicate genotype-cluster bootstrap intervals are [-0.087992, -0.054236] and [-0.094660, -0.024189], respectively. The corresponding MAE intervals are also entirely below zero.
+
+The normalized formulation does not dominate the original pre-registered interaction model in every deployment regime. Its CV-G RMSE is about 0.54% lower than the original 0.894899 result, while its CV2 RMSE is about 0.98% higher than the original 0.846926 result. This sub-1% sensitivity is retained rather than hidden. The central conclusion is therefore robust to the interaction-weight parameterization, while the exact optimum is task-dependent.
+
+### Frozen classical challenger threshold
+
+The classical G×E family is now frozen before nonlinear ML. Future challengers must not be compared only with the easier formulation. The benchmark threshold is the strongest leakage-safe classical result already observed within each primary deployment regime:
+
+| Primary regime | Frozen classical RMSE threshold | Source formulation |
+|---|---:|---|
+| CV-G | **0.890109** | normalized G×E mixture |
+| CV2 | **0.846926** | pre-registered classical G×E |
+
+This threshold is a challenger benchmark, not a replacement of the pre-registered evidence. The original B2 results remain reported as the primary classical information-ablation experiment; B2-R establishes that their G×E conclusion survives a resolved and more interpretable regularization parameterization.
+
 ## Environment-specific behavior
 
-The interaction benefit is not uniform across environments. Under CV-G, the G+E+G×E model achieves RMSE values of 0.873, 0.882, 0.928, and 0.896 in ME1–ME4 respectively. The largest qualitative correction occurs in ME1: the G-only model has RMSE 1.035 and negative R² (-0.074), whereas the G×E model reduces RMSE to 0.873 and produces positive R² (0.237).
+The interaction benefit is not uniform across environments. Under CV-G, the original G+E+G×E model achieves RMSE values of 0.873, 0.882, 0.928, and 0.896 in ME1–ME4 respectively. The largest qualitative correction occurs in ME1: the G-only model has RMSE 1.035 and negative R² (-0.074), whereas the G×E model reduces RMSE to 0.873 and produces positive R² (0.237).
 
 This is consistent with the earlier data audit, where ME1 had weak or negative phenotypic correlations with the other mega-environments. The result supports environment-dependent response as a predictive feature of this dataset. It does not establish a causal environmental mechanism.
 
@@ -101,25 +144,31 @@ The primary result is specific and useful:
 
 under both unseen-genotype CV-G and sparse multi-environment CV2.
 
+B2-R strengthens that conclusion rather than changing it. Once the raw \(\gamma\)-scale ambiguity is removed, the normalized mixture still favors very strong environment-specific genomic structure and still materially outperforms its genomic-plus-environment reference in both primary regimes.
+
 The result does **not** imply that categorical G×E kernels solve environmental extrapolation. The stress tests show the opposite: when the environmental category itself is unseen, performance approaches the global baseline and can deteriorate sharply for a distinct environment such as ME1.
 
 That distinction is central to the Plant Intelligence Lab architecture. Genotype × environment interaction can add genuine predictive value without providing a mechanism for extrapolating to new climates or management systems. True environmental transfer would require informative continuous environmental descriptors and a model that can learn similarity across environments.
 
 ## Reproducibility
 
-Implementation:
+Implementations:
 
-`src/plant_intelligence/models/wheat_gxe_baseline.py`
+- `src/plant_intelligence/models/wheat_gxe_baseline.py`
+- `src/plant_intelligence/models/wheat_gxe_robustness.py`
+- `src/plant_intelligence/models/wheat_gxe_mixture_robustness.py`
 
 Tests:
 
-`tests/test_case_study_b_models.py`
+- `tests/test_case_study_b_models.py`
+- `tests/test_case_study_b_robustness.py`
+- `tests/test_case_study_b_mixture_robustness.py`
 
 Workflow:
 
 `.github/workflows/case-study-b-modeling.yml`
 
-Validated outputs:
+Core validated outputs:
 
 - `reports/results/case_study_b_model_summary.csv`
 - `reports/results/case_study_b_model_scenario_metrics.csv`
@@ -127,6 +176,16 @@ Validated outputs:
 - `reports/results/case_study_b_model_predictions.csv`
 - `reports/results/case_study_b_gxe_bootstrap.csv`
 - `reports/results/case_study_b_genomic_kernel_audit.csv`
+- `reports/results/case_study_b_gxe_robustness_audit.csv`
+- `reports/results/case_study_b_gxe_robustness_selection.csv`
+- `reports/results/case_study_b_gxe_robustness_tuning_profile.csv`
+- `reports/results/case_study_b_gxe_mixture_audit.csv`
+- `reports/results/case_study_b_gxe_mixture_selection.csv`
+- `reports/results/case_study_b_gxe_mixture_profile.csv`
+- `reports/results/case_study_b_gxe_mixture_summary.csv`
+- `reports/results/case_study_b_gxe_mixture_bootstrap.csv`
 - `reports/figures/case_study_b_gxe_ablation.png`
+- `reports/figures/case_study_b_gxe_gamma_robustness.png`
+- `reports/figures/case_study_b_gxe_mixture_robustness.png`
 
-The dedicated workflow passed all ten Case Study B data-lock and modeling tests, executed all locked validation regimes, verified every compact output, and published the evidence to the repository.
+The dedicated workflow passed **15/15 targeted Case Study B tests**, reproduced the locked classical baseline, executed both robustness stages, verified every compact output, and published the evidence to the repository.
