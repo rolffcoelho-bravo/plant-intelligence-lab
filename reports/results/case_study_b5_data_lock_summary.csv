@@ -1,0 +1,2 @@
+source_doi,n_phenotype_records,n_phenotype_genotypes,n_genotyped_hybrids,n_markers,n_phenotype_environments,n_ecov_environments,n_environment_covariates_raw,n_environment_covariates_nonconstant,phenotype_environment_ecov_overlap,phenotype_genotype_genomic_overlap,yield_nonmissing,ecov_missing_fraction,first_year,last_year,primary_transfer_validation,strict_transfer_validation
+10.6084/m9.figshare.22776806,78686,4372,4372,98026,136,136,202,202,136,4372,78686,0.0,2014,2021,environment-level 5-fold cold-start with ECs available,crossed genotype-fold x environment-fold cold-start
