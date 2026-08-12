@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Genomic prediction, phenotype forecasting, uncertainty-aware modelling and AI-assisted experimental design for plant biotechnology."
 readme = "README.md"
 requires-python = ">=3.11"
+license = { file = "LICENSE" }
 authors = [
   { name = "Rodolfo Pereira" }
 ]
