@@ -206,12 +206,42 @@ $$
 but
 
 $$
-\boxed{\text{the current representation does not yet establish a robust transfer gain}}.
+\boxed{\text{the first representation does not establish a robust transfer gain}}.
 $$
 
 ![Case Study B6 continuous-environment transfer](reports/figures/case_study_b6_environment_transfer.png)
 
-Detailed methodology and evidence: [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md).
+## B6-R — Transfer robustness and environmental novelty
+
+B6-R keeps every B5 outer fold fixed and applies a **nine-configuration nested robustness neighborhood** around the B6 representation. The inner search varies environmental RBF bandwidth, environmental rank, genomic rank, and ridge regularization; selection uses additive `G+E` only, and the selected representation is then reused unchanged for the interaction challenger and strict double-cold-start scenarios.
+
+Three outer folds select a **narrower environmental kernel** (`2×` the B6 bandwidth), while two select a **higher environmental rank** (`32` rather than `16`). None selects a different genomic rank or ridge penalty. This points to environmental geometry, rather than generic genomic complexity, as the main representation bottleneck.
+
+| Regime | Model | RMSE | MAE | $R^2$ | Correlation |
+|---|---|---:|---:|---:|---:|
+| Unseen environment | B6 fixed G+E | 2.6495 | 2.1232 | 0.0958 | 0.3497 |
+| Unseen environment | Selected G | 2.6876 | 2.1524 | 0.0696 | 0.2722 |
+| **Unseen environment** | **Selected G+E** | **2.5693** | 2.0507 | 0.1497 | 0.4002 |
+| Unseen environment | Selected G+E+G×E | **2.5666** | **2.0445** | **0.1514** | **0.4260** |
+| Double cold start | B6 fixed G+E | 2.6527 | 2.1261 | 0.0936 | 0.3474 |
+| Double cold start | Selected G | 2.6917 | 2.1558 | 0.0668 | 0.2681 |
+| **Double cold start** | **Selected G+E** | **2.5726** | 2.0537 | 0.1475 | 0.3979 |
+| Double cold start | Selected G+E+G×E | **2.5724** | **2.0499** | **0.1477** | **0.4229** |
+
+Nested representation selection improves additive `G+E` RMSE by approximately **3.03%** over the fixed B6 representation in the primary unseen-environment regime and **3.02%** in the strict double cold start. Relative to selected genomics alone, the point-estimate improvement is about **4.4%** in both regimes.
+
+Environment-cluster uncertainty remains important. The `Selected-G+E − Selected-G` RMSE difference is **-0.1183** with 95% interval **[-0.2594, 0.0336]** in the primary regime and **-0.1190** with interval **[-0.2645, 0.0280]** in the strict regime. The intervals still cross zero, so the project does **not** claim a universal 95%-robust transfer gain.
+
+After environmental representation is improved, the explicit product interaction contributes essentially no further RMSE reduction. Its improvement frequency relative to selected additive `G+E` is approximately **0.5** in both regimes.
+
+B6-R also quantifies environmental novelty from the measured environmental vectors. For selected additive `G+E`, nearest-training-environment novelty has a weak positive association with environment-level RMSE: Spearman **0.190** (`p = 0.0267`) in primary CV-E and **0.187** (`p = 0.0296`) in strict CV-GE. The high-novelty quartile is approximately **0.38 RMSE units harder** than the low-novelty quartile. This supports environmental support distance as a candidate reliability signal, but not yet as a hard abstention threshold.
+
+![Case Study B6-R environmental novelty versus transfer error](reports/figures/case_study_b6r_novelty_vs_error.png)
+
+Detailed evidence:
+
+- [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 data and first transfer benchmark
+- [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md) — B6-R nested robustness and novelty audit
 
 ---
 
@@ -269,9 +299,9 @@ No proprietary biotechnology data are used.
 
 The project avoids naive random splitting when biological structure can leak between train and test partitions. Genotype-aware, environment-aware, sparse multi-environment, and double-cold-start manifests are defined explicitly for the deployment problem being tested.
 
-Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment so added information is not rewarded merely because it receives a larger tuning search.
+Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R then performs a deliberately small nested representation search **inside each outer training partition**, using only the remaining frozen environment folds, so environmental representation does not receive information from its held-out deployment environments.
 
-Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster bootstrap uncertainty, and grounded-answer verification.
+Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster bootstrap uncertainty, environmental-support diagnostics, and grounded-answer verification.
 
 # Reproducibility
 
@@ -286,7 +316,8 @@ GitHub Actions separates lightweight software checks from real-data executions. 
 - `case-study-b-ml.yml` — frozen-baseline high-dimensional ML challengers;
 - `case-study-b-uncertainty.yml` — wheat uncertainty and deployment boundaries;
 - `case-study-b5-data-lock.yml` — continuous-environment Genomes-to-Fields data lock;
-- `case-study-b6-environment-transfer.yml` — unseen-environment and double-cold-start transfer benchmark.
+- `case-study-b6-environment-transfer.yml` — first unseen-environment and double-cold-start transfer benchmark;
+- `case-study-b6r-transfer-robustness.yml` — nested environmental-representation robustness and novelty audit.
 
 Install the core package with:
 
@@ -307,6 +338,7 @@ python -m plant_intelligence.data.wheat_gxe --output-root .
 python -m plant_intelligence.models.wheat_gxe_baseline --output-root .
 python -m plant_intelligence.data.maize_environment_transfer --output-root .
 python -m plant_intelligence.models.maize_environment_transfer --output-root .
+python -m plant_intelligence.models.maize_environment_transfer_robustness --output-root .
 ```
 
 # Repository structure
@@ -350,13 +382,14 @@ Performance claims apply only to the evaluated public datasets, target definitio
 - validated performance on proprietary commercial processes;
 - automatic transfer of fitted models across species, laboratories, breeding programs, or production conditions;
 - universal future-climate prediction;
-- that continuous environmental covariates have already produced a robust unseen-environment gain in B6;
-- that the B6 product kernel is a causal G×E decomposition;
+- that the B6-R continuous-environment gain is universal across environments: its 95% environment-cluster intervals still cross zero;
+- that environmental novelty is already strong enough to define a prospective abstention threshold;
+- that the B6/B6-R product kernel is a causal G×E decomposition or a robust RMSE improvement over additive environmental transfer;
 - that genomic information is generally unimportant because it did not improve one Case Study A forecast;
 - that a language model may override or extrapolate beyond validated quantitative evidence;
 - that the deterministic grounding benchmark measures a real external LLM's scientific accuracy.
 
-See [`docs/limitations.md`](docs/limitations.md) and [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) for the detailed boundaries.
+See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), and [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md) for the detailed boundaries.
 
 # Documentation
 
@@ -365,6 +398,7 @@ See [`docs/limitations.md`](docs/limitations.md) and [`docs/case_study_b_environ
 - [`docs/case_study_b_data_lock.md`](docs/case_study_b_data_lock.md) — wheat source and validation design
 - [`docs/case_study_b_modeling.md`](docs/case_study_b_modeling.md) — classical wheat G×E benchmark
 - [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 continuous-environment data lock and transfer evidence
+- [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md) — B6-R environmental-representation robustness and novelty evidence
 - [`docs/limitations.md`](docs/limitations.md) — interpretation boundaries
 - [`docs/transferability.md`](docs/transferability.md) — transfer to biotechnology applications
 - [`docs/Plant_Intelligence_Lab_Technical_Architecture.pdf`](docs/Plant_Intelligence_Lab_Technical_Architecture.pdf) — technical architecture document
