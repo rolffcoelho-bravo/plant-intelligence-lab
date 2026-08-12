@@ -1,0 +1,75 @@
+name: Case Study B — Classical GxE Modeling
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/plant_intelligence/models/wheat_gxe_baseline.py'
+      - 'src/plant_intelligence/data/wheat_gxe.py'
+      - 'tests/test_case_study_b_models.py'
+      - 'docs/case_study_b_modeling.md'
+      - '.github/workflows/case-study-b-modeling.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  classical-gxe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Case Study B environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[case-study-b]'
+          python -m pip install pytest
+
+      - name: Validate classical GxE implementation
+        run: |
+          pytest -q tests/test_case_study_b.py tests/test_case_study_b_models.py
+
+      - name: Execute locked classical GxE ablation
+        run: |
+          python -u -m plant_intelligence.models.wheat_gxe_baseline --output-root .
+
+      - name: Verify Case Study B modeling evidence
+        run: |
+          test -s reports/results/case_study_b_model_summary.csv
+          test -s reports/results/case_study_b_model_scenario_metrics.csv
+          test -s reports/results/case_study_b_model_environment_metrics.csv
+          test -s reports/results/case_study_b_model_predictions.csv
+          test -s reports/results/case_study_b_gxe_bootstrap.csv
+          test -s reports/results/case_study_b_genomic_kernel_audit.csv
+          test -s reports/figures/case_study_b_gxe_ablation.png
+          cat reports/results/case_study_b_model_summary.csv
+          cat reports/results/case_study_b_gxe_bootstrap.csv
+
+      - name: Publish compact Case Study B modeling evidence
+        run: |
+          git config user.name 'plant-intelligence-lab-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add \
+            reports/results/case_study_b_model_summary.csv \
+            reports/results/case_study_b_model_scenario_metrics.csv \
+            reports/results/case_study_b_model_environment_metrics.csv \
+            reports/results/case_study_b_model_predictions.csv \
+            reports/results/case_study_b_gxe_bootstrap.csv \
+            reports/results/case_study_b_genomic_kernel_audit.csv \
+            reports/figures/case_study_b_gxe_ablation.png
+          if git diff --cached --quiet; then
+            echo 'No new Case Study B modeling outputs to publish.'
+          else
+            git commit -m 'Publish Case Study B classical GxE evidence [skip ci]'
+            git push
+          fi
