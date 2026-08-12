@@ -8,7 +8,6 @@ on:
       - 'src/plant_intelligence/models/wheat_gxe_baseline.py'
       - 'src/plant_intelligence/data/wheat_gxe.py'
       - 'tests/test_case_study_b_models.py'
-      - 'docs/case_study_b_modeling.md'
       - '.github/workflows/case-study-b-modeling.yml'
 
 permissions:
