@@ -1,0 +1,2 @@
+source_package,source_institution,package_license,n_lines,n_markers,n_environments,n_phenotype_cells,phenotype_missing_cells,genotype_missing_cells,p_over_n,primary_validation,stress_validation,cold_environment_limitation
+BGLR 1.1.4,"International Maize and Wheat Improvement Center (CIMMYT), Mexico",GPL-3,599,1279,4,2396,0,0,2.1352253756260433,CV-G + CV2 sparse-cell,CV-E + CV-GE,"Four categorical mega-environments lack transferable continuous weather/soil descriptors; CV-E/CV-GE are stress tests, not headline evidence."

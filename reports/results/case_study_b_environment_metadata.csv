@@ -1,0 +1,5 @@
+environment,description,environment_type,continuous_covariates_available
+ME1,CIMMYT wheat mega-environment 1,target_set_of_environments,False
+ME2,CIMMYT wheat mega-environment 2,target_set_of_environments,False
+ME3,CIMMYT wheat mega-environment 3,target_set_of_environments,False
+ME4,CIMMYT wheat mega-environment 4,target_set_of_environments,False
