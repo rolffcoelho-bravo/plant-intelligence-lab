@@ -340,6 +340,16 @@ See [`docs/limitations.md`](docs/limitations.md) for the full limitation framewo
 9. **Retrospective evidence must not be presented as prospective validation.**
 10. **Results should be reproducible.**
 
+## Citation
+
+Pereira, Rodolfo. (2026). *Plant Intelligence Lab: Genomic Prediction, Phenotype Forecasting & AI-Assisted Biological Decision Systems*. ShockBridge Pulse Research Lab. Python research software.
+
+See [`CITATION.cff`](https://github.com/rolffcoelho-bravo/plant-intelligence-lab/blob/main/CITATION.cff) for machine-readable citation metadata.
+
+## Disclaimer
+
+This project is for research, education, reproducible benchmarking, and professional portfolio demonstration. It does not provide biological, agronomic, breeding, laboratory, regulatory, production, or commercial recommendations; it does not establish prospective laboratory performance; and it is not a substitute for domain-specific experimental validation, biosafety review, or institution-specific decision processes.
+
 ---
 
 **Plant Intelligence Lab**  
