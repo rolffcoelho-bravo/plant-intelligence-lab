@@ -44,17 +44,30 @@ jobs:
       - name: 08 — Benchmark active experiment selection
         run: python -u -m plant_intelligence.optimization.active_learning
 
+      - name: 09 — Build integrated biological decision engine and report
+        run: python -u -m plant_intelligence.optimization.decision_engine
+
+      - name: Verify integrated decision outputs
+        run: |
+          test -s reports/results/case_study_a_decision_engine_summary.csv
+          test -s reports/results/case_study_a_decision_recommendations.csv
+          test -s reports/figures/case_study_a_decision_engine.png
+          test -s reports/Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf
+
       - name: Publish downstream results
         run: |
           git config user.name 'plant-intelligence-lab-bot'
           git config user.email 'actions@users.noreply.github.com'
           git add reports/results/case_study_a_uncertainty_*.csv \
                   reports/results/case_study_a_active_selection_*.csv \
+                  reports/results/case_study_a_decision_*.csv \
                   reports/figures/case_study_a_uncertainty_intervals.png \
-                  reports/figures/case_study_a_active_selection.png
+                  reports/figures/case_study_a_active_selection.png \
+                  reports/figures/case_study_a_decision_engine.png \
+                  reports/Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf
           if git diff --cached --quiet; then
             echo 'No new downstream outputs to publish.'
           else
-            git commit -m 'Publish Case Study A downstream decision outputs [skip ci]'
+            git commit -m 'Publish Case Study A integrated decision outputs [skip ci]'
             git push
           fi
