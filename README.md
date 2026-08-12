@@ -6,9 +6,9 @@
 
 Plant Intelligence Lab is an open computational biotechnology project built around a practical question: **what information is actually useful for forecasting biological outcomes and making better experimental decisions?**
 
-The repository combines quantitative genetics, high-dimensional machine learning, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, and a grounded scientific interface using real public plant data.
+The repository combines quantitative genetics, high-dimensional machine learning, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, multi-environment genomic prediction, and a grounded scientific interface using real public plant data.
 
-The current validated case study uses *Arabidopsis thaliana* shoot-regeneration data linked to 1001 Genomes resources. The study begins with more than 10.7 million raw SNP markers and 170 natural accessions, then evaluates genomic, phenotypic, and protocol information under genotype-aware validation.
+**Case Study A** is the validated longitudinal decision-intelligence demonstration using *Arabidopsis thaliana*. **Case Study B** now has a verified wheat genotype × environment data lock and validation design; predictive model results for Case Study B are not claimed until that modelling stage is executed.
 
 ## Validated Case Study A
 
@@ -199,9 +199,46 @@ At an experimental budget of 10 observations, predicted-response ranking retrosp
 
 **This is a retrospective acquisition benchmark, not a prospective laboratory trial.** It demonstrates enrichment within the evaluated public dataset; it does not establish that a real laboratory would reduce experiments by the same percentage.
 
+## Case Study B — Wheat Genotype × Environment
+
+Case Study B introduces the missing multi-environment dimension of the original architecture:
+
+$$
+\boxed{G+E+G\times E\rightarrow Y_{yield}}.
+$$
+
+The executable data lock uses the canonical BGLR wheat dataset distributed through CRAN and sourced from CIMMYT's Global Wheat Program.
+
+| Component | Verified data-lock result |
+|---|---:|
+| Wheat lines | **599** |
+| DArT markers | **1,279** |
+| Mega-environments | **4** |
+| Line × environment phenotype cells | **2,396** |
+| Phenotype missing cells | **0** |
+| Genotype missing cells | **0** |
+| Marker-to-line ratio $p/n$ | **2.135** |
+
+The four phenotype environments are represented as `ME1`–`ME4`. Cross-environment phenotype association is heterogeneous: `ME2` and `ME3` correlate at about **0.661**, while `ME1` has near-zero or negative correlations with the other three environments. This makes explicit environment-aware modelling scientifically meaningful without presuming that every environment shares the same response structure.
+
+The validation design is locked before model fitting:
+
+- **CV-G / CV1 — primary:** whole genotypes are held out across all environments.
+- **CV2 — primary:** each line has one environment masked while remaining observed in the others.
+- **CV-E — diagnostic stress test:** one complete mega-environment is withheld.
+- **CV-GE — diagnostic stress test:** a genotype fold and an environment are both unseen during training.
+
+`CV-E` and `CV-GE` are deliberately not headline validation because the four categorical mega-environments do not include a transferable continuous weather/soil covariate vector. The project will expose failure under this cold-start condition rather than manufacture unseen-climate claims.
+
+**No Case Study B prediction-performance claim is made yet.** The current evidence is the verified data lock, environment structure, and leakage-aware validation design.
+
+- [`docs/case_study_b_data_lock.md`](docs/case_study_b_data_lock.md) — source lock and scientific design
+- [`reports/results/case_study_b_data_lock_summary.csv`](reports/results/case_study_b_data_lock_summary.csv) — executed data audit
+- [`reports/results/case_study_b_environment_correlations.csv`](reports/results/case_study_b_environment_correlations.csv) — empirical environment correlations
+
 ## Decision engine
 
-The current quantitative engine connects:
+The current Case Study A quantitative engine connects:
 
 $$
 \boxed{
@@ -283,30 +320,27 @@ python -m plant_intelligence.ai.evaluation --output-dir reports/results
 
 ## Public data foundation
 
-Case Study A uses public biological resources including:
-
-- **1001 Genomes Project** for *Arabidopsis thaliana* genomic variation;
-- **AraPheno** phenotype resources;
-- public shoot-regeneration measurements for natural accessions under two protocol variants.
+Case Study A uses public *Arabidopsis thaliana* resources from **1001 Genomes** and **AraPheno**. Case Study B uses the canonical multi-environment wheat dataset distributed with **BGLR** and sourced from **CIMMYT**.
 
 No proprietary biotechnology data are used in the repository.
 
 ## Validation design
 
-The project avoids naive random splitting when genomic relatedness can leak biological structure between training and test observations. Case Study A uses genotype-aware folds consistently across the quantitative comparison.
+The project avoids naive random splitting when biological structure can leak between training and test observations. Case Study A uses genotype-aware folds consistently across the quantitative comparison. Case Study B pre-registers whole-genotype and sparse multi-environment validation as primary evidence, with full environment cold starts separated as stress tests.
 
 Feature transformations that learn from data are fitted inside training folds where applicable. Downstream uncertainty and decision analyses operate on validated out-of-fold forecasts.
 
-Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval coverage, interval width, retained-versus-abstained error, retrospective selection efficiency, and grounded-answer verification.
+Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval coverage, interval width, retained-versus-abstained error, retrospective selection efficiency, environment-specific performance, and grounded-answer verification.
 
 ## Reproducibility
 
-The repository contains four complementary GitHub Actions workflows:
+The repository contains five complementary GitHub Actions workflows:
 
-- **Unit Tests** — lightweight validation for core code, uncertainty, optimization, and grounded-interface logic.
+- **Unit Tests** — lightweight validation for core code, uncertainty, optimization, grounded-interface logic, and validation manifests.
 - **Grounded AI Evaluation** — runs the scientific grounding benchmark and publishes compact evaluation evidence.
-- **Full real-data execution** — rebuilds the Case Study A empirical pipeline from public phenotype and genomic inputs through genomic modelling and forecasting.
-- **Downstream analysis** — reuses validated compact outputs for uncertainty, experiment selection, and decision-engine reporting without unnecessarily recomputing the full genomic stack.
+- **Case Study A — Full real-data execution** — rebuilds the Arabidopsis empirical pipeline from public phenotype and genomic inputs through forecasting.
+- **Case Study A — Downstream analysis** — reuses validated compact outputs for uncertainty, experiment selection, and decision-engine reporting.
+- **Case Study B — Wheat G×E Data Lock** — acquires the version-locked public wheat source, validates dimensions, and publishes the pre-model validation manifests.
 
 Install the core package with:
 
@@ -314,7 +348,7 @@ Install the core package with:
 python -m pip install -e .
 ```
 
-Run the current downstream modules with:
+Run the current modules with:
 
 ```bash
 python -m plant_intelligence.uncertainty.conformal
@@ -322,6 +356,8 @@ python -m plant_intelligence.optimization.active_learning
 python -m plant_intelligence.optimization.decision_engine
 python -m plant_intelligence.ai.grounded_interface "What should I know about this case study?"
 python -m plant_intelligence.ai.evaluation --output-dir reports/results
+python -m pip install -e '.[case-study-b]'
+python -m plant_intelligence.data.wheat_gxe --output-root .
 ```
 
 ## Repository structure
@@ -330,6 +366,7 @@ python -m plant_intelligence.ai.evaluation --output-dir reports/results
 plant-intelligence-lab/
 ├── .github/workflows/
 │   ├── case-study-a.yml
+│   ├── case-study-b-data-lock.yml
 │   ├── ci.yml
 │   ├── downstream-analysis.yml
 │   └── grounded-ai-evaluation.yml
@@ -338,6 +375,7 @@ plant-intelligence-lab/
 ├── docs/
 │   ├── Plant_Intelligence_Lab_Technical_Architecture.pdf
 │   ├── biological_context.md
+│   ├── case_study_b_data_lock.md
 │   ├── limitations.md
 │   ├── methodology.md
 │   └── transferability.md
@@ -368,21 +406,22 @@ This structure reflects the repository as implemented. Public documentation does
 
 ## Industrial relevance
 
-The methods demonstrated here are transferable to biotechnology problems involving early biological monitoring, propagation and regeneration analytics, high-dimensional omics, treatment-response modelling, experimental prioritization, uncertainty-aware decision support, and evidence-grounded scientific interfaces.
+The methods demonstrated here are transferable to biotechnology problems involving early biological monitoring, propagation and regeneration analytics, high-dimensional omics, treatment-response modelling, genotype × environment prediction, experimental prioritization, uncertainty-aware decision support, and evidence-grounded scientific interfaces.
 
-The relevant industrial question is not whether one model can be copied unchanged into another laboratory. It is whether the quantitative architecture can be adapted to the available biological process, measurements, decision horizon, and operational objective.
+The relevant industrial question is not whether one model can be copied unchanged into another laboratory or breeding program. It is whether the quantitative architecture can be adapted to the available biological process, measurements, decision horizon, environment structure, and operational objective.
 
 ## Limits on interpretation
 
-Performance claims in this repository apply to the evaluated public Case Study A data and validation design.
+Performance claims currently apply to the evaluated public **Case Study A** data and validation design. Case Study B currently has a validated data lock and split design, **not validated prediction-performance results**.
 
 The project does **not** claim:
 
 - causal biological mechanisms from predictive associations;
 - prospective laboratory savings from the retrospective experiment-selection benchmark;
 - validated performance on proprietary commercial processes;
-- automatic transfer of fitted models across species, laboratories, or production conditions;
-- that genomic information is generally unimportant because it did not improve this particular early forecast;
+- automatic transfer of fitted models across species, laboratories, breeding programs, or production conditions;
+- universal future-climate prediction from four categorical wheat mega-environments;
+- that genomic information is generally unimportant because it did not improve one Case Study A forecast;
 - that a language model may override, extrapolate beyond, or replace the validated quantitative evidence;
 - that the deterministic grounding benchmark measures a real external LLM's scientific accuracy.
 
@@ -392,6 +431,7 @@ See [`docs/limitations.md`](docs/limitations.md) for the full limitation framewo
 
 - [`docs/methodology.md`](docs/methodology.md) — quantitative methodology and grounded-interface design
 - [`docs/biological_context.md`](docs/biological_context.md) — biological context
+- [`docs/case_study_b_data_lock.md`](docs/case_study_b_data_lock.md) — wheat G×E source and validation design
 - [`docs/limitations.md`](docs/limitations.md) — interpretation boundaries
 - [`docs/transferability.md`](docs/transferability.md) — transfer from public demonstrations to biotechnology applications
 - [`docs/Plant_Intelligence_Lab_Technical_Architecture.pdf`](docs/Plant_Intelligence_Lab_Technical_Architecture.pdf) — technical architecture document
