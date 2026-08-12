@@ -13,8 +13,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
 import tarfile
+import zipfile
 from pathlib import Path
+from urllib.parse import quote
 
 import numpy as np
 import pandas as pd
@@ -23,14 +26,11 @@ from sklearn.model_selection import KFold
 
 DRYAD_DOI = "10.5061/dryad.vx0k6dk3p"
 DRYAD_DATASET_URL = "https://datadryad.org/dataset/doi:10.5061/dryad.vx0k6dk3p"
-# Dryad exposes version-specific file streams. The first ID is the current file
-# linked from the published dataset page; the second is retained as a provenance-
-# compatible fallback for the earlier published-version file entry.
-DRYAD_FILE_URLS = (
+DRYAD_FILE_NAME = "wheat_data.tar.gz"
+DRYAD_FILE_STREAMS = (
     "https://datadryad.org/downloads/file_stream/4077944",
     "https://datadryad.org/downloads/file_stream/4074242",
 )
-DRYAD_FILE_NAME = "wheat_data.tar.gz"
 EXPECTED_LINES = 3731
 EXPECTED_MARKERS = 9045
 EXPECTED_ENVIRONMENTS = ("B2I", "B5I", "MEL", "LHT")
@@ -38,12 +38,7 @@ SEED = 20260812
 
 
 def environment_metadata() -> pd.DataFrame:
-    """Return source-documented environment descriptors without inventing fields.
-
-    B2I, B5I, MEL and LHT are managed environmental conditions from CIMMYT's
-    Ciudad Obregon trials. Fields not specified consistently by the public source
-    are left missing rather than inferred.
-    """
+    """Return source-documented environment descriptors without inventing fields."""
 
     return pd.DataFrame(
         [
@@ -83,67 +78,115 @@ def environment_metadata() -> pd.DataFrame:
     )
 
 
-def download_source_archive(destination: Path, timeout: int = 180) -> dict[str, str]:
-    """Download the locked Dryad archive and return provenance metadata.
+def _download_candidates() -> tuple[str, ...]:
+    encoded = quote(f"doi:{DRYAD_DOI}", safe="")
+    double_encoded = quote(encoded, safe="")
+    return (
+        f"https://datadryad.org/api/v2/datasets/{encoded}/download",
+        f"https://datadryad.org/api/v2/datasets/{double_encoded}/download",
+        *DRYAD_FILE_STREAMS,
+    )
 
-    Dryad's browser-facing file stream may reject generic urllib clients. Use a
-    session with explicit browser-compatible headers and verify that the received
-    payload is actually a gzip archive before accepting it as scientific input.
+
+def _safe_extract_zip(archive: Path, destination: Path) -> None:
+    destination.mkdir(parents=True, exist_ok=True)
+    root = destination.resolve()
+    with zipfile.ZipFile(archive) as zf:
+        for member in zf.infolist():
+            target = (destination / member.filename).resolve()
+            if root not in target.parents and target != root:
+                raise ValueError(f"Unsafe zip member: {member.filename}")
+        zf.extractall(destination)
+
+
+def _materialize_download_payload(
+    response: requests.Response,
+    destination: Path,
+    source_url: str,
+) -> tuple[Path, str]:
+    """Normalize a Dryad gzip or full-dataset ZIP response to wheat_data.tar.gz."""
+
+    first = next(response.iter_content(chunk_size=1024 * 1024), b"")
+    if not first:
+        raise ValueError("empty payload")
+
+    if first.startswith(b"\x1f\x8b"):
+        digest = hashlib.sha256()
+        with destination.open("wb") as handle:
+            handle.write(first)
+            digest.update(first)
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    handle.write(chunk)
+                    digest.update(chunk)
+        return destination, digest.hexdigest()
+
+    if first.startswith(b"PK\x03\x04"):
+        package = destination.with_suffix(".dryad.zip")
+        with package.open("wb") as handle:
+            handle.write(first)
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    handle.write(chunk)
+        unpacked = destination.parent / "dryad_package"
+        if unpacked.exists():
+            shutil.rmtree(unpacked)
+        _safe_extract_zip(package, unpacked)
+        matches = list(unpacked.rglob(DRYAD_FILE_NAME))
+        if len(matches) != 1:
+            raise ValueError(
+                f"Dryad ZIP from {source_url} contained {len(matches)} {DRYAD_FILE_NAME!r} files"
+            )
+        shutil.copyfile(matches[0], destination)
+        digest = hashlib.sha256(destination.read_bytes()).hexdigest()
+        return destination, digest
+
+    content_type = response.headers.get("Content-Type", "unknown")
+    raise ValueError(f"unsupported payload {content_type}; prefix={first[:32]!r}")
+
+
+def download_source_archive(destination: Path, timeout: int = 240) -> dict[str, str]:
+    """Download the locked Dryad archive through the public dataset API.
+
+    The public landing page's individual file route can return an HTML interstitial
+    to automated clients. The function therefore tries the dataset API archive first,
+    accepts either a full-dataset ZIP or the target gzip, validates the payload magic,
+    and records the exact successful URL plus SHA-256 checksum.
     """
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/131.0 Safari/537.36 "
-            "plant-intelligence-lab/0.1"
-        ),
-        "Accept": "application/gzip,application/octet-stream,*/*;q=0.8",
+        "User-Agent": "plant-intelligence-lab/0.1 reproducible-research",
+        "Accept": "application/zip,application/gzip,application/octet-stream,*/*;q=0.5",
         "Referer": DRYAD_DATASET_URL,
     }
     failures: list[str] = []
 
     with requests.Session() as session:
-        for url in DRYAD_FILE_URLS:
-            digest = hashlib.sha256()
+        for url in _download_candidates():
             try:
-                response = session.get(
+                with session.get(
                     url,
                     headers=headers,
                     timeout=(30, timeout),
                     stream=True,
                     allow_redirects=True,
-                )
-                if response.status_code != 200:
-                    failures.append(f"{url} -> HTTP {response.status_code}")
-                    response.close()
-                    continue
-
-                first_chunk = next(response.iter_content(chunk_size=1024 * 1024), b"")
-                if not first_chunk.startswith(b"\x1f\x8b"):
-                    content_type = response.headers.get("Content-Type", "unknown")
-                    failures.append(
-                        f"{url} -> non-gzip payload ({content_type}, {first_chunk[:24]!r})"
-                    )
-                    response.close()
-                    continue
-
-                with destination.open("wb") as handle:
-                    handle.write(first_chunk)
-                    digest.update(first_chunk)
-                    for chunk in response.iter_content(chunk_size=1024 * 1024):
-                        if chunk:
-                            handle.write(chunk)
-                            digest.update(chunk)
-                response.close()
-
-                return {
-                    "dataset_doi": DRYAD_DOI,
-                    "dataset_url": DRYAD_DATASET_URL,
-                    "download_url": url,
-                    "archive": destination.name,
-                    "sha256": digest.hexdigest(),
-                }
+                ) as response:
+                    if response.status_code != 200:
+                        failures.append(f"{url} -> HTTP {response.status_code}")
+                        continue
+                    try:
+                        archive, digest = _materialize_download_payload(response, destination, url)
+                    except ValueError as exc:
+                        failures.append(f"{url} -> {exc}")
+                        continue
+                    return {
+                        "dataset_doi": DRYAD_DOI,
+                        "dataset_url": DRYAD_DATASET_URL,
+                        "download_url": url,
+                        "archive": archive.name,
+                        "sha256": digest,
+                    }
             except requests.RequestException as exc:
                 failures.append(f"{url} -> {type(exc).__name__}: {exc}")
 
@@ -233,11 +276,7 @@ def build_cv_g(genotype_ids: list[str], n_splits: int = 5, seed: int = SEED) -> 
 
 
 def build_cv2_sparse(genotype_ids: list[str], environments: tuple[str, ...]) -> pd.DataFrame:
-    """CV2-style sparse MET design: one held-out environment per genotype.
-
-    Every genotype remains observed in the other environments, and every
-    environment receives approximately the same number of masked cells.
-    """
+    """CV2-style sparse MET design: one held-out environment per genotype."""
 
     ids = sorted(map(str, genotype_ids))
     envs = tuple(environments)
@@ -260,13 +299,7 @@ def build_cv_ge_scenarios(
     cv_g: pd.DataFrame,
     environments: tuple[str, ...],
 ) -> pd.DataFrame:
-    """Strict genotype-plus-environment cold-start scenarios.
-
-    For each scenario, training excludes both the held-out genotype fold and the
-    held-out environment. Test cells are their Cartesian intersection. These
-    scenarios are intentionally difficult and are admitted only as stress tests
-    unless transferable environmental descriptors prove sufficient.
-    """
+    """Strict genotype-plus-environment cold-start scenarios."""
 
     n_total_genotypes = cv_g["genotype_id"].nunique()
     n_g_folds = cv_g["fold"].nunique()
