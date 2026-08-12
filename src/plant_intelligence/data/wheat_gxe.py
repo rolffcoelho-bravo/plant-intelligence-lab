@@ -15,15 +15,21 @@ import hashlib
 import json
 import tarfile
 from pathlib import Path
-from urllib.request import Request, urlopen
 
 import numpy as np
 import pandas as pd
+import requests
 from sklearn.model_selection import KFold
 
 DRYAD_DOI = "10.5061/dryad.vx0k6dk3p"
 DRYAD_DATASET_URL = "https://datadryad.org/dataset/doi:10.5061/dryad.vx0k6dk3p"
-DRYAD_FILE_URL = "https://datadryad.org/downloads/file_stream/4074242"
+# Dryad exposes version-specific file streams. The first ID is the current file
+# linked from the published dataset page; the second is retained as a provenance-
+# compatible fallback for the earlier published-version file entry.
+DRYAD_FILE_URLS = (
+    "https://datadryad.org/downloads/file_stream/4077944",
+    "https://datadryad.org/downloads/file_stream/4074242",
+)
 DRYAD_FILE_NAME = "wheat_data.tar.gz"
 EXPECTED_LINES = 3731
 EXPECTED_MARKERS = 9045
@@ -77,37 +83,71 @@ def environment_metadata() -> pd.DataFrame:
     )
 
 
-def _request(url: str) -> Request:
-    return Request(
-        url,
-        headers={
-            "User-Agent": "plant-intelligence-lab/0.1 (+public research project)",
-            "Accept": "application/octet-stream,*/*;q=0.8",
-        },
-    )
-
-
 def download_source_archive(destination: Path, timeout: int = 180) -> dict[str, str]:
-    """Download the locked Dryad archive and return provenance metadata."""
+    """Download the locked Dryad archive and return provenance metadata.
+
+    Dryad's browser-facing file stream may reject generic urllib clients. Use a
+    session with explicit browser-compatible headers and verify that the received
+    payload is actually a gzip archive before accepting it as scientific input.
+    """
 
     destination.parent.mkdir(parents=True, exist_ok=True)
-    digest = hashlib.sha256()
-    with urlopen(_request(DRYAD_FILE_URL), timeout=timeout) as response:  # noqa: S310
-        with destination.open("wb") as handle:
-            while True:
-                chunk = response.read(1024 * 1024)
-                if not chunk:
-                    break
-                handle.write(chunk)
-                digest.update(chunk)
-
-    return {
-        "dataset_doi": DRYAD_DOI,
-        "dataset_url": DRYAD_DATASET_URL,
-        "download_url": DRYAD_FILE_URL,
-        "archive": destination.name,
-        "sha256": digest.hexdigest(),
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/131.0 Safari/537.36 "
+            "plant-intelligence-lab/0.1"
+        ),
+        "Accept": "application/gzip,application/octet-stream,*/*;q=0.8",
+        "Referer": DRYAD_DATASET_URL,
     }
+    failures: list[str] = []
+
+    with requests.Session() as session:
+        for url in DRYAD_FILE_URLS:
+            digest = hashlib.sha256()
+            try:
+                response = session.get(
+                    url,
+                    headers=headers,
+                    timeout=(30, timeout),
+                    stream=True,
+                    allow_redirects=True,
+                )
+                if response.status_code != 200:
+                    failures.append(f"{url} -> HTTP {response.status_code}")
+                    response.close()
+                    continue
+
+                first_chunk = next(response.iter_content(chunk_size=1024 * 1024), b"")
+                if not first_chunk.startswith(b"\x1f\x8b"):
+                    content_type = response.headers.get("Content-Type", "unknown")
+                    failures.append(
+                        f"{url} -> non-gzip payload ({content_type}, {first_chunk[:24]!r})"
+                    )
+                    response.close()
+                    continue
+
+                with destination.open("wb") as handle:
+                    handle.write(first_chunk)
+                    digest.update(first_chunk)
+                    for chunk in response.iter_content(chunk_size=1024 * 1024):
+                        if chunk:
+                            handle.write(chunk)
+                            digest.update(chunk)
+                response.close()
+
+                return {
+                    "dataset_doi": DRYAD_DOI,
+                    "dataset_url": DRYAD_DATASET_URL,
+                    "download_url": url,
+                    "archive": destination.name,
+                    "sha256": digest.hexdigest(),
+                }
+            except requests.RequestException as exc:
+                failures.append(f"{url} -> {type(exc).__name__}: {exc}")
+
+    raise RuntimeError("Dryad archive acquisition failed: " + " | ".join(failures))
 
 
 def _safe_extract(archive: Path, destination: Path) -> None:
