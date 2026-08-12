@@ -1,0 +1,3 @@
+regime,frozen_rmse_threshold,source_formulation,source_result_file,interpretation
+CV-G,0.8901094388292136,G+E+normalized-GxE-mixture,reports/results/case_study_b_gxe_mixture_summary.csv,Strongest leakage-safe classical RMSE observed for unseen-genotype prediction after B2-R robustness resolution
+CV2,0.8469263874382605,G+E+GxE pre-registered,reports/results/case_study_b_model_summary.csv,Strongest leakage-safe classical RMSE observed for sparse multi-environment prediction; normalized robustness confirms the GxE conclusion but does not lower this threshold
