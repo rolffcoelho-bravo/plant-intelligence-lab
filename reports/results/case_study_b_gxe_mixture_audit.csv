@@ -1,0 +1,2 @@
+n_primary_scenarios,eta_domain_complete,eta_grid_min,eta_grid_max,selected_eta_min,selected_eta_median,selected_eta_max,pure_gxe_endpoint_scenarios,near_pure_gxe_scenarios,selected_lambda_min,selected_lambda_median,selected_lambda_max,lambda_upper_boundary_scenarios,lambda_lower_boundary_scenarios,search_resolved
+6,True,0.0,1.0,0.9,0.9875,1.0,3,5,0.75,1.0,1.0,0,0,True

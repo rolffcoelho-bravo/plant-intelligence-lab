@@ -1,0 +1,5 @@
+regime,reference_model,candidate_model,metric,delta_candidate_minus_reference,bootstrap_ci_low,bootstrap_ci_high,bootstrap_probability_improvement,n_genotype_clusters,n_bootstrap
+CV-G,G+E normalized-reference,G+E+normalized-GxE-mixture,rmse,-0.07037800743007028,-0.08799232060762288,-0.05423642390058568,1.0,599,2000
+CV-G,G+E normalized-reference,G+E+normalized-GxE-mixture,mae,-0.0626395117285039,-0.07743431400290894,-0.04867501507648283,1.0,599,2000
+CV2,G+E normalized-reference,G+E+normalized-GxE-mixture,rmse,-0.05887674414126487,-0.0946597123889552,-0.024189192479476453,1.0,599,2000
+CV2,G+E normalized-reference,G+E+normalized-GxE-mixture,mae,-0.04921867900195209,-0.0793591209001475,-0.019386574359227127,1.0,599,2000
