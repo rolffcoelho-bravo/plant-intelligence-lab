@@ -1,196 +1,95 @@
 """Case Study B acquisition and validation design for multi-environment wheat.
 
-The locked source is the Dryad dataset accompanying Lopez-Cruz & de los Campos
-(2025), DOI 10.5061/dryad.vx0k6dk3p. It contains 3,731 CIMMYT wheat lines,
-9,045 filtered SNP markers, and grain-yield records in four managed environments.
+The executable data lock uses the canonical ``wheat`` dataset distributed with
+BGLR on CRAN. It contains 599 historical CIMMYT wheat lines, 1,279 edited DArT
+markers, and standardized grain-yield phenotypes in four mega-environments.
 
-Large source files are downloaded at execution time and remain outside Git. The
-module publishes only compact audits and split manifests under reports/results.
+The source package is downloaded at execution time and remains outside Git. Only
+compact audit and validation manifests are published under ``reports/results``.
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
-import json
-import shutil
 import tarfile
-import zipfile
 from pathlib import Path
-from urllib.parse import quote
 
 import numpy as np
 import pandas as pd
 import requests
 from sklearn.model_selection import KFold
 
-DRYAD_DOI = "10.5061/dryad.vx0k6dk3p"
-DRYAD_DATASET_URL = "https://datadryad.org/dataset/doi:10.5061/dryad.vx0k6dk3p"
-DRYAD_FILE_NAME = "wheat_data.tar.gz"
-DRYAD_FILE_STREAMS = (
-    "https://datadryad.org/downloads/file_stream/4077944",
-    "https://datadryad.org/downloads/file_stream/4074242",
-)
-EXPECTED_LINES = 3731
-EXPECTED_MARKERS = 9045
-EXPECTED_ENVIRONMENTS = ("B2I", "B5I", "MEL", "LHT")
+BGLR_VERSION = "1.1.4"
+BGLR_PACKAGE_URL = f"https://cran.r-project.org/src/contrib/BGLR_{BGLR_VERSION}.tar.gz"
+BGLR_PACKAGE_NAME = f"BGLR_{BGLR_VERSION}.tar.gz"
+BGLR_PROJECT_URL = "https://CRAN.R-project.org/package=BGLR"
+SOURCE_INSTITUTION = "International Maize and Wheat Improvement Center (CIMMYT), Mexico"
+EXPECTED_LINES = 599
+EXPECTED_MARKERS = 1279
+EXPECTED_ENVIRONMENTS = ("ME1", "ME2", "ME3", "ME4")
 SEED = 20260812
 
 
 def environment_metadata() -> pd.DataFrame:
-    """Return source-documented environment descriptors without inventing fields."""
+    """Return only source-supported descriptors for the four mega-environments.
+
+    The BGLR documentation identifies four target sets of environments / main
+    agroclimatic regions but does not publish a transferable weather/soil vector.
+    Missing physical descriptors are therefore left missing rather than inferred.
+    """
 
     return pd.DataFrame(
         [
             {
-                "environment": "B2I",
-                "description": "bed planting and two irrigations",
-                "planting_system": "bed",
-                "irrigations": 2,
-                "stress_family": "drought",
-                "heat_timing": "none_documented",
-            },
-            {
-                "environment": "B5I",
-                "description": "bed planting and five irrigations",
-                "planting_system": "bed",
-                "irrigations": 5,
-                "stress_family": "optimal",
-                "heat_timing": "none_documented",
-            },
-            {
-                "environment": "MEL",
-                "description": "melgas flat planting and five irrigations",
-                "planting_system": "flat",
-                "irrigations": 5,
-                "stress_family": "optimal",
-                "heat_timing": "none_documented",
-            },
-            {
-                "environment": "LHT",
-                "description": "late heat",
-                "planting_system": pd.NA,
-                "irrigations": pd.NA,
-                "stress_family": "heat",
-                "heat_timing": "late",
-            },
+                "environment": env,
+                "description": f"CIMMYT wheat mega-environment {idx}",
+                "environment_type": "target_set_of_environments",
+                "continuous_covariates_available": False,
+            }
+            for idx, env in enumerate(EXPECTED_ENVIRONMENTS, start=1)
         ]
     )
 
 
-def _download_candidates() -> tuple[str, ...]:
-    encoded = quote(f"doi:{DRYAD_DOI}", safe="")
-    double_encoded = quote(encoded, safe="")
-    return (
-        f"https://datadryad.org/api/v2/datasets/{encoded}/download",
-        f"https://datadryad.org/api/v2/datasets/{double_encoded}/download",
-        *DRYAD_FILE_STREAMS,
-    )
-
-
-def _safe_extract_zip(archive: Path, destination: Path) -> None:
-    destination.mkdir(parents=True, exist_ok=True)
-    root = destination.resolve()
-    with zipfile.ZipFile(archive) as zf:
-        for member in zf.infolist():
-            target = (destination / member.filename).resolve()
-            if root not in target.parents and target != root:
-                raise ValueError(f"Unsafe zip member: {member.filename}")
-        zf.extractall(destination)
-
-
-def _materialize_download_payload(
-    response: requests.Response,
-    destination: Path,
-    source_url: str,
-) -> tuple[Path, str]:
-    """Normalize a Dryad gzip or full-dataset ZIP response to wheat_data.tar.gz."""
-
-    first = next(response.iter_content(chunk_size=1024 * 1024), b"")
-    if not first:
-        raise ValueError("empty payload")
-
-    if first.startswith(b"\x1f\x8b"):
-        digest = hashlib.sha256()
-        with destination.open("wb") as handle:
-            handle.write(first)
-            digest.update(first)
-            for chunk in response.iter_content(chunk_size=1024 * 1024):
-                if chunk:
-                    handle.write(chunk)
-                    digest.update(chunk)
-        return destination, digest.hexdigest()
-
-    if first.startswith(b"PK\x03\x04"):
-        package = destination.with_suffix(".dryad.zip")
-        with package.open("wb") as handle:
-            handle.write(first)
-            for chunk in response.iter_content(chunk_size=1024 * 1024):
-                if chunk:
-                    handle.write(chunk)
-        unpacked = destination.parent / "dryad_package"
-        if unpacked.exists():
-            shutil.rmtree(unpacked)
-        _safe_extract_zip(package, unpacked)
-        matches = list(unpacked.rglob(DRYAD_FILE_NAME))
-        if len(matches) != 1:
-            raise ValueError(
-                f"Dryad ZIP from {source_url} contained {len(matches)} {DRYAD_FILE_NAME!r} files"
-            )
-        shutil.copyfile(matches[0], destination)
-        digest = hashlib.sha256(destination.read_bytes()).hexdigest()
-        return destination, digest
-
-    content_type = response.headers.get("Content-Type", "unknown")
-    raise ValueError(f"unsupported payload {content_type}; prefix={first[:32]!r}")
-
-
-def download_source_archive(destination: Path, timeout: int = 240) -> dict[str, str]:
-    """Download the locked Dryad archive through the public dataset API.
-
-    The public landing page's individual file route can return an HTML interstitial
-    to automated clients. The function therefore tries the dataset API archive first,
-    accepts either a full-dataset ZIP or the target gzip, validates the payload magic,
-    and records the exact successful URL plus SHA-256 checksum.
-    """
+def download_source_package(destination: Path, timeout: int = 180) -> dict[str, str]:
+    """Download the version-locked BGLR CRAN source package with provenance."""
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     headers = {
         "User-Agent": "plant-intelligence-lab/0.1 reproducible-research",
-        "Accept": "application/zip,application/gzip,application/octet-stream,*/*;q=0.5",
-        "Referer": DRYAD_DATASET_URL,
+        "Accept": "application/gzip,application/octet-stream,*/*;q=0.5",
     }
-    failures: list[str] = []
+    digest = hashlib.sha256()
+    with requests.get(
+        BGLR_PACKAGE_URL,
+        headers=headers,
+        timeout=(30, timeout),
+        stream=True,
+    ) as response:
+        response.raise_for_status()
+        iterator = response.iter_content(chunk_size=1024 * 1024)
+        first = next(iterator, b"")
+        if not first.startswith(b"\x1f\x8b"):
+            content_type = response.headers.get("Content-Type", "unknown")
+            raise RuntimeError(
+                f"CRAN returned a non-gzip payload ({content_type}, prefix={first[:24]!r})."
+            )
+        with destination.open("wb") as handle:
+            handle.write(first)
+            digest.update(first)
+            for chunk in iterator:
+                if chunk:
+                    handle.write(chunk)
+                    digest.update(chunk)
 
-    with requests.Session() as session:
-        for url in _download_candidates():
-            try:
-                with session.get(
-                    url,
-                    headers=headers,
-                    timeout=(30, timeout),
-                    stream=True,
-                    allow_redirects=True,
-                ) as response:
-                    if response.status_code != 200:
-                        failures.append(f"{url} -> HTTP {response.status_code}")
-                        continue
-                    try:
-                        archive, digest = _materialize_download_payload(response, destination, url)
-                    except ValueError as exc:
-                        failures.append(f"{url} -> {exc}")
-                        continue
-                    return {
-                        "dataset_doi": DRYAD_DOI,
-                        "dataset_url": DRYAD_DATASET_URL,
-                        "download_url": url,
-                        "archive": archive.name,
-                        "sha256": digest,
-                    }
-            except requests.RequestException as exc:
-                failures.append(f"{url} -> {type(exc).__name__}: {exc}")
-
-    raise RuntimeError("Dryad archive acquisition failed: " + " | ".join(failures))
+    return {
+        "source_package": f"BGLR {BGLR_VERSION}",
+        "source_url": BGLR_PACKAGE_URL,
+        "project_url": BGLR_PROJECT_URL,
+        "archive": destination.name,
+        "sha256": digest.hexdigest(),
+    }
 
 
 def _safe_extract(archive: Path, destination: Path) -> None:
@@ -211,49 +110,78 @@ def _find_unique(root: Path, name: str) -> Path:
     return matches[0]
 
 
-def load_locked_matrices(extracted_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Load phenotype and genotype matrices from the Dryad archive."""
+def _as_frame(value: object) -> pd.DataFrame:
+    frame = value.copy() if isinstance(value, pd.DataFrame) else pd.DataFrame(value)
+    return frame.apply(pd.to_numeric, errors="coerce")
 
-    pheno = pd.read_csv(_find_unique(extracted_dir, "pheno.csv"), index_col=0)
-    geno = pd.read_csv(_find_unique(extracted_dir, "geno.csv"), index_col=0)
-    pheno.index = pheno.index.astype(str)
-    geno.index = geno.index.astype(str)
-    pheno.columns = [str(col) for col in pheno.columns]
-    geno.columns = [str(col) for col in geno.columns]
+
+def load_locked_matrices(extracted_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load ``wheat.Y`` and ``wheat.X`` from BGLR's version-locked R data file."""
+
+    try:
+        import pyreadr
+    except ImportError as exc:  # pragma: no cover - exercised by workflow installation
+        raise RuntimeError(
+            "Case Study B acquisition requires optional dependency 'pyreadr'. "
+            "Install with: python -m pip install -e '.[case-study-b]'"
+        ) from exc
+
+    rdata = _find_unique(extracted_dir, "wheat.RData")
+    objects = pyreadr.read_r(str(rdata))
+
+    pheno_obj = objects.get("wheat.Y")
+    geno_obj = objects.get("wheat.X")
+    if pheno_obj is None:
+        candidates = [obj for obj in objects.values() if getattr(obj, "shape", None) == (599, 4)]
+        if len(candidates) == 1:
+            pheno_obj = candidates[0]
+    if geno_obj is None:
+        candidates = [obj for obj in objects.values() if getattr(obj, "shape", None) == (599, 1279)]
+        if len(candidates) == 1:
+            geno_obj = candidates[0]
+    if pheno_obj is None or geno_obj is None:
+        shapes = {name: getattr(obj, "shape", None) for name, obj in objects.items()}
+        raise ValueError(f"Could not resolve wheat.Y/wheat.X from BGLR archive; objects={shapes}")
+
+    pheno = _as_frame(pheno_obj)
+    geno = _as_frame(geno_obj)
+    ids = [f"W{idx:03d}" for idx in range(1, len(pheno) + 1)]
+    pheno.index = ids
+    geno.index = ids
+    pheno.columns = list(EXPECTED_ENVIRONMENTS)
+    geno.columns = [f"M{idx:04d}" for idx in range(1, geno.shape[1] + 1)]
     return pheno, geno
 
 
 def audit_matrices(pheno: pd.DataFrame, geno: pd.DataFrame) -> pd.DataFrame:
     """Validate the public data lock and return a one-row scientific audit."""
 
-    envs = tuple(pheno.columns)
     if pheno.shape != (EXPECTED_LINES, len(EXPECTED_ENVIRONMENTS)):
         raise ValueError(f"Unexpected phenotype shape: {pheno.shape}")
     if geno.shape != (EXPECTED_LINES, EXPECTED_MARKERS):
         raise ValueError(f"Unexpected genotype shape: {geno.shape}")
-    if set(envs) != set(EXPECTED_ENVIRONMENTS):
-        raise ValueError(f"Unexpected environments: {envs}")
-    if set(pheno.index) != set(geno.index):
+    if tuple(pheno.columns) != EXPECTED_ENVIRONMENTS:
+        raise ValueError(f"Unexpected environments: {tuple(pheno.columns)}")
+    if not pheno.index.equals(geno.index):
         raise ValueError("Phenotype and genotype line identifiers do not match exactly.")
 
-    pheno_missing = int(pheno.isna().sum().sum())
-    geno_missing = int(geno.isna().sum().sum())
     return pd.DataFrame(
         [
             {
-                "dataset_doi": DRYAD_DOI,
-                "data_license": "CC0",
+                "source_package": f"BGLR {BGLR_VERSION}",
+                "source_institution": SOURCE_INSTITUTION,
+                "package_license": "GPL-3",
                 "n_lines": len(pheno),
                 "n_markers": geno.shape[1],
                 "n_environments": pheno.shape[1],
                 "n_phenotype_cells": int(pheno.size),
-                "phenotype_missing_cells": pheno_missing,
-                "genotype_missing_cells": geno_missing,
+                "phenotype_missing_cells": int(pheno.isna().sum().sum()),
+                "genotype_missing_cells": int(geno.isna().sum().sum()),
                 "p_over_n": float(geno.shape[1] / len(pheno)),
                 "primary_validation": "CV-G + CV2 sparse-cell",
                 "stress_validation": "CV-E + CV-GE",
                 "cold_environment_limitation": (
-                    "Only four managed environments and incomplete transferable environment "
+                    "Four categorical mega-environments lack transferable continuous weather/soil "
                     "descriptors; CV-E/CV-GE are stress tests, not headline evidence."
                 ),
             }
@@ -280,15 +208,16 @@ def build_cv2_sparse(genotype_ids: list[str], environments: tuple[str, ...]) -> 
 
     ids = sorted(map(str, genotype_ids))
     envs = tuple(environments)
-    rows = [
-        {"genotype_id": gid, "test_environment": envs[i % len(envs)]}
-        for i, gid in enumerate(ids)
-    ]
-    return pd.DataFrame(rows)
+    return pd.DataFrame(
+        [
+            {"genotype_id": gid, "test_environment": envs[i % len(envs)]}
+            for i, gid in enumerate(ids)
+        ]
+    )
 
 
 def build_cv_e(environments: tuple[str, ...]) -> pd.DataFrame:
-    """CV-E diagnostic: leave one entire managed environment out."""
+    """CV-E diagnostic: leave one categorical mega-environment out."""
 
     return pd.DataFrame(
         [{"environment": env, "fold": fold} for fold, env in enumerate(environments)]
@@ -299,7 +228,7 @@ def build_cv_ge_scenarios(
     cv_g: pd.DataFrame,
     environments: tuple[str, ...],
 ) -> pd.DataFrame:
-    """Strict genotype-plus-environment cold-start scenarios."""
+    """Strict genotype-plus-environment double-cold-start scenarios."""
 
     n_total_genotypes = cv_g["genotype_id"].nunique()
     n_g_folds = cv_g["fold"].nunique()
@@ -336,10 +265,11 @@ def run_data_lock(output_root: Path) -> dict[str, Path]:
     interim_dir.mkdir(parents=True, exist_ok=True)
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    archive = raw_dir / DRYAD_FILE_NAME
-    provenance = download_source_archive(archive)
-    provenance_path = raw_dir / "source_provenance.json"
-    provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
+    archive = raw_dir / BGLR_PACKAGE_NAME
+    provenance = download_source_package(archive)
+    (raw_dir / "source_provenance.json").write_text(
+        __import__("json").dumps(provenance, indent=2), encoding="utf-8"
+    )
 
     _safe_extract(archive, interim_dir)
     pheno, geno = load_locked_matrices(interim_dir)
@@ -349,7 +279,7 @@ def run_data_lock(output_root: Path) -> dict[str, Path]:
     cv_e = build_cv_e(EXPECTED_ENVIRONMENTS)
     cv_ge = build_cv_ge_scenarios(cv_g, EXPECTED_ENVIRONMENTS)
     env_meta = environment_metadata()
-    correlations = pheno.loc[:, list(EXPECTED_ENVIRONMENTS)].corr()
+    correlations = pheno.corr()
 
     paths = {
         "audit": results_dir / "case_study_b_data_lock_summary.csv",
