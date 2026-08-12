@@ -1,0 +1,5 @@
+regime,deployment_state,reason
+CV-G,FORECAST_SUPPORTED,Unseen genotype in a represented categorical environment.
+CV2,FORECAST_SUPPORTED,Sparse genotype-environment response with genotype observed in other represented environments.
+CV-E,UNSUPPORTED_ENVIRONMENT,Held-out environment has no transferable continuous environmental descriptors.
+CV-GE,UNSUPPORTED_ENVIRONMENT,Both genotype and categorical environment are unseen; environment similarity cannot be inferred.
