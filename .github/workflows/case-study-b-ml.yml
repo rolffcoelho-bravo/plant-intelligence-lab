@@ -1,0 +1,77 @@
+name: Case Study B — ML Challengers
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/plant_intelligence/models/wheat_gxe_ml.py'
+      - 'tests/test_case_study_b_ml.py'
+      - 'reports/results/case_study_b_classical_benchmark_envelope.csv'
+      - '.github/workflows/case-study-b-ml.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  ml-challengers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Case Study B ML environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[case-study-b,ml]'
+          python -m pip install pytest
+
+      - name: Validate ML challenger implementation
+        run: |
+          pytest -q tests/test_case_study_b.py tests/test_case_study_b_models.py tests/test_case_study_b_ml.py
+
+      - name: Verify frozen classical envelope
+        run: |
+          test -s reports/results/case_study_b_classical_benchmark_envelope.csv
+          cat reports/results/case_study_b_classical_benchmark_envelope.csv
+
+      - name: Execute Step B3 ML challengers
+        run: |
+          python -u -m plant_intelligence.models.wheat_gxe_ml --output-root .
+
+      - name: Verify Step B3 evidence
+        run: |
+          test -s reports/results/case_study_b_ml_predictions.csv
+          test -s reports/results/case_study_b_ml_selection.csv
+          test -s reports/results/case_study_b_ml_summary.csv
+          test -s reports/results/case_study_b_ml_challenger_bootstrap.csv
+          test -s reports/results/case_study_b_ml_envelope_comparison.csv
+          test -s reports/figures/case_study_b_ml_challengers.png
+          cat reports/results/case_study_b_ml_summary.csv
+          cat reports/results/case_study_b_ml_envelope_comparison.csv
+
+      - name: Publish compact Step B3 evidence
+        run: |
+          git config user.name 'plant-intelligence-lab-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add \
+            reports/results/case_study_b_ml_predictions.csv \
+            reports/results/case_study_b_ml_selection.csv \
+            reports/results/case_study_b_ml_summary.csv \
+            reports/results/case_study_b_ml_challenger_bootstrap.csv \
+            reports/results/case_study_b_ml_envelope_comparison.csv \
+            reports/figures/case_study_b_ml_challengers.png
+          if git diff --cached --quiet; then
+            echo 'No new Step B3 outputs to publish.'
+          else
+            git commit -m 'Publish Case Study B ML challenger evidence [skip ci]'
+            git push
+          fi
