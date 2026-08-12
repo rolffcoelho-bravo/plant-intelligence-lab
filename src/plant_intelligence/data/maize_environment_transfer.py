@@ -1,8 +1,8 @@
 """Case Study B Step B5: continuous-environment transfer data lock.
 
 This module locks the curated Genomes-to-Fields maize resource published by
-Lopez-Cruz et al. (2023) on Figshare (article 22776806). The resource provides
-three files used here:
+Lopez-Cruz et al. (2023) on Figshare (article 22776806). The public article
+currently exposes ``curated_data.zip`` containing:
 
 - PHENO.csv: multi-environment phenotypes and environment/genotype identifiers;
 - GENO.csv: hybrid SNP marker matrix;
@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -29,6 +30,7 @@ FIGSHARE_ARTICLE_ID = 22776806
 FIGSHARE_API = f"https://api.figshare.com/v2/articles/{FIGSHARE_ARTICLE_ID}"
 FIGSHARE_DOI = "10.6084/m9.figshare.22776806"
 EXPECTED_FILES = ("PHENO.csv", "GENO.csv", "ECOV.csv")
+ARCHIVE_NAME = "curated_data.zip"
 SEED = 20260812
 N_ENV_FOLDS = 5
 N_GENO_FOLDS = 5
@@ -58,13 +60,37 @@ def resolve_figshare_files(timeout: int = 60) -> dict[str, dict[str, object]]:
     response.raise_for_status()
     metadata = response.json()
     files = {str(item["name"]): item for item in metadata.get("files", [])}
-    missing = [name for name in EXPECTED_FILES if name not in files]
-    if missing:
-        raise FileNotFoundError(
-            f"Figshare article {FIGSHARE_ARTICLE_ID} is missing expected files: {missing}; "
-            f"available={sorted(files)}"
-        )
-    return {name: files[name] for name in EXPECTED_FILES}
+    if all(name in files for name in EXPECTED_FILES):
+        return {name: files[name] for name in EXPECTED_FILES}
+    if ARCHIVE_NAME in files:
+        return {ARCHIVE_NAME: files[ARCHIVE_NAME]}
+    raise FileNotFoundError(
+        f"Figshare article {FIGSHARE_ARTICLE_ID} exposes neither the expected CSV files "
+        f"nor {ARCHIVE_NAME}; available={sorted(files)}"
+    )
+
+
+def _extract_expected_archive(archive: Path, destination: Path) -> dict[str, Path]:
+    destination.mkdir(parents=True, exist_ok=True)
+    resolved: dict[str, Path] = {}
+    with zipfile.ZipFile(archive) as zf:
+        members = zf.namelist()
+        for expected in EXPECTED_FILES:
+            matches = [m for m in members if Path(m).name == expected]
+            if len(matches) != 1:
+                raise FileNotFoundError(
+                    f"Expected exactly one {expected} inside {archive.name}; matches={matches}"
+                )
+            member = matches[0]
+            target = destination / expected
+            with zf.open(member) as src, target.open("wb") as dst:
+                while True:
+                    chunk = src.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    dst.write(chunk)
+            resolved[expected] = target
+    return resolved
 
 
 def acquire_source(root: Path) -> tuple[dict[str, Path], dict[str, object]]:
@@ -73,19 +99,46 @@ def acquire_source(root: Path) -> tuple[dict[str, Path], dict[str, object]]:
     resolved = resolve_figshare_files()
     paths: dict[str, Path] = {}
     provenance_files: list[dict[str, object]] = []
-    for name, meta in resolved.items():
-        destination = raw / name
-        sha256 = _download(str(meta["download_url"]), destination)
-        paths[name] = destination
+
+    if ARCHIVE_NAME in resolved:
+        meta = resolved[ARCHIVE_NAME]
+        archive = raw / ARCHIVE_NAME
+        sha256 = _download(str(meta["download_url"]), archive)
         provenance_files.append(
             {
-                "name": name,
+                "name": ARCHIVE_NAME,
                 "figshare_file_id": meta.get("id"),
                 "download_url": meta.get("download_url"),
-                "size_bytes": int(destination.stat().st_size),
+                "size_bytes": int(archive.stat().st_size),
                 "sha256": sha256,
             }
         )
+        paths = _extract_expected_archive(archive, raw)
+        for name, path in paths.items():
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            provenance_files.append(
+                {
+                    "name": name,
+                    "source_archive": ARCHIVE_NAME,
+                    "size_bytes": int(path.stat().st_size),
+                    "sha256": digest,
+                }
+            )
+    else:
+        for name, meta in resolved.items():
+            destination = raw / name
+            sha256 = _download(str(meta["download_url"]), destination)
+            paths[name] = destination
+            provenance_files.append(
+                {
+                    "name": name,
+                    "figshare_file_id": meta.get("id"),
+                    "download_url": meta.get("download_url"),
+                    "size_bytes": int(destination.stat().st_size),
+                    "sha256": sha256,
+                }
+            )
+
     provenance = {
         "source": "Lopez-Cruz et al. (2023) curated Genomes-to-Fields maize dataset",
         "figshare_article_id": FIGSHARE_ARTICLE_ID,
@@ -134,9 +187,7 @@ def audit_source(
 
     numeric_ecov = ecov.apply(pd.to_numeric, errors="coerce")
     nonempty_ec = numeric_ecov.columns[numeric_ecov.notna().any(axis=0)]
-    nonconstant_ec = [
-        c for c in nonempty_ec if numeric_ecov[c].dropna().nunique() > 1
-    ]
+    nonconstant_ec = [c for c in nonempty_ec if numeric_ecov[c].dropna().nunique() > 1]
     if not nonconstant_ec:
         raise ValueError("No nonconstant continuous environmental covariates were resolved.")
 
