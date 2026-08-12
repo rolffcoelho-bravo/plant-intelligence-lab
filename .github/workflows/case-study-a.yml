@@ -7,7 +7,7 @@ on:
     paths:
       - 'notebooks/01_data_discovery.ipynb'
       - 'notebooks/03_genomic_prediction.ipynb'
-      - 'src/plant_intelligence/data/**'
+      - 'src/plant_intelligence/data/arapheno.py'
       - 'src/plant_intelligence/genetics/**'
       - 'src/plant_intelligence/models/**'
       - 'src/plant_intelligence/forecasting/**'
@@ -34,102 +34,78 @@ jobs:
       - name: Install research environment with boosting
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e '.[notebooks,ml]'
-          python -m pip install pytest
+          python -m pip install -e '.[ml]'
+          python -m pip install pytest nbconvert nbformat
 
-      - name: Run tests
+      - name: Run unit tests
         run: pytest -q
 
-      - name: Normalize notebooks for current nbformat
+      - name: Normalize executed notebooks
         run: |
           python - <<'PY'
-          from pathlib import Path
+          import glob
           import nbformat
-          for name in ('01_data_discovery.ipynb', '03_genomic_prediction.ipynb'):
-              path = Path('notebooks') / name
+          from pathlib import Path
+          for path in glob.glob('notebooks/*.ipynb'):
               nb = nbformat.read(path, as_version=4)
-              nbformat.validator.normalize(nb)
-              nbformat.write(nb, path)
+              changed = False
+              for cell in nb.cells:
+                  if cell.cell_type == 'code':
+                      if cell.get('execution_count') is not None:
+                          cell['execution_count'] = None
+                          changed = True
+                      if cell.get('outputs'):
+                          cell['outputs'] = []
+                          changed = True
+              if changed:
+                  nbformat.write(nb, path)
           PY
 
-      - name: 01 — Download and profile real phenotype data
-        working-directory: notebooks
-        run: |
-          jupyter nbconvert \
-            --to notebook \
-            --execute 01_data_discovery.ipynb \
-            --output 01_data_discovery.executed.ipynb \
-            --ExecutePreprocessor.timeout=1800 \
-            --ExecutePreprocessor.kernel_name=python3
+      - name: 01 — Acquire public phenotype data
+        run: python -u notebooks/run_data_discovery.py
 
-      - name: 02 — Download genomics, intersect accessions and build genomic structure
-        run: |
-          echo 'Starting 1001 Genomes acquisition and genomic QC.'
-          python -u -m plant_intelligence.genetics.genomic_structure
+      - name: 02 — Build genomic structure and validation folds
+        run: python -u -m plant_intelligence.genetics.genomic_structure
 
-      - name: Verify genomic modelling inputs
+      - name: Verify modelling inputs
         run: |
-          test -s data/interim/case_study_a/shoot_regeneration_accession_summary.csv
-          test -s data/processed/case_study_a/genomic_relationship_matrix.npy
-          test -s data/processed/case_study_a/genotype_matrix_qc.npy
           test -s data/processed/case_study_a/model_accessions.csv
+          test -s data/processed/case_study_a/genotype_matrix_qc.npy
+          test -s data/processed/case_study_a/genomic_relationship_matrix.npy
           test -s data/processed/case_study_a/genotype_aware_folds.csv
 
-      - name: 03 — Fit GBLUP baseline on real matched data
+      - name: 03 — Run GBLUP baseline
         run: python -u -m plant_intelligence.genetics.genomic_prediction
 
-      - name: 04 — Benchmark high-dimensional genomic ML and boosting
+      - name: 04 — Run high-dimensional ML benchmark
         run: python -u -m plant_intelligence.models.ml_benchmark
 
-      - name: 05 — Quantify genotype-specific protocol response
+      - name: 05 — Quantify protocol-response heterogeneity
         run: python -u -m plant_intelligence.forecasting.protocol_response
 
-      - name: 06 — Forecast Day-21 regeneration from early biological observations
+      - name: 06 — Run early phenotype forecasting
         run: python -u -m plant_intelligence.forecasting.early_forecasting
 
       - name: Build execution inventory
-        if: always()
         run: |
-          mkdir -p reports/results reports/figures
-          python - <<'PY'
-          from pathlib import Path
-          from datetime import datetime, timezone
-          import json
-          root = Path('.')
-          payload = {
-              'generated_at_utc': datetime.now(timezone.utc).isoformat(),
-              'result_files': sorted(str(p) for p in (root/'reports'/'results').glob('*') if p.is_file()),
-              'figure_files': sorted(str(p) for p in (root/'reports'/'figures').glob('*') if p.is_file()),
-              'executed_notebooks': sorted(str(p) for p in (root/'notebooks').glob('*.executed.ipynb')),
-          }
-          (root/'reports'/'results'/'case_study_a_execution_inventory.json').write_text(
-              json.dumps(payload, indent=2), encoding='utf-8'
-          )
-          PY
+          find reports/results -maxdepth 1 -type f -printf '%f\n' | sort > reports/results/case_study_a_execution_inventory.txt
 
-      - name: Upload empirical execution artifact
-        if: always()
+      - name: Upload full execution evidence
         uses: actions/upload-artifact@v4
         with:
-          name: case-study-a-real-data-execution
-          if-no-files-found: warn
-          retention-days: 30
+          name: case-study-a-full-execution
           path: |
-            notebooks/*.executed.ipynb
-            reports/results/**
-            reports/figures/**
-            data/interim/case_study_a/**
-            data/processed/case_study_a/**
+            reports/results/
+            reports/figures/
+          retention-days: 30
 
       - name: Publish compact results
-        if: success()
         run: |
-          git checkout -- notebooks/01_data_discovery.ipynb notebooks/03_genomic_prediction.ipynb
           git config user.name 'plant-intelligence-lab-bot'
           git config user.email 'actions@users.noreply.github.com'
           git add reports/results reports/figures
           if git diff --cached --quiet; then
-            echo 'No new compact public outputs to publish.'
+            echo 'No new compact results to publish.'
           else
             git commit -m 'Publish Case Study A empirical outputs [skip ci]'
             git push
