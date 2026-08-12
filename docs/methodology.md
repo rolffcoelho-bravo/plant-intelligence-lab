@@ -160,29 +160,52 @@ Interpretability outputs are treated as predictive evidence, not proof of biolog
 
 ## 12. Grounded GenAI scientific interface
 
-The scientific interface is built only after validated quantitative outputs exist. The first implemented layer is an **evidence boundary**: user questions are mapped to committed result tables, relevant validated records are selected, and a structured grounding packet is built before any generative rendering is allowed.
-
-The implemented flow is:
+The scientific interface is built only after validated quantitative outputs exist. The implemented architecture is evidence-first:
 
 \[
 \text{question}
 \rightarrow
 \text{validated result tables}
 \rightarrow
-\text{evidence packet}
+\text{grounding packet}
 \rightarrow
-\text{scientific answer or downstream LLM}
+\text{provider adapter}
+\rightarrow
+\text{claim verification}
+\rightarrow
+\text{answer or withholding}
 \]
 
-The grounding packet contains:
+The grounding packet contains the user question, selected quantitative evidence, exact repository source files, an explicit answerability state, and instructions preserving uncertainty, causality limits, and retrospective-versus-prospective distinctions.
 
-- the user question;
-- selected quantitative evidence;
-- the exact repository source file for each evidence item;
-- instructions that preserve retrospective/prospective distinctions;
-- instructions that prohibit unsupported causality claims;
-- instructions that require explicit uncertainty when relevant.
+### 12.1 Answerability boundary
 
-The current deterministic interface can answer repository-level questions directly from the validated evidence and can also emit the structured packet intended for a future generative model. No external language-model dependency is required at this stage.
+Questions that ask the repository to establish evidence it does not contain are marked `unsupported` before generation. Current examples include causal-gene claims, molecular mechanisms, prospective laboratory savings, commercial validation, and transfer to another laboratory. Unsupported questions are required to return an evidence-boundary response rather than an inferred scientific answer.
 
-A downstream generative model, when added, must remain a rendering layer rather than a source of scientific facts. It must not invent experimental results, hide abstention states, convert retrospective evidence into prospective claims, or replace statistical validation.
+### 12.2 Provider-independent adapter
+
+The generative layer implements a common adapter contract. Any external provider SDK, local model, or callable generation function can be wrapped behind the same interface. Provider-specific code therefore remains outside the scientific evidence layer.
+
+A deterministic `GroundedTemplateAdapter` is included as the reproducible reference implementation used in CI. It is not represented as an LLM benchmark result.
+
+### 12.3 Claim verification
+
+Generated drafts are checked before release. The verifier currently tests:
+
+- numerical claims against the values carried in the grounding packet;
+- source-file traceability for material quantitative claims;
+- uncertainty omission when uncertainty evidence is relevant;
+- omission of the retrospective boundary for experiment-selection claims;
+- omission of abstention/reliability information when supplied;
+- positive causality inflation;
+- prospective or commercial-performance inflation.
+
+If verification fails, the runtime withholds the generated draft rather than returning it as a scientific answer.
+
+### 12.4 Grounding evaluation benchmark
+
+The repository includes a compact benchmark with supported questions and adversarial boundary cases. It covers forecast accuracy, uncertainty calibration, abstention, experiment selection, protocol response, genomic-only prediction, multi-claim summaries, causal-gene traps, prospective-savings traps, external-laboratory transfer, and overgeneralization about genomics.
+
+The benchmark records a **Grounded Scientific Answer Rate**, supported-case pass rate, unsupported-safe-response rate, source-traceability rate, number of numerical claims checked, and verification failures.
+
+The committed reference-adapter benchmark is a deterministic software-validation baseline. A score of 100% for the reference adapter demonstrates that the evidence-routing and verification machinery behaves as specified; it must not be interpreted as empirical performance of an external language model. External providers should be evaluated through the same benchmark before their output is treated as acceptable scientific rendering.
