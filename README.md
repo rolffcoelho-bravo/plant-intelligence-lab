@@ -4,276 +4,343 @@
 
 > **Can we predict a plant phenotype from genomic information, environmental variables and early biological observations, while quantifying uncertainty?**
 
-Plant Intelligence Lab is an open computational biotechnology project focused on applying quantitative genetics, machine learning, statistical modelling, and probabilistic forecasting to plant-science problems with direct research and industrial relevance.
+Plant Intelligence Lab is an open computational biotechnology project built around a practical question: **what information is actually useful for forecasting biological outcomes and making better experimental decisions?**
 
-The repository uses real public biological data to evaluate predictive models under realistic high-dimensional conditions, with particular attention to biological generalization, uncertainty, reproducibility, and decision support.
+The repository combines quantitative genetics, high-dimensional machine learning, early phenotype forecasting, calibrated uncertainty, selective prediction, and retrospective experiment prioritization using real public plant data.
 
-## Public data foundation
+The current validated case study uses *Arabidopsis thaliana* shoot-regeneration data linked to 1001 Genomes resources. The study begins with more than 10.7 million raw SNP markers and 170 natural accessions, then evaluates genomic, phenotypic, and protocol information under genotype-aware validation.
 
-The project uses established public plant-genomics resources, including:
+## Validated Case Study A
 
-- **1001 Genomes Project** — genomic variation across more than 1,100 *Arabidopsis thaliana* accessions.
-- **AraPheno** — public phenotype datasets linked to *Arabidopsis* accessions.
-- **Shoot-regeneration data** — a public study covering 170 natural accessions tested under two regeneration protocol variants, with regenerated shoots and related *in vitro* traits measured.
+### From genomic prediction to biological decision intelligence
 
-These resources provide a real setting for studying genomic prediction and phenotype forecasting without relying on synthetic biological results.
-
-## Core prediction framework
-
-The central forecasting problem is:
+The empirical sequence is deliberately cumulative:
 
 $$
-\widehat{Y}_{t+h}=f\left(G,P,E,X_t\right)
+G
+\rightarrow
+\text{genomic prediction}
+\rightarrow
+G\times P
+\rightarrow
+X_{15}\rightarrow\widehat{Y}_{21}
+\rightarrow
+\text{prediction interval}
+\rightarrow
+\text{abstain / forecast}
+\rightarrow
+\text{experiment prioritization}
 $$
 
 where:
 
-- $\widehat{Y}_{t+h}$ is the predicted biological outcome at future horizon $t+h$;
 - $G$ denotes genomic information;
-- $P$ denotes protocol or treatment information;
-- $E$ denotes environmental information;
-- $X_t$ denotes biological observations available up to time $t$.
+- $P$ denotes protocol or treatment context;
+- $X_{15}$ is the observed Day-15 biological response;
+- $\widehat{Y}_{21}$ is the forecast Day-21 response.
 
-For the regeneration setting, an early-forecasting specification can be written as:
+### Headline results
+
+| Component | Validated result |
+|---|---:|
+| Raw SNP markers processed | **10,709,949** |
+| SNP markers after QC | **1,257,793** |
+| Genomic accessions used in modelling | **152** |
+| Champion forecast | **$X_{15}\rightarrow Y_{21}$** |
+| Out-of-fold $R^2$ | **0.8631** |
+| Out-of-fold RMSE | **0.7397** |
+| Predictive correlation | **0.9306** |
+| 90% nominal interval empirical coverage | **91.23%** |
+| Predictions retained after abstention | **98.60%** |
+| Retained RMSE | **0.6766** |
+| Abstained-case RMSE | **2.6113** |
+| Budget-10 guided high-value hit rate | **100%** |
+| Budget-10 random benchmark | **10.15%** |
+
+The decision-engine summary is available in [`reports/results/case_study_a_decision_engine_summary.csv`](reports/results/case_study_a_decision_engine_summary.csv).
+
+![Integrated biological decision engine](reports/figures/case_study_a_decision_engine.png)
+
+**Technical decision report:** [`Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf`](reports/Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf)
+
+## What the data showed
+
+### 1. Genomics alone was not enough
+
+The genomic problem is strongly high-dimensional:
 
 $$
-\widehat{Y}_{21}=f\left(G,P,X_{15}\right)
+p\gg n,
+\qquad
+p_{QC}=1{,}257{,}793,
+\qquad
+n=152.
 $$
 
-and compared with a genomic-treatment baseline:
+The project benchmarks **GBLUP — Genomic Best Linear Unbiased Prediction** against Elastic Net, Kernel Ridge, Random Forest, XGBoost, LightGBM, and PCA-based representations under the same genotype-aware folds.
+
+GBLUP is represented by
 
 $$
-\widehat{Y}_{21}=f\left(G,P\right)
-$$
-
-The comparison measures whether early biological observations add predictive information beyond genotype and treatment alone.
-
-## Quantitative-genetics baseline
-
-The first genomic benchmark is **GBLUP: Genomic Best Linear Unbiased Prediction**. It is a standard quantitative-genetics method that uses genome-wide markers to construct a genomic relationship matrix and predict genetic values or biological outcomes from realized genomic similarity.
-
-The name describes the estimator directly:
-
-- **Genomic** — genome-wide marker information is used to quantify genetic relatedness;
-- **Best Linear** — under the mixed-model assumptions, the predictor minimizes prediction-error variance within the class of linear unbiased predictors;
-- **Unbiased** — the prediction rule does not systematically shift random genetic effects upward or downward under the model;
-- **Prediction** — the fitted genetic structure is used to predict outcomes for held-out genotypes.
-
-The model is represented by
-
-$$
-\mathbf{y}=\mathbf{X}\boldsymbol{\beta}+\mathbf{Z}\mathbf{u}+\boldsymbol{\varepsilon}
+\mathbf{y}=\mathbf{X}\boldsymbol{\beta}+\mathbf{Z}\mathbf{u}+\boldsymbol{\varepsilon},
 $$
 
 with
 
 $$
-\mathbf{u}\sim\mathcal{N}\left(\mathbf{0},\mathbf{K}\sigma_g^2\right),
+\mathbf{u}\sim\mathcal{N}(\mathbf{0},\mathbf{K}\sigma_g^2),
 \qquad
-\boldsymbol{\varepsilon}\sim\mathcal{N}\left(\mathbf{0},\mathbf{I}\sigma_e^2\right),
+\boldsymbol{\varepsilon}\sim\mathcal{N}(\mathbf{0},\mathbf{I}\sigma_e^2),
 $$
 
-where $\mathbf{K}$ is the genomic relationship matrix, $\sigma_g^2$ is the genomic variance component, and $\sigma_e^2$ is the residual variance component.
+where $\mathbf{K}$ is the genomic relationship matrix.
 
-In the regeneration case study, GBLUP asks a concrete question: **can genome-wide relatedness predict shoot-regeneration performance for genotypes that were not used to fit the model?** It provides a serious classical reference point against which regularized and nonlinear machine-learning models can be evaluated under the same genotype-aware validation folds.
+Across the regeneration targets, genomic-only models did not produce strong out-of-fold prediction. This result is retained rather than hidden: **more genomic variables did not automatically create better biological forecasts.**
 
-## High-dimensional genomic modelling
+### 2. Protocol response was heterogeneous
 
-Genomic prediction frequently operates in the regime
-
-$$
-p\gg n
-$$
-
-where $p$ is the number of genomic markers and $n$ is the number of observed plants or accessions.
-
-This creates a high-dimensional estimation problem in which naive fitting can capture noise rather than biological signal. The repository therefore evaluates models under validation schemes designed to measure generalization to genuinely unseen genotypes.
-
-Candidate approaches include regularized linear models, tree ensembles, gradient boosting, kernel methods, and carefully regularized neural networks.
-
-Performance assessment focuses on quantities such as root mean squared error,
+The same accessions were observed under two regeneration protocol variants. For each genotype,
 
 $$
-\mathrm{RMSE}=\sqrt{\frac{1}{n}\sum_{i=1}^{n}\left(y_i-\widehat{y}_i\right)^2}
+\Delta_g=Y_{g,B}-Y_{g,A}.
 $$
 
-mean absolute error,
+At Day 15 the mean protocol shift was positive, while Day-21 responses displayed greater genotype-specific dispersion. Cross-protocol correlations remained substantial, showing that biological ranking was partly stable but not invariant to protocol.
+
+This separates two questions that should not be confused: whether one protocol changes the population average, and whether individual genotypes respond differently to that change.
+
+### 3. Early biological observation dominated the forecast
+
+The information-ablation study compared
 
 $$
-\mathrm{MAE}=\frac{1}{n}\sum_{i=1}^{n}\left|y_i-\widehat{y}_i\right|
+\text{Mean},\quad G,\quad G+P,\quad X_{15},\quad P+X_{15},\quad G+X_{15},\quad G+P+X_{15}.
 $$
 
-and predictive correlation,
+The parsimonious model
 
 $$
-\rho\left(y,\widehat{y}\right).
+\boxed{X_{15}\rightarrow Y_{21}}
 $$
 
-## Genotype × Environment forecasting
-
-Plant performance can change when the same genotype is exposed to different environments. A standard decomposition is
+was the strongest operational forecast:
 
 $$
-Y_{ij}=\mu+G_i+E_j+\left(G\times E\right)_{ij}+\varepsilon_{ij}
+R^2=0.8631,
+\qquad
+RMSE=0.7397,
+\qquad
+\rho=0.9306.
 $$
 
-where $G_i$ is the genotype effect, $E_j$ is the environment effect, and $(G\times E)_{ij}$ captures their interaction.
+Adding genomic information to the early phenotype did not improve performance in this case study. The result therefore supports a broader principle: **complexity must earn its place through measurable predictive or decision value.**
 
-A flexible predictive extension is
+### 4. Forecasts carry calibrated uncertainty
 
-$$
-\widehat{Y}=f\left(G,E,G\times E\right).
-$$
+The forecasting layer uses conformal calibration rather than presenting point predictions as certainty.
 
-The objective is to evaluate whether biological performance can be forecast under environmental change rather than assuming a stable response across conditions.
-
-## Early biological forecasting
-
-Where longitudinal measurements are available, the project evaluates whether earlier biological observations improve forecasts of later outcomes.
-
-A general formulation is
+For nominal coverage $1-\alpha$,
 
 $$
-P\left(Y_T\mid G,P,E,X_{0:t}\right)
+P\left(L_{1-\alpha}(x)\leq Y_{new}\leq U_{1-\alpha}(x)\right)\approx1-\alpha.
 $$
 
-where $X_{0:t}$ contains the information observed from the beginning of the experiment through time $t$, and $Y_T$ is the later biological outcome of interest.
+Observed pooled coverage was:
 
-## Uncertainty-aware prediction
+| Nominal coverage | Empirical coverage |
+|---:|---:|
+| 80% | **79.30%** |
+| 90% | **91.23%** |
+| 95% | **95.79%** |
 
-Predictions are accompanied by uncertainty rather than reported as isolated point estimates.
+Calibration remained similar across both protocol variants.
 
-A predictive interval can be represented as
+### 5. The system can abstain
+
+A prediction system should be able to say that evidence is insufficient.
+
+The reliability layer therefore exposes
 
 $$
-P\left(L_{1-\alpha}(x)\leq Y_{\mathrm{new}}\leq U_{1-\alpha}(x)\right)\approx 1-\alpha
+\text{status}(x)\in\{\text{FORECAST},\text{ABSTAIN}\}.
 $$
 
-where $L_{1-\alpha}(x)$ and $U_{1-\alpha}(x)$ are the lower and upper predictive bounds for a new observation $x$.
+Only 4 of 285 retrospective predictions were abstained, so this result should not be overgeneralized. In this dataset, however, the abstained cases were substantially harder: retained RMSE was **0.6766**, compared with **2.6113** for the four abstained observations.
 
-Methods may include conformal prediction, bootstrap-based intervals, Bayesian modelling, or calibrated predictive distributions.
+### 6. Predictions become experimental priorities
 
-When a new genotype or biological condition lies outside the model's reliable evidence base, the system can abstain rather than return unjustified precision.
+The decision layer evaluates three objectives:
 
-## Core capabilities
+**EXPLOIT**
 
-Plant Intelligence Lab develops and evaluates methods for:
+$$
+x^*_{exploit}=\arg\max_x\widehat{Y}_{21}(x)
+$$
 
-- genomic prediction
-- phenotype forecasting
-- high-dimensional genomic modelling
-- quantitative-genetics baselines
-- machine-learning prediction
-- genotype × environment analysis
-- genotype × treatment analysis
-- early biological outcome forecasting
-- uncertainty quantification
-- out-of-distribution detection
-- model abstention when evidence is insufficient
-- explainable predictions
-- experimental decision support
-- scientific AI interfaces grounded in validated outputs
+prioritizes expected biological response.
 
-## Public applications
+**EXPLORE**
 
-### In-Vitro Regeneration Intelligence
+$$
+x^*_{explore}=\arg\max_x U(x)
+$$
 
-Uses public *Arabidopsis thaliana* genomic and phenotype resources to evaluate regeneration-related prediction across accessions and treatment conditions.
+prioritizes uncertain observations that may be informative to investigate.
 
-### Genotype × Environment Forecasting
+**BALANCED**
 
-Uses public multi-environment plant data to evaluate whether genomic models remain informative when biological performance changes across environmental conditions.
+$$
+A(x)=0.5R_{\widehat{Y}}(x)+0.5R_U(x)
+$$
 
-### AI-Assisted Experimental Analysis
+combines response and uncertainty ranks.
 
-Extends validated predictive models toward uncertainty-aware experimental prioritization and biological decision support.
+At an experimental budget of 10 observations, predicted-response ranking retrospectively identified 10/10 high-value outcomes, compared with an average random-selection hit rate of 10.15%.
 
-## Industrial relevance
+**This is a retrospective acquisition benchmark, not a prospective laboratory trial.** It demonstrates enrichment within the evaluated public dataset; it does not establish that a real laboratory would reduce experiments by the same percentage.
 
-The methods demonstrated here are applicable to plant-biotechnology problems involving:
+## Decision engine
 
-- genomic selection and breeding support
-- plant propagation and regeneration analysis
-- genotype × environment prediction
-- treatment-response modelling
-- early biological outcome forecasting
-- experimental prioritization
-- uncertainty-aware decision systems
-- scientific data and AI interfaces
+The current quantitative engine connects:
 
-Public datasets are used for reproducibility and benchmarking. Performance claims apply only to the evaluated public datasets and should not be interpreted as validated performance on proprietary industrial processes.
+$$
+\boxed{
+X_t
+\rightarrow
+\widehat{Y}_{t+h}
+\rightarrow
+PI
+\rightarrow
+\text{Reliability}
+\rightarrow
+\text{Decision objective}
+\rightarrow
+\text{Recommended experiment}
+}
+$$
 
-## Scientific principles
+The purpose is not to automate biological judgement. It is to expose prediction, uncertainty, reliability, and experimental priorities in a traceable quantitative system.
 
-1. **Real public data before synthetic demonstrations**
-2. **Prediction is not biological causation**
-3. **Generalization matters more than in-sample performance**
-4. **Genetic leakage must be prevented**
-5. **Uncertainty is part of the prediction**
-6. **Models should abstain when evidence is insufficient**
-7. **GenAI operates over verified scientific outputs**
-8. **Results should be reproducible**
+## Public data foundation
+
+Case Study A uses public biological resources including:
+
+- **1001 Genomes Project** for *Arabidopsis thaliana* genomic variation;
+- **AraPheno** phenotype resources;
+- public shoot-regeneration measurements for natural accessions under two protocol variants.
+
+No proprietary biotechnology data are used in the repository.
+
+## Validation design
+
+The project avoids naive random splitting when genomic relatedness can leak biological structure between training and test observations. Case Study A uses genotype-aware folds consistently across the quantitative comparison.
+
+Feature transformations that learn from data are fitted inside training folds where applicable. Downstream uncertainty and decision analyses operate on validated out-of-fold forecasts.
+
+Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval coverage, interval width, retained-versus-abstained error, and retrospective selection efficiency.
+
+## Reproducibility
+
+The repository contains two complementary GitHub Actions workflows:
+
+- **Full real-data execution** — rebuilds the Case Study A empirical pipeline from public phenotype and genomic inputs through genomic modelling and forecasting.
+- **Downstream analysis** — reuses validated compact outputs for uncertainty, experiment selection, and decision-engine reporting without unnecessarily recomputing the full genomic stack.
+
+Install the core package with:
+
+```bash
+python -m pip install -e .
+```
+
+Run the current downstream quantitative modules with:
+
+```bash
+python -m plant_intelligence.uncertainty.conformal
+python -m plant_intelligence.optimization.active_learning
+python -m plant_intelligence.optimization.decision_engine
+```
 
 ## Repository structure
 
 ```text
 plant-intelligence-lab/
-│
-├── README.md
-├── LICENSE
-├── CITATION.cff
-├── pyproject.toml
-│
+├── .github/workflows/
+│   ├── case-study-a.yml
+│   └── downstream-analysis.yml
 ├── data/
-│   ├── README.md
-│   ├── raw/
-│   ├── interim/
-│   └── processed/
-│
+│   └── README.md
+├── docs/
+│   ├── Plant_Intelligence_Lab_Technical_Architecture.pdf
+│   ├── biological_context.md
+│   ├── limitations.md
+│   ├── methodology.md
+│   └── transferability.md
 ├── notebooks/
 │   ├── 01_data_discovery.ipynb
 │   ├── 02_genomic_structure.ipynb
-│   ├── 03_genomic_prediction.ipynb
-│   ├── 04_gxe_forecasting.ipynb
-│   ├── 05_uncertainty.ipynb
-│   └── 06_active_learning.ipynb
-│
-├── src/
-│   └── plant_intelligence/
-│       ├── data/
-│       ├── genetics/
-│       ├── models/
-│       ├── forecasting/
-│       ├── uncertainty/
-│       ├── optimization/
-│       └── explainability/
-│
-├── experiments/
-│   ├── baselines/
-│   ├── ml/
-│   └── genomic/
-│
+│   └── 03_genomic_prediction.ipynb
 ├── reports/
+│   ├── Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf
 │   ├── figures/
-│   ├── model_cards/
 │   └── results/
-│
-├── app/
-│   └── dashboard/
-│
+├── src/plant_intelligence/
+│   ├── data/
+│   ├── forecasting/
+│   ├── genetics/
+│   ├── models/
+│   ├── optimization/
+│   └── uncertainty/
 ├── tests/
-│
-└── docs/
-    ├── methodology.md
-    ├── biological_context.md
-    ├── limitations.md
-    └── transferability.md
+├── CITATION.cff
+├── pyproject.toml
+└── README.md
 ```
 
-## PhytoForecast
+This structure reflects the repository as implemented. Public documentation does not present unimplemented directories or modules as if they already existed.
 
-**Genomic Intelligence for Plant Performance**
+## Industrial relevance
 
-PhytoForecast is the forecasting component within Plant Intelligence Lab, combining genomic information, biological observations, environmental context, and uncertainty-aware prediction.
+The methods demonstrated here are transferable to biotechnology problems involving early biological monitoring, propagation and regeneration analytics, high-dimensional omics, treatment-response modelling, experimental prioritization, and uncertainty-aware decision support.
 
-> *An open-source computational biotechnology project exploring how quantitative genetics, machine learning, probabilistic forecasting, and AI-assisted experimental analysis can support plant science and biotechnology.*
+The relevant industrial question is not whether one model can be copied unchanged into another laboratory. It is whether the quantitative architecture can be adapted to the available biological process, measurements, decision horizon, and operational objective.
+
+## Limits on interpretation
+
+Performance claims in this repository apply to the evaluated public Case Study A data and validation design.
+
+The project does **not** claim:
+
+- causal biological mechanisms from predictive associations;
+- prospective laboratory savings from the retrospective experiment-selection benchmark;
+- validated performance on proprietary commercial processes;
+- automatic transfer of fitted models across species, laboratories, or production conditions;
+- that genomic information is generally unimportant because it did not improve this particular early forecast.
+
+See [`docs/limitations.md`](docs/limitations.md) for the full limitation framework.
+
+## Documentation
+
+- [`docs/methodology.md`](docs/methodology.md) — quantitative methodology
+- [`docs/biological_context.md`](docs/biological_context.md) — biological context
+- [`docs/limitations.md`](docs/limitations.md) — interpretation boundaries
+- [`docs/transferability.md`](docs/transferability.md) — transfer from public demonstrations to biotechnology applications
+- [`docs/Plant_Intelligence_Lab_Technical_Architecture.pdf`](docs/Plant_Intelligence_Lab_Technical_Architecture.pdf) — technical architecture document
+- [`reports/Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf`](reports/Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf) — validated Case Study A decision report
+
+## Scientific principles
+
+1. **Real data before synthetic demonstration.**
+2. **Generalization matters more than in-sample fit.**
+3. **Prediction is not causation.**
+4. **Biological and temporal leakage must be prevented.**
+5. **Uncertainty is part of the prediction.**
+6. **A model should abstain when evidence is insufficient.**
+7. **Complexity must earn measurable value.**
+8. **Experimental recommendations must remain traceable to validated quantitative outputs.**
+9. **Retrospective evidence must not be presented as prospective validation.**
+10. **Results should be reproducible.**
+
+---
+
+**Plant Intelligence Lab**  
+Rodolfo Pereira · ShockBridge Pulse Research Lab
