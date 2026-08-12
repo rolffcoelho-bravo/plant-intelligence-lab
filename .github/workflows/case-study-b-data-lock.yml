@@ -9,6 +9,7 @@ on:
       - 'tests/test_case_study_b.py'
       - 'docs/case_study_b_data_lock.md'
       - 'data/README.md'
+      - 'pyproject.toml'
       - '.github/workflows/case-study-b-data-lock.yml'
 
 permissions:
@@ -32,13 +33,13 @@ jobs:
       - name: Install package and tests
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
+          python -m pip install -e '.[case-study-b]'
           python -m pip install pytest
 
       - name: Validate Case Study B split logic
         run: pytest -q tests/test_case_study_b.py
 
-      - name: Acquire and audit locked Dryad wheat data
+      - name: Acquire and audit locked BGLR wheat data
         run: python -u -m plant_intelligence.data.wheat_gxe --output-root .
 
       - name: Verify compact Case Study B evidence
