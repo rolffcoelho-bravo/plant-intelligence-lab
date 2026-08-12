@@ -7,9 +7,11 @@ on:
     paths:
       - 'src/plant_intelligence/models/wheat_gxe_baseline.py'
       - 'src/plant_intelligence/models/wheat_gxe_robustness.py'
+      - 'src/plant_intelligence/models/wheat_gxe_mixture_robustness.py'
       - 'src/plant_intelligence/data/wheat_gxe.py'
       - 'tests/test_case_study_b_models.py'
       - 'tests/test_case_study_b_robustness.py'
+      - 'tests/test_case_study_b_mixture_robustness.py'
       - '.github/workflows/case-study-b-modeling.yml'
 
 permissions:
@@ -38,15 +40,19 @@ jobs:
 
       - name: Validate classical GxE implementation
         run: |
-          pytest -q tests/test_case_study_b.py tests/test_case_study_b_models.py tests/test_case_study_b_robustness.py
+          pytest -q tests/test_case_study_b.py tests/test_case_study_b_models.py tests/test_case_study_b_robustness.py tests/test_case_study_b_mixture_robustness.py
 
       - name: Execute locked classical GxE ablation
         run: |
           python -u -m plant_intelligence.models.wheat_gxe_baseline --output-root .
 
-      - name: Execute B2-R interaction-boundary resolution
+      - name: Execute B2-R raw interaction-weight diagnostic
         run: |
           python -u -m plant_intelligence.models.wheat_gxe_robustness --output-root .
+
+      - name: Execute B2-R normalized-mixture resolution
+        run: |
+          python -u -m plant_intelligence.models.wheat_gxe_mixture_robustness --output-root .
 
       - name: Verify Case Study B modeling evidence
         run: |
@@ -64,11 +70,19 @@ jobs:
           test -s reports/results/case_study_b_gxe_robustness_bootstrap.csv
           test -s reports/results/case_study_b_gxe_robustness_audit.csv
           test -s reports/figures/case_study_b_gxe_gamma_robustness.png
+          test -s reports/results/case_study_b_gxe_mixture_summary.csv
+          test -s reports/results/case_study_b_gxe_mixture_selection.csv
+          test -s reports/results/case_study_b_gxe_mixture_profile.csv
+          test -s reports/results/case_study_b_gxe_mixture_predictions.csv
+          test -s reports/results/case_study_b_gxe_mixture_bootstrap.csv
+          test -s reports/results/case_study_b_gxe_mixture_audit.csv
+          test -s reports/figures/case_study_b_gxe_mixture_robustness.png
           cat reports/results/case_study_b_model_summary.csv
           cat reports/results/case_study_b_gxe_robustness_audit.csv
-          cat reports/results/case_study_b_gxe_robustness_selection.csv
-          cat reports/results/case_study_b_gxe_robustness_summary.csv
-          cat reports/results/case_study_b_gxe_robustness_bootstrap.csv
+          cat reports/results/case_study_b_gxe_mixture_audit.csv
+          cat reports/results/case_study_b_gxe_mixture_selection.csv
+          cat reports/results/case_study_b_gxe_mixture_summary.csv
+          cat reports/results/case_study_b_gxe_mixture_bootstrap.csv
 
       - name: Publish compact Case Study B modeling evidence
         run: |
@@ -88,10 +102,17 @@ jobs:
             reports/results/case_study_b_gxe_robustness_predictions.csv \
             reports/results/case_study_b_gxe_robustness_bootstrap.csv \
             reports/results/case_study_b_gxe_robustness_audit.csv \
-            reports/figures/case_study_b_gxe_gamma_robustness.png
+            reports/figures/case_study_b_gxe_gamma_robustness.png \
+            reports/results/case_study_b_gxe_mixture_summary.csv \
+            reports/results/case_study_b_gxe_mixture_selection.csv \
+            reports/results/case_study_b_gxe_mixture_profile.csv \
+            reports/results/case_study_b_gxe_mixture_predictions.csv \
+            reports/results/case_study_b_gxe_mixture_bootstrap.csv \
+            reports/results/case_study_b_gxe_mixture_audit.csv \
+            reports/figures/case_study_b_gxe_mixture_robustness.png
           if git diff --cached --quiet; then
             echo 'No new Case Study B modeling outputs to publish.'
           else
-            git commit -m 'Publish Case Study B GxE robustness evidence [skip ci]'
+            git commit -m 'Publish Case Study B normalized GxE robustness evidence [skip ci]'
             git push
           fi
