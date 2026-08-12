@@ -1,5 +1,3 @@
-import pandas as pd
-
 from plant_intelligence.data.wheat_gxe import (
     EXPECTED_ENVIRONMENTS,
     build_cv2_sparse,
@@ -13,9 +11,8 @@ from plant_intelligence.data.wheat_gxe import (
 def test_environment_metadata_is_explicit_and_noninvented():
     meta = environment_metadata()
     assert tuple(meta["environment"]) == EXPECTED_ENVIRONMENTS
-    assert meta.loc[meta["environment"] == "B2I", "irrigations"].iloc[0] == 2
-    assert meta.loc[meta["environment"] == "B5I", "irrigations"].iloc[0] == 5
-    assert pd.isna(meta.loc[meta["environment"] == "LHT", "irrigations"].iloc[0])
+    assert (meta["environment_type"] == "target_set_of_environments").all()
+    assert not meta["continuous_covariates_available"].any()
 
 
 def test_cv_g_holds_each_genotype_out_once():
