@@ -1,19 +1,17 @@
-"""Case Study B classical multi-environment genomic baselines.
+"""Classical multi-environment genomic baselines for Case Study B.
 
-The model sequence is intentionally interpretable:
+Locked information ablation:
 
-    Environment mean -> G -> G + E -> G + E + GxE
+    Environment mean -> G -> G+E -> G+E+GxE
 
-G is represented by a standardized genomic relationship matrix. E is treated as
-an environment fixed-effect baseline estimated only from the training partition.
-GxE is represented by an environment-specific genomic kernel. Hyperparameters
-are selected only inside each outer training partition using genotype-grouped
-inner validation.
+G uses the standardized genomic relationship matrix. E is a training-only
+categorical environment fixed-effect baseline. GxE is an environment-specific
+genomic kernel. Hyperparameters are selected only inside each outer training
+partition with genotype-grouped inner validation.
 
-Primary evidence is CV-G (unseen genotypes) and CV2 sparse-cell prediction.
-CV-E and CV-GE are retained as diagnostic stress tests because the locked BGLR
-wheat data provide categorical mega-environments but no transferable continuous
-weather/soil descriptor vector.
+CV-G and CV2 are primary evidence. CV-E and CV-GE are diagnostic stress tests
+because the locked BGLR wheat data have categorical mega-environments but no
+transferable continuous weather/soil covariate vector.
 """
 
 from __future__ import annotations
@@ -83,27 +81,22 @@ def predictive_correlation(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
 
 def genomic_relationship(geno: pd.DataFrame) -> tuple[np.ndarray, dict[str, float]]:
-    """Build a VanRaden-style standardized marker relationship matrix.
-
-    Markers are centered and scaled within the locked 599-line population. Zero-
-    variance markers are removed. K is normalized to mean diagonal one so the
-    ridge parameter has a stable scale across executions.
-    """
+    """Return a standardized marker relationship matrix with mean diagonal one."""
 
     x = geno.to_numpy(dtype=float)
     means = np.nanmean(x, axis=0)
     sds = np.nanstd(x, axis=0, ddof=0)
     keep = np.isfinite(sds) & (sds > 1e-12)
-    if int(keep.sum()) < 10:
-        raise ValueError("Too few nonconstant genomic markers remain.")
+    if int(keep.sum()) == 0:
+        raise ValueError("No nonconstant genomic markers remain.")
     z = (x[:, keep] - means[keep]) / sds[keep]
     if not np.isfinite(z).all():
-        raise ValueError("Genomic matrix contains non-finite values after standardization.")
+        raise ValueError("Non-finite standardized marker values.")
     k = (z @ z.T) / z.shape[1]
     k = 0.5 * (k + k.T)
     mean_diag = float(np.mean(np.diag(k)))
     if not np.isfinite(mean_diag) or mean_diag <= 0:
-        raise ValueError("Invalid genomic relationship matrix scaling.")
+        raise ValueError("Invalid genomic relationship scaling.")
     k /= mean_diag
     return k, {
         "markers_input": float(x.shape[1]),
@@ -113,10 +106,8 @@ def genomic_relationship(geno: pd.DataFrame) -> tuple[np.ndarray, dict[str, floa
 
 
 def phenotype_long(pheno: pd.DataFrame) -> pd.DataFrame:
-    """Convert the complete line x environment matrix to one row per cell."""
-
     if tuple(pheno.columns) != EXPECTED_ENVIRONMENTS:
-        raise ValueError("Phenotype environments do not match the locked Case Study B order.")
+        raise ValueError("Phenotype environments differ from the locked Case Study B order.")
     genotype_ids = list(map(str, pheno.index))
     g_map = {gid: idx for idx, gid in enumerate(genotype_ids)}
     e_map = {env: idx for idx, env in enumerate(EXPECTED_ENVIRONMENTS)}
@@ -125,7 +116,7 @@ def phenotype_long(pheno: pd.DataFrame) -> pd.DataFrame:
         for env in EXPECTED_ENVIRONMENTS:
             value = float(pheno.loc[gid, env])
             if not np.isfinite(value):
-                raise ValueError("Case Study B baseline requires the locked complete phenotype grid.")
+                raise ValueError("The locked Case Study B phenotype grid must be complete.")
             rows.append(
                 {
                     "genotype_id": gid,
@@ -138,27 +129,24 @@ def phenotype_long(pheno: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _environment_baseline(
+def _training_baseline(
     y: np.ndarray,
     e_idx: np.ndarray,
-    use_environment: bool,
+    environment_specific: bool,
 ) -> tuple[float, dict[int, float], np.ndarray]:
     global_mean = float(np.mean(y))
-    env_means: dict[int, float] = {}
-    if use_environment:
-        for env in np.unique(e_idx):
-            env_means[int(env)] = float(np.mean(y[e_idx == env]))
-        baseline = np.asarray([env_means[int(env)] for env in e_idx], dtype=float)
-    else:
-        baseline = np.full(len(y), global_mean, dtype=float)
+    if not environment_specific:
+        return global_mean, {}, np.full(len(y), global_mean, dtype=float)
+    env_means = {
+        int(env): float(np.mean(y[e_idx == env]))
+        for env in np.unique(e_idx)
+    }
+    baseline = np.asarray([env_means[int(env)] for env in e_idx], dtype=float)
     return global_mean, env_means, baseline
 
 
-def _baseline_predict(
-    model: FittedKernelModel,
-    test_e: np.ndarray,
-) -> np.ndarray:
-    if model.model in (MODEL_GE, MODEL_GXE):
+def _baseline_predict(model: FittedKernelModel, test_e: np.ndarray) -> np.ndarray:
+    if model.model in (MODEL_ENV, MODEL_GE, MODEL_GXE):
         return np.asarray(
             [model.environment_means.get(int(env), model.global_mean) for env in test_e],
             dtype=float,
@@ -173,7 +161,7 @@ def _kernel_train_matvec(
     k_genomic: np.ndarray,
     gamma: float,
 ) -> np.ndarray:
-    """Apply K_G + gamma K_GxE without materializing a cell-level dense kernel."""
+    """Apply K_G + gamma*K_GxE without a dense cell-level kernel."""
 
     n_genotypes = k_genomic.shape[0]
     v = np.asarray(vector, dtype=float)
@@ -227,55 +215,46 @@ def fit_model(
     alpha: float | None = None,
     gamma: float = 0.0,
 ) -> FittedKernelModel:
-    """Fit one baseline on a training partition only."""
-
     y = np.asarray(y, dtype=float)
     train_g = np.asarray(train_g, dtype=int)
     train_e = np.asarray(train_e, dtype=int)
     if not (len(y) == len(train_g) == len(train_e)):
-        raise ValueError("Training vectors must have identical length.")
+        raise ValueError("Training vectors must have equal length.")
 
-    use_environment = model_name in (MODEL_GE, MODEL_GXE, MODEL_ENV)
-    global_mean, env_means, baseline = _environment_baseline(y, train_e, use_environment)
+    environment_specific = model_name in (MODEL_ENV, MODEL_GE, MODEL_GXE)
+    global_mean, env_means, baseline = _training_baseline(
+        y, train_e, environment_specific
+    )
 
     if model_name == MODEL_ENV:
         return FittedKernelModel(
-            model=model_name,
-            alpha=None,
-            gamma=0.0,
-            global_mean=global_mean,
-            environment_means=env_means,
-            train_g=train_g,
-            train_e=train_e,
-            coefficients=None,
-            cg_iterations=0,
+            model_name, None, 0.0, global_mean, env_means,
+            train_g, train_e, None, 0
         )
-
     if model_name not in (MODEL_G, MODEL_GE, MODEL_GXE):
         raise ValueError(f"Unknown model: {model_name}")
     if alpha is None or alpha <= 0:
-        raise ValueError("A positive ridge alpha is required for genomic models.")
+        raise ValueError("Genomic models require positive alpha.")
     if model_name != MODEL_GXE:
         gamma = 0.0
 
     residual = y - baseline
     n = len(y)
     diagonal = np.diag(k_genomic)[train_g] * (1.0 + gamma) + float(alpha)
-
     operator = LinearOperator(
-        shape=(n, n),
-        dtype=float,
+        (n, n),
         matvec=lambda v: _kernel_train_matvec(v, train_g, train_e, k_genomic, gamma)
         + float(alpha) * v,
+        dtype=float,
     )
     preconditioner = LinearOperator(
-        shape=(n, n),
-        dtype=float,
+        (n, n),
         matvec=lambda v: np.asarray(v, dtype=float) / diagonal,
+        dtype=float,
     )
     iterations = 0
 
-    def _callback(_: np.ndarray) -> None:
+    def callback(_: np.ndarray) -> None:
         nonlocal iterations
         iterations += 1
 
@@ -286,23 +265,22 @@ def fit_model(
         rtol=1e-7,
         atol=0.0,
         maxiter=1000,
-        callback=_callback,
+        callback=callback,
     )
     if info != 0 or not np.isfinite(coefficients).all():
         raise RuntimeError(
-            f"Kernel ridge CG failed for {model_name}: info={info}, iterations={iterations}"
+            f"CG failed for {model_name}: info={info}, iterations={iterations}"
         )
-
     return FittedKernelModel(
-        model=model_name,
-        alpha=float(alpha),
-        gamma=float(gamma),
-        global_mean=global_mean,
-        environment_means=env_means,
-        train_g=train_g,
-        train_e=train_e,
-        coefficients=np.asarray(coefficients, dtype=float),
-        cg_iterations=iterations,
+        model_name,
+        float(alpha),
+        float(gamma),
+        global_mean,
+        env_means,
+        train_g,
+        train_e,
+        np.asarray(coefficients, dtype=float),
+        iterations,
     )
 
 
@@ -312,19 +290,20 @@ def predict_model(
     test_e: np.ndarray,
     k_genomic: np.ndarray,
 ) -> np.ndarray:
-    baseline = _baseline_predict(fitted, np.asarray(test_e, dtype=int))
+    test_g = np.asarray(test_g, dtype=int)
+    test_e = np.asarray(test_e, dtype=int)
+    baseline = _baseline_predict(fitted, test_e)
     if fitted.coefficients is None:
         return baseline
-    genomic = _kernel_cross_predict(
+    return baseline + _kernel_cross_predict(
         fitted.coefficients,
         fitted.train_g,
         fitted.train_e,
-        np.asarray(test_g, dtype=int),
-        np.asarray(test_e, dtype=int),
+        test_g,
+        test_e,
         k_genomic,
         fitted.gamma,
     )
-    return baseline + genomic
 
 
 def _candidate_grid(model_name: str) -> list[tuple[float, float]]:
@@ -344,43 +323,32 @@ def tune_hyperparameters(
     k_genomic: np.ndarray,
     model_name: str,
 ) -> tuple[float, float, float]:
-    """Select alpha/gamma with genotype-grouped inner CV inside the outer training data."""
+    """Training-only genotype-grouped inner selection by pooled RMSE."""
 
     groups = train["genotype_id"].astype(str).to_numpy()
-    unique_groups = np.unique(groups)
-    if len(unique_groups) < INNER_SPLITS:
-        raise ValueError("Too few genotypes for inner grouped validation.")
+    if len(np.unique(groups)) < INNER_SPLITS:
+        raise ValueError("Too few genotype groups for inner validation.")
     splitter = GroupKFold(n_splits=INNER_SPLITS)
-    y_all = train["observed"].to_numpy(dtype=float)
-    g_all = train["g_idx"].to_numpy(dtype=int)
-    e_all = train["e_idx"].to_numpy(dtype=int)
+    y = train["observed"].to_numpy(dtype=float)
+    g = train["g_idx"].to_numpy(dtype=int)
+    e = train["e_idx"].to_numpy(dtype=int)
 
     best: tuple[float, float, float] | None = None
     for alpha, gamma in _candidate_grid(model_name):
-        squared_errors: list[np.ndarray] = []
-        for inner_train_idx, inner_val_idx in splitter.split(train, groups=groups):
+        errors: list[np.ndarray] = []
+        for inner_train, inner_val in splitter.split(train, groups=groups):
             fitted = fit_model(
-                y_all[inner_train_idx],
-                g_all[inner_train_idx],
-                e_all[inner_train_idx],
-                k_genomic,
-                model_name,
-                alpha=alpha,
-                gamma=gamma,
+                y[inner_train], g[inner_train], e[inner_train],
+                k_genomic, model_name, alpha, gamma
             )
-            pred = predict_model(
-                fitted,
-                g_all[inner_val_idx],
-                e_all[inner_val_idx],
-                k_genomic,
-            )
-            squared_errors.append((y_all[inner_val_idx] - pred) ** 2)
-        rmse = float(np.sqrt(np.mean(np.concatenate(squared_errors))))
+            pred = predict_model(fitted, g[inner_val], e[inner_val], k_genomic)
+            errors.append((y[inner_val] - pred) ** 2)
+        rmse = float(np.sqrt(np.mean(np.concatenate(errors))))
         candidate = (rmse, alpha, gamma)
         if best is None or candidate < best:
             best = candidate
     if best is None:
-        raise RuntimeError("Hyperparameter tuning produced no candidate.")
+        raise RuntimeError("No hyperparameter candidate was evaluated.")
     return float(best[1]), float(best[2]), float(best[0])
 
 
@@ -391,10 +359,9 @@ def build_splits(
     cv_e: pd.DataFrame,
     cv_ge: pd.DataFrame,
 ) -> list[SplitDefinition]:
-    """Materialize the four validation regimes exactly from the locked manifests."""
-
     fold_map = cv_g.set_index("genotype_id")["fold"].astype(int).to_dict()
     cell_g_fold = cells["genotype_id"].map(fold_map).to_numpy(dtype=int)
+    cell_env = cells["environment"].astype(str).to_numpy()
     splits: list[SplitDefinition] = []
 
     for fold in sorted(cv_g["fold"].unique()):
@@ -403,55 +370,36 @@ def build_splits(
         splits.append(SplitDefinition("CV-G", f"gfold_{int(fold)}", train, test))
 
     cv2_map = cv2.set_index("genotype_id")["test_environment"].astype(str).to_dict()
-    cv2_test_mask = np.asarray(
-        [str(env) == cv2_map[str(gid)] for gid, env in zip(cells["genotype_id"], cells["environment"])],
+    cv2_test = np.asarray(
+        [env == cv2_map[str(gid)] for gid, env in zip(cells["genotype_id"], cell_env)],
         dtype=bool,
     )
     splits.append(
-        SplitDefinition(
-            "CV2",
-            "sparse_cell",
-            np.where(~cv2_test_mask)[0],
-            np.where(cv2_test_mask)[0],
-        )
+        SplitDefinition("CV2", "sparse_cell", np.where(~cv2_test)[0], np.where(cv2_test)[0])
     )
 
     for row in cv_e.itertuples(index=False):
         env = str(row.environment)
-        test_mask = cells["environment"].to_numpy(dtype=str) == env
+        test = cell_env == env
         splits.append(
-            SplitDefinition(
-                "CV-E",
-                f"heldout_{env}",
-                np.where(~test_mask)[0],
-                np.where(test_mask)[0],
-            )
+            SplitDefinition("CV-E", f"heldout_{env}", np.where(~test)[0], np.where(test)[0])
         )
 
     for row in cv_ge.itertuples(index=False):
         env = str(row.held_out_environment)
         g_fold = int(row.genotype_fold)
-        test_mask = (
-            (cell_g_fold == g_fold)
-            & (cells["environment"].to_numpy(dtype=str) == env)
-        )
-        train_mask = (
-            (cell_g_fold != g_fold)
-            & (cells["environment"].to_numpy(dtype=str) != env)
-        )
+        test = (cell_g_fold == g_fold) & (cell_env == env)
+        train = (cell_g_fold != g_fold) & (cell_env != env)
         splits.append(
             SplitDefinition(
-                "CV-GE",
-                str(row.scenario),
-                np.where(train_mask)[0],
-                np.where(test_mask)[0],
+                "CV-GE", str(row.scenario), np.where(train)[0], np.where(test)[0]
             )
         )
 
-    expected = {"CV-G": 5, "CV2": 1, "CV-E": 4, "CV-GE": 20}
     observed = pd.Series([split.regime for split in splits]).value_counts().to_dict()
+    expected = {"CV-GE": 20, "CV-G": 5, "CV-E": 4, "CV2": 1}
     if observed != expected:
-        raise AssertionError(f"Unexpected validation split counts: {observed}")
+        raise AssertionError(f"Unexpected split counts: {observed}")
     return splits
 
 
@@ -471,41 +419,38 @@ def evaluate_splits(
     k_genomic: np.ndarray,
     splits: Iterable[SplitDefinition],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Fit the locked ablation sequence on every validation split."""
-
     prediction_rows: list[dict[str, object]] = []
     scenario_rows: list[dict[str, object]] = []
+
     for split in splits:
         train = cells.iloc[split.train_index].reset_index(drop=True)
         test = cells.iloc[split.test_index].reset_index(drop=True)
         if train.empty or test.empty:
-            raise RuntimeError(f"Empty partition in {split.regime}/{split.scenario}")
+            raise RuntimeError(f"Empty split: {split.regime}/{split.scenario}")
 
         for model_name in MODEL_SEQUENCE:
             if model_name == MODEL_ENV:
-                alpha = None
-                gamma = 0.0
-                inner_rmse = float("nan")
+                alpha, gamma, inner_rmse = None, 0.0, float("nan")
             else:
-                alpha, gamma, inner_rmse = tune_hyperparameters(train, k_genomic, model_name)
-
+                alpha, gamma, inner_rmse = tune_hyperparameters(
+                    train, k_genomic, model_name
+                )
             fitted = fit_model(
                 train["observed"].to_numpy(dtype=float),
                 train["g_idx"].to_numpy(dtype=int),
                 train["e_idx"].to_numpy(dtype=int),
                 k_genomic,
                 model_name,
-                alpha=alpha,
-                gamma=gamma,
+                alpha,
+                gamma,
             )
-            prediction = predict_model(
+            pred = predict_model(
                 fitted,
                 test["g_idx"].to_numpy(dtype=int),
                 test["e_idx"].to_numpy(dtype=int),
                 k_genomic,
             )
-            observed = test["observed"].to_numpy(dtype=float)
-            metric = _metrics(observed, prediction)
+            obs = test["observed"].to_numpy(dtype=float)
             scenario_rows.append(
                 {
                     "regime": split.regime,
@@ -513,40 +458,38 @@ def evaluate_splits(
                     "model": model_name,
                     "n_train": int(len(train)),
                     "n_test": int(len(test)),
-                    "alpha": float(alpha) if alpha is not None else np.nan,
+                    "alpha": np.nan if alpha is None else float(alpha),
                     "gamma_gxe": float(gamma),
-                    "inner_grouped_rmse": inner_rmse,
+                    "inner_grouped_rmse": float(inner_rmse),
                     "cg_iterations": int(fitted.cg_iterations),
-                    **metric,
+                    **_metrics(obs, pred),
                 }
             )
-            for row, pred in zip(test.itertuples(index=False), prediction):
-                prediction_rows.append(
-                    {
-                        "regime": split.regime,
-                        "scenario": split.scenario,
-                        "model": model_name,
-                        "genotype_id": str(row.genotype_id),
-                        "environment": str(row.environment),
-                        "observed": float(row.observed),
-                        "predicted": float(pred),
-                        "error": float(row.observed - pred),
-                    }
-                )
+            prediction_rows.extend(
+                {
+                    "regime": split.regime,
+                    "scenario": split.scenario,
+                    "model": model_name,
+                    "genotype_id": str(row.genotype_id),
+                    "environment": str(row.environment),
+                    "observed": float(row.observed),
+                    "predicted": float(p),
+                    "error": float(row.observed - p),
+                }
+                for row, p in zip(test.itertuples(index=False), pred)
+            )
 
-    predictions = pd.DataFrame(prediction_rows)
-    scenario_metrics = pd.DataFrame(scenario_rows)
-    return predictions, scenario_metrics
+    return pd.DataFrame(prediction_rows), pd.DataFrame(scenario_rows)
 
 
 def summarize_predictions(predictions: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     summary_rows: list[dict[str, object]] = []
-    environment_rows: list[dict[str, object]] = []
-    regime_order = ("CV-G", "CV2", "CV-E", "CV-GE")
-    for regime in regime_order:
+    env_rows: list[dict[str, object]] = []
+    for regime in ("CV-G", "CV2", "CV-E", "CV-GE"):
         for model_name in MODEL_SEQUENCE:
             frame = predictions[
-                (predictions["regime"] == regime) & (predictions["model"] == model_name)
+                (predictions["regime"] == regime)
+                & (predictions["model"] == model_name)
             ]
             if frame.empty:
                 continue
@@ -557,23 +500,20 @@ def summarize_predictions(predictions: pd.DataFrame) -> tuple[pd.DataFrame, pd.D
                     "n_predictions": int(len(frame)),
                     "n_genotypes": int(frame["genotype_id"].nunique()),
                     "n_environments": int(frame["environment"].nunique()),
-                    **_metrics(frame["observed"].to_numpy(), frame["predicted"].to_numpy()),
+                    **_metrics(frame["observed"], frame["predicted"]),
                 }
             )
             for env, env_frame in frame.groupby("environment", sort=True):
-                environment_rows.append(
+                env_rows.append(
                     {
                         "regime": regime,
                         "model": model_name,
-                        "environment": env,
+                        "environment": str(env),
                         "n_predictions": int(len(env_frame)),
-                        **_metrics(
-                            env_frame["observed"].to_numpy(),
-                            env_frame["predicted"].to_numpy(),
-                        ),
+                        **_metrics(env_frame["observed"], env_frame["predicted"]),
                     }
                 )
-    return pd.DataFrame(summary_rows), pd.DataFrame(environment_rows)
+    return pd.DataFrame(summary_rows), pd.DataFrame(env_rows)
 
 
 def paired_cluster_bootstrap(
@@ -584,26 +524,25 @@ def paired_cluster_bootstrap(
     n_bootstrap: int = BOOTSTRAP_REPS,
     seed: int = SEED,
 ) -> list[dict[str, object]]:
-    """Cluster-bootstrap paired RMSE/MAE deltas over genotype IDs.
-
-    Delta is candidate minus reference; negative values favor the candidate.
-    """
+    """Paired genotype-cluster bootstrap; negative candidate-reference delta is better."""
 
     ref = predictions[
-        (predictions["regime"] == regime) & (predictions["model"] == reference_model)
+        (predictions["regime"] == regime)
+        & (predictions["model"] == reference_model)
     ][["genotype_id", "environment", "observed", "predicted"]].rename(
         columns={"predicted": "pred_ref"}
     )
     cand = predictions[
-        (predictions["regime"] == regime) & (predictions["model"] == candidate_model)
+        (predictions["regime"] == regime)
+        & (predictions["model"] == candidate_model)
     ][["genotype_id", "environment", "observed", "predicted"]].rename(
-        columns={"predicted": "pred_cand", "observed": "observed_cand"}
+        columns={"observed": "observed_cand", "predicted": "pred_cand"}
     )
     merged = ref.merge(cand, on=["genotype_id", "environment"], how="inner")
     if len(merged) != len(ref) or len(merged) != len(cand):
-        raise ValueError("Paired bootstrap predictions are not aligned exactly.")
+        raise ValueError("Paired prediction rows do not align.")
     if not np.allclose(merged["observed"], merged["observed_cand"]):
-        raise ValueError("Observed values differ across paired models.")
+        raise ValueError("Observed outcomes differ between paired model rows.")
 
     merged["sq_ref"] = (merged["observed"] - merged["pred_ref"]) ** 2
     merged["sq_cand"] = (merged["observed"] - merged["pred_cand"]) ** 2
@@ -621,22 +560,25 @@ def paired_cluster_bootstrap(
     rng = np.random.default_rng(seed)
     rmse_delta = np.empty(n_bootstrap, dtype=float)
     mae_delta = np.empty(n_bootstrap, dtype=float)
+
     for b in range(n_bootstrap):
         sample = rng.integers(0, n_groups, size=n_groups)
         n = float(np.sum(arrays["n"][sample]))
-        rmse_ref = float(np.sqrt(np.sum(arrays["sq_ref"][sample]) / n))
-        rmse_cand = float(np.sqrt(np.sum(arrays["sq_cand"][sample]) / n))
-        mae_ref = float(np.sum(arrays["abs_ref"][sample]) / n)
-        mae_cand = float(np.sum(arrays["abs_cand"][sample]) / n)
-        rmse_delta[b] = rmse_cand - rmse_ref
-        mae_delta[b] = mae_cand - mae_ref
+        rmse_delta[b] = (
+            np.sqrt(np.sum(arrays["sq_cand"][sample]) / n)
+            - np.sqrt(np.sum(arrays["sq_ref"][sample]) / n)
+        )
+        mae_delta[b] = (
+            np.sum(arrays["abs_cand"][sample]) / n
+            - np.sum(arrays["abs_ref"][sample]) / n
+        )
 
-    observed_ref = merged["observed"].to_numpy(dtype=float)
-    pred_ref = merged["pred_ref"].to_numpy(dtype=float)
-    pred_cand = merged["pred_cand"].to_numpy(dtype=float)
-    observed_deltas = {
-        "rmse": _metrics(observed_ref, pred_cand)["rmse"] - _metrics(observed_ref, pred_ref)["rmse"],
-        "mae": _metrics(observed_ref, pred_cand)["mae"] - _metrics(observed_ref, pred_ref)["mae"],
+    obs = merged["observed"].to_numpy(dtype=float)
+    ref_pred = merged["pred_ref"].to_numpy(dtype=float)
+    cand_pred = merged["pred_cand"].to_numpy(dtype=float)
+    observed_delta = {
+        "rmse": _metrics(obs, cand_pred)["rmse"] - _metrics(obs, ref_pred)["rmse"],
+        "mae": _metrics(obs, cand_pred)["mae"] - _metrics(obs, ref_pred)["mae"],
     }
     rows: list[dict[str, object]] = []
     for metric_name, samples in (("rmse", rmse_delta), ("mae", mae_delta)):
@@ -646,10 +588,10 @@ def paired_cluster_bootstrap(
                 "reference_model": reference_model,
                 "candidate_model": candidate_model,
                 "metric": metric_name,
-                "delta_candidate_minus_reference": float(observed_deltas[metric_name]),
+                "delta_candidate_minus_reference": float(observed_delta[metric_name]),
                 "bootstrap_ci_low": float(np.quantile(samples, 0.025)),
                 "bootstrap_ci_high": float(np.quantile(samples, 0.975)),
-                "bootstrap_probability_improvement": float(np.mean(samples < 0.0)),
+                "bootstrap_probability_improvement": float(np.mean(samples < 0)),
                 "n_genotype_clusters": int(n_groups),
                 "n_bootstrap": int(n_bootstrap),
             }
@@ -667,17 +609,20 @@ def build_bootstrap_table(predictions: pd.DataFrame) -> pd.DataFrame:
 
 def plot_ablation(summary: pd.DataFrame, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
-    regimes = [regime for regime in ("CV-G", "CV2", "CV-E", "CV-GE") if regime in set(summary["regime"])]
-    models = list(MODEL_SEQUENCE)
+    regimes = ["CV-G", "CV2", "CV-E", "CV-GE"]
     x = np.arange(len(regimes), dtype=float)
     width = 0.18
     fig, ax = plt.subplots(figsize=(11, 6.5))
-    for idx, model_name in enumerate(models):
-        values = []
-        for regime in regimes:
-            row = summary[(summary["regime"] == regime) & (summary["model"] == model_name)]
-            values.append(float(row["rmse"].iloc[0]))
-        offset = (idx - (len(models) - 1) / 2.0) * width
+    for idx, model_name in enumerate(MODEL_SEQUENCE):
+        values = [
+            float(
+                summary[
+                    (summary["regime"] == regime) & (summary["model"] == model_name)
+                ]["rmse"].iloc[0]
+            )
+            for regime in regimes
+        ]
+        offset = (idx - 1.5) * width
         bars = ax.bar(x + offset, values, width=width, label=model_name)
         ax.bar_label(bars, fmt="%.3f", padding=2, fontsize=8)
     ax.set_xticks(x, regimes)
@@ -697,13 +642,10 @@ def run(root: str | Path = ".") -> dict[str, pd.DataFrame]:
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
-    # Rebuild the locked public data locally so modelling never depends on a manually
-    # copied matrix. The acquisition outputs remain under ignored data directories.
     run_data_lock(root)
-    interim_dir = root / "data" / "interim" / "case_study_b"
-    pheno, geno = load_locked_matrices(interim_dir)
+    pheno, geno = load_locked_matrices(root / "data" / "interim" / "case_study_b")
     cells = phenotype_long(pheno)
-    k_genomic, k_audit = genomic_relationship(geno)
+    k_genomic, kernel_audit = genomic_relationship(geno)
 
     cv_g = build_cv_g(pheno.index.tolist())
     cv2 = build_cv2_sparse(pheno.index.tolist(), EXPECTED_ENVIRONMENTS)
@@ -715,21 +657,19 @@ def run(root: str | Path = ".") -> dict[str, pd.DataFrame]:
     summary, environment_metrics = summarize_predictions(predictions)
     bootstrap = build_bootstrap_table(predictions)
 
-    summary_path = results_dir / "case_study_b_model_summary.csv"
-    scenario_path = results_dir / "case_study_b_model_scenario_metrics.csv"
-    env_path = results_dir / "case_study_b_model_environment_metrics.csv"
-    pred_path = results_dir / "case_study_b_model_predictions.csv"
-    bootstrap_path = results_dir / "case_study_b_gxe_bootstrap.csv"
-    kernel_path = results_dir / "case_study_b_genomic_kernel_audit.csv"
-    figure_path = figures_dir / "case_study_b_gxe_ablation.png"
-
-    summary.to_csv(summary_path, index=False)
-    scenario_metrics.to_csv(scenario_path, index=False)
-    environment_metrics.to_csv(env_path, index=False)
-    predictions.to_csv(pred_path, index=False)
-    bootstrap.to_csv(bootstrap_path, index=False)
-    pd.DataFrame([k_audit]).to_csv(kernel_path, index=False)
-    plot_ablation(summary, figure_path)
+    summary.to_csv(results_dir / "case_study_b_model_summary.csv", index=False)
+    scenario_metrics.to_csv(
+        results_dir / "case_study_b_model_scenario_metrics.csv", index=False
+    )
+    environment_metrics.to_csv(
+        results_dir / "case_study_b_model_environment_metrics.csv", index=False
+    )
+    predictions.to_csv(results_dir / "case_study_b_model_predictions.csv", index=False)
+    bootstrap.to_csv(results_dir / "case_study_b_gxe_bootstrap.csv", index=False)
+    pd.DataFrame([kernel_audit]).to_csv(
+        results_dir / "case_study_b_genomic_kernel_audit.csv", index=False
+    )
+    plot_ablation(summary, figures_dir / "case_study_b_gxe_ablation.png")
 
     print("Case Study B classical GxE baseline complete", flush=True)
     print(summary.to_string(index=False), flush=True)
@@ -746,7 +686,7 @@ def run(root: str | Path = ".") -> dict[str, pd.DataFrame]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run Case Study B classical GxE baselines.")
-    parser.add_argument("--output-root", default=".", help="Repository root for outputs.")
+    parser.add_argument("--output-root", default=".")
     args = parser.parse_args()
     run(args.output_root)
 
