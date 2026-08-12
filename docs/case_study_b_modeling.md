@@ -62,13 +62,13 @@ The ridge parameter \(\alpha\), and the interaction-kernel weight \(\gamma\) for
 | CV2 | G+E | 0.917310 | 0.710639 | 0.113603 | 0.341617 |
 | CV2 | **G+E+G×E** | **0.846926** | **0.653620** | **0.244407** | **0.501070** |
 
-Under CV-G, adding the G×E kernel to G+E reduces RMSE by 0.065948 and MAE by 0.056700. A 2,000-replicate genotype-cluster bootstrap gives a 95% interval of [-0.081171, -0.052093] for the RMSE delta and [-0.069917, -0.044313] for the MAE delta.
+Under CV-G, adding the G×E kernel to G+E reduces RMSE by 0.065948, or about 6.86%, and MAE by 0.056700. A 2,000-replicate genotype-cluster bootstrap gives a 95% interval of [-0.081171, -0.052093] for the RMSE delta and [-0.069917, -0.044313] for the MAE delta.
 
-Under CV2, the corresponding RMSE reduction is 0.070383 and the MAE reduction is 0.057018. The genotype-cluster bootstrap intervals are [-0.097549, -0.043946] for RMSE and [-0.079862, -0.034943] for MAE.
+Under CV2, the corresponding RMSE reduction is 0.070383, or about 7.67%, and the MAE reduction is 0.057018. The genotype-cluster bootstrap intervals are [-0.097549, -0.043946] for RMSE and [-0.079862, -0.034943] for MAE.
 
-Because the delta is defined as candidate minus reference, negative values favor the G×E model. None of the four G×E bootstrap intervals cross zero in the two primary validation regimes.
+Because the delta is defined as candidate minus reference, negative values favor the G×E model. None of the four G×E bootstrap intervals cross zero in the two primary validation regimes. The bootstrap probability of improvement is 1.0 in all four primary G×E comparisons; this is an empirical bootstrap frequency, not a formal p-value.
 
-By contrast, adding categorical environment means to G alone does not improve the primary predictions. Under CV-G it is slightly worse, and under CV2 the paired uncertainty interval crosses zero. The useful environmental information in this benchmark is therefore not captured by a simple additive environment offset; it appears through environment-dependent genomic response.
+Adding categorical environment means to G alone does not improve the primary predictions. This must be interpreted in light of the source preprocessing: the BGLR wheat yield phenotypes are standardized by environment, so environment-specific location shifts have already been largely removed. The near-zero incremental value of the additive environment-mean term is therefore expected and should not be generalized into a claim that additive environmental effects are biologically unimportant. The incremental signal in this benchmark is the environment-dependent genomic response captured by the interaction structure.
 
 ## Environment-specific behavior
 
@@ -80,14 +80,16 @@ This is consistent with the earlier data audit, where ME1 had weak or negative p
 
 | Validation | Environment mean RMSE | G RMSE | G+E RMSE | G+E+G×E RMSE |
 |---|---:|---:|---:|---:|
-| CV-E | 0.999165 | 1.012603 | 1.012603 | **0.974996** |
-| CV-GE | **0.998951** | 1.034790 | 1.034790 | 1.002064 |
+| CV-E | 0.999165 | 1.012603 | 1.012603 | 0.974996 |
+| CV-GE | 0.998951 | 1.034790 | 1.034790 | 1.002064 |
 
 The stress tests are deliberately difficult. In CV-E, one complete environment is absent from training. In CV-GE, both the test genotype and the test environment are absent from training.
 
 For an unseen categorical environment, the environment-specific interaction kernel has no same-environment training observations from which to transfer an interaction response. A categorical identifier cannot encode how a genuinely new environment relates to the environments that were observed during training. Consequently, CV-E and CV-GE are diagnostics of the present representation boundary, not evidence of universal environmental extrapolation.
 
-ME1 is particularly revealing. In leave-ME1-out CV-E, the G model has RMSE 1.236 and R² -0.531. The G×E model improves that failure to RMSE 1.048, but R² remains negative (-0.100). This is a failure diagnostic, not a success claim.
+The pooled CV-E G×E row should not be interpreted as successful interaction transfer. For a held-out environment the interaction cross-kernel is unavailable; the fitted coefficients and regularization learned on represented environments can still change the genomic main-effect prediction, but the environment-specific interaction itself cannot transfer to the unseen category.
+
+ME1 is particularly revealing. In leave-ME1-out CV-E, the G model has RMSE 1.236 and R² -0.531. The G×E specification improves that failure to RMSE 1.048, but R² remains negative (-0.100). In strict CV-GE the pooled G×E specification has RMSE 1.002 and R² -0.006, essentially failing to beat the environment-mean baseline. These are failure diagnostics, not success claims.
 
 ## Interpretation
 
