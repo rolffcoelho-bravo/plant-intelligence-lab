@@ -1,0 +1,66 @@
+name: Case Study B — Wheat GxE Data Lock
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/plant_intelligence/data/wheat_gxe.py'
+      - 'tests/test_case_study_b.py'
+      - 'docs/case_study_b_data_lock.md'
+      - 'data/README.md'
+      - '.github/workflows/case-study-b-data-lock.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  data-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install package and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Validate Case Study B split logic
+        run: pytest -q tests/test_case_study_b.py
+
+      - name: Acquire and audit locked Dryad wheat data
+        run: python -u -m plant_intelligence.data.wheat_gxe --output-root .
+
+      - name: Verify compact Case Study B evidence
+        run: |
+          test -s reports/results/case_study_b_data_lock_summary.csv
+          test -s reports/results/case_study_b_environment_metadata.csv
+          test -s reports/results/case_study_b_environment_correlations.csv
+          test -s reports/results/case_study_b_cv_g_folds.csv
+          test -s reports/results/case_study_b_cv2_sparse_mask.csv
+          test -s reports/results/case_study_b_cv_e_folds.csv
+          test -s reports/results/case_study_b_cv_ge_scenarios.csv
+          cat reports/results/case_study_b_data_lock_summary.csv
+          cat reports/results/case_study_b_environment_correlations.csv
+
+      - name: Publish compact Case Study B data-lock evidence
+        run: |
+          git config user.name 'plant-intelligence-lab-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add reports/results/case_study_b_*.csv
+          if git diff --cached --quiet; then
+            echo 'No new Case Study B data-lock outputs to publish.'
+          else
+            git commit -m 'Publish Case Study B wheat GxE data-lock evidence [skip ci]'
+            git push
+          fi
