@@ -56,11 +56,23 @@ $$
 
 The genomic intersection, relatedness structure, marker dimensionality, and genotype-aware validation design belong to `02_genomic_structure.ipynb`.
 
-## Case Study B — Genotype × Environment Forecasting
+## Case Study B — Wheat Genotype × Environment Forecasting
 
-A later public case study will use multi-environment plant data to evaluate genomic prediction under environmental heterogeneity and distribution shift.
+Case Study B is now locked to the open Dryad dataset:
 
-The objective is to test whether predictive information survives changes in biological context, rather than simply maximizing performance under random train-test splits.
+> Lopez-Cruz, Marco; de los Campos, Gustavo. (2025). *Data for: Multi-trait/environment sparse genomic prediction using the SFSI R-package*. Dryad. DOI: `10.5061/dryad.vx0k6dk3p`.
+
+The locked public subset contains **3,731 CIMMYT wheat lines**, **9,045 filtered SNP markers**, and adjusted grain-yield records in four managed environments: `B2I`, `B5I`, `MEL`, and `LHT`.
+
+The Case Study B target is:
+
+$$
+G + E + G\times E \rightarrow Y_{yield}.
+$$
+
+Primary validation uses whole-genotype holdout (**CV-G / CV1**) and sparse multi-environment masking (**CV2**). Leave-one-environment-out (**CV-E**) and strict genotype-plus-environment cold start (**CV-GE**) are retained as diagnostic stress tests because only four environments are available and the source does not contain a rich continuous weather/soil descriptor vector.
+
+The complete source lock, environment definitions, limitations, and split design are documented in [`docs/case_study_b_data_lock.md`](../docs/case_study_b_data_lock.md). Reproducible acquisition and audit are implemented in `src/plant_intelligence/data/wheat_gxe.py`.
 
 ## Directory convention
 
