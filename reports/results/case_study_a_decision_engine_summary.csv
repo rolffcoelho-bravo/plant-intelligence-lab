@@ -1,0 +1,10 @@
+metric,value,role
+Champion forecast,X15 -> Day 21,Parsimonious early-phenotype model
+Out-of-fold R2,0.8630859417615446,Forecast skill
+Out-of-fold RMSE,0.7396778151057256,Forecast error
+90% empirical coverage,0.912280701754386,Calibrated uncertainty
+Retained fraction,0.9859649122807016,Selective prediction
+Retained RMSE,0.6766433256231745,Reliability-filtered error
+Abstained RMSE,2.611290513063457,Difficult-case error
+Budget-10 guided hit rate,1.0,Retrospective experiment selection
+Budget-10 random hit rate,0.1015,Random benchmark
