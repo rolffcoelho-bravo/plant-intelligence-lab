@@ -1,0 +1,76 @@
+name: Case Study B — Transfer Robustness
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/plant_intelligence/models/maize_environment_transfer_robustness.py'
+      - 'src/plant_intelligence/data/maize_environment_transfer.py'
+      - 'tests/test_case_study_b6r_transfer_robustness.py'
+      - '.github/workflows/case-study-b6r-transfer-robustness.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  transfer-robustness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Validate Step B6-R implementation
+        run: pytest -q tests/test_case_study_b6r_transfer_robustness.py
+
+      - name: Materialize locked B5 public data and manifests
+        run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
+
+      - name: Execute Step B6-R robustness audit
+        run: python -u -m plant_intelligence.models.maize_environment_transfer_robustness --output-root .
+
+      - name: Verify Step B6-R evidence
+        run: |
+          test -s reports/results/case_study_b6r_transfer_summary.csv
+          test -s reports/results/case_study_b6r_nested_selection.csv
+          test -s reports/results/case_study_b6r_selected_configs.csv
+          test -s reports/results/case_study_b6r_environment_errors.csv
+          test -s reports/results/case_study_b6r_novelty_diagnostics.csv
+          test -s reports/results/case_study_b6r_bootstrap.csv
+          test -s reports/figures/case_study_b6r_novelty_vs_error.png
+          cat reports/results/case_study_b6r_transfer_summary.csv
+          cat reports/results/case_study_b6r_selected_configs.csv
+          cat reports/results/case_study_b6r_novelty_diagnostics.csv
+          cat reports/results/case_study_b6r_bootstrap.csv
+
+      - name: Publish compact Step B6-R evidence
+        run: |
+          git config user.name 'plant-intelligence-lab-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add \
+            reports/results/case_study_b6r_transfer_summary.csv \
+            reports/results/case_study_b6r_nested_selection.csv \
+            reports/results/case_study_b6r_selected_configs.csv \
+            reports/results/case_study_b6r_environment_errors.csv \
+            reports/results/case_study_b6r_novelty_diagnostics.csv \
+            reports/results/case_study_b6r_bootstrap.csv \
+            reports/figures/case_study_b6r_novelty_vs_error.png
+          if git diff --cached --quiet; then
+            echo 'No new Step B6-R outputs to publish.'
+          else
+            git commit -m 'Publish Case Study B6-R transfer robustness evidence [skip ci]'
+            git push
+          fi
