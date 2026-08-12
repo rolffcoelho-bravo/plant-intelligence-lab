@@ -6,7 +6,7 @@
 
 Plant Intelligence Lab is an open computational biotechnology project built around a practical question: **what information is actually useful for forecasting biological outcomes and making better experimental decisions?**
 
-The repository combines quantitative genetics, high-dimensional machine learning, early phenotype forecasting, calibrated uncertainty, selective prediction, and retrospective experiment prioritization using real public plant data.
+The repository combines quantitative genetics, high-dimensional machine learning, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, and a grounded scientific interface using real public plant data.
 
 The current validated case study uses *Arabidopsis thaliana* shoot-regeneration data linked to 1001 Genomes resources. The study begins with more than 10.7 million raw SNP markers and 170 natural accessions, then evaluates genomic, phenotypic, and protocol information under genotype-aware validation.
 
@@ -221,6 +221,41 @@ $$
 
 The purpose is not to automate biological judgement. It is to expose prediction, uncertainty, reliability, and experimental priorities in a traceable quantitative system.
 
+## Grounded scientific interface
+
+The first GenAI-facing layer is now implemented as an **evidence-first scientific interface**. It does not allow a language model to discover or invent scientific facts from free text. Instead, a question is resolved against committed, validated result tables before any generative rendering is allowed:
+
+$$
+\boxed{
+\text{Question}
+\rightarrow
+\text{validated repository evidence}
+\rightarrow
+\text{grounding packet}
+\rightarrow
+\text{scientific answer / downstream LLM}
+}
+$$
+
+The grounding packet carries the selected quantitative evidence, exact source files, and instructions that preserve uncertainty, retrospective-versus-prospective distinctions, and causality limits.
+
+The current implementation can answer directly from the evidence without an external LLM:
+
+```bash
+python -m plant_intelligence.ai.grounded_interface \
+  "How accurate is the Day-21 forecast?"
+```
+
+It can also emit the structured packet intended for a future generative model:
+
+```bash
+python -m plant_intelligence.ai.grounded_interface \
+  "How well calibrated is the 90% prediction interval?" \
+  --packet
+```
+
+This phase deliberately keeps the language model downstream of the quantitative evidence boundary. The generative model is a future rendering layer, not a source of experimental truth.
+
 ## Public data foundation
 
 Case Study A uses public biological resources including:
@@ -241,8 +276,9 @@ Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval cove
 
 ## Reproducibility
 
-The repository contains two complementary GitHub Actions workflows:
+The repository contains three complementary GitHub Actions workflows:
 
+- **Unit Tests** — lightweight validation for core code, uncertainty, optimization, and grounded-interface logic.
 - **Full real-data execution** — rebuilds the Case Study A empirical pipeline from public phenotype and genomic inputs through genomic modelling and forecasting.
 - **Downstream analysis** — reuses validated compact outputs for uncertainty, experiment selection, and decision-engine reporting without unnecessarily recomputing the full genomic stack.
 
@@ -258,6 +294,7 @@ Run the current downstream quantitative modules with:
 python -m plant_intelligence.uncertainty.conformal
 python -m plant_intelligence.optimization.active_learning
 python -m plant_intelligence.optimization.decision_engine
+python -m plant_intelligence.ai.grounded_interface "What should I know about this case study?"
 ```
 
 ## Repository structure
@@ -266,6 +303,7 @@ python -m plant_intelligence.optimization.decision_engine
 plant-intelligence-lab/
 ├── .github/workflows/
 │   ├── case-study-a.yml
+│   ├── ci.yml
 │   └── downstream-analysis.yml
 ├── data/
 │   └── README.md
@@ -284,6 +322,7 @@ plant-intelligence-lab/
 │   ├── figures/
 │   └── results/
 ├── src/plant_intelligence/
+│   ├── ai/
 │   ├── data/
 │   ├── forecasting/
 │   ├── genetics/
@@ -292,6 +331,7 @@ plant-intelligence-lab/
 │   └── uncertainty/
 ├── tests/
 ├── CITATION.cff
+├── LICENSE
 ├── pyproject.toml
 └── README.md
 ```
@@ -300,7 +340,7 @@ This structure reflects the repository as implemented. Public documentation does
 
 ## Industrial relevance
 
-The methods demonstrated here are transferable to biotechnology problems involving early biological monitoring, propagation and regeneration analytics, high-dimensional omics, treatment-response modelling, experimental prioritization, and uncertainty-aware decision support.
+The methods demonstrated here are transferable to biotechnology problems involving early biological monitoring, propagation and regeneration analytics, high-dimensional omics, treatment-response modelling, experimental prioritization, uncertainty-aware decision support, and evidence-grounded scientific interfaces.
 
 The relevant industrial question is not whether one model can be copied unchanged into another laboratory. It is whether the quantitative architecture can be adapted to the available biological process, measurements, decision horizon, and operational objective.
 
@@ -314,13 +354,14 @@ The project does **not** claim:
 - prospective laboratory savings from the retrospective experiment-selection benchmark;
 - validated performance on proprietary commercial processes;
 - automatic transfer of fitted models across species, laboratories, or production conditions;
-- that genomic information is generally unimportant because it did not improve this particular early forecast.
+- that genomic information is generally unimportant because it did not improve this particular early forecast;
+- that a language model may override, extrapolate beyond, or replace the validated quantitative evidence.
 
 See [`docs/limitations.md`](docs/limitations.md) for the full limitation framework.
 
 ## Documentation
 
-- [`docs/methodology.md`](docs/methodology.md) — quantitative methodology
+- [`docs/methodology.md`](docs/methodology.md) — quantitative methodology and grounded-interface design
 - [`docs/biological_context.md`](docs/biological_context.md) — biological context
 - [`docs/limitations.md`](docs/limitations.md) — interpretation boundaries
 - [`docs/transferability.md`](docs/transferability.md) — transfer from public demonstrations to biotechnology applications
@@ -338,7 +379,12 @@ See [`docs/limitations.md`](docs/limitations.md) for the full limitation framewo
 7. **Complexity must earn measurable value.**
 8. **Experimental recommendations must remain traceable to validated quantitative outputs.**
 9. **Retrospective evidence must not be presented as prospective validation.**
-10. **Results should be reproducible.**
+10. **GenAI must remain downstream of verified evidence.**
+11. **Results should be reproducible.**
+
+## License
+
+This repository is licensed under the **Apache License 2.0**. See [`LICENSE`](LICENSE).
 
 ## Citation
 
