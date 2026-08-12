@@ -1,0 +1,53 @@
+name: Case Study A — Downstream Analysis
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/plant_intelligence/forecasting/**'
+      - 'src/plant_intelligence/uncertainty/**'
+      - '.github/workflows/downstream-analysis.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  downstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install lightweight scientific environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Verify validated forecasting outputs
+        run: |
+          test -s reports/results/case_study_a_early_forecasting_predictions.csv
+          test -s reports/results/case_study_a_early_forecasting_summary.csv
+
+      - name: 07 — Calibrate prediction intervals and abstention
+        run: python -u -m plant_intelligence.uncertainty.conformal
+
+      - name: Publish downstream results
+        run: |
+          git config user.name 'plant-intelligence-lab-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add reports/results/case_study_a_uncertainty_*.csv reports/figures/case_study_a_uncertainty_intervals.png
+          if git diff --cached --quiet; then
+            echo 'No new downstream outputs to publish.'
+          else
+            git commit -m 'Publish Case Study A uncertainty outputs [skip ci]'
+            git push
+          fi
