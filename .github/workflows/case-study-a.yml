@@ -7,9 +7,10 @@ on:
     paths:
       - 'notebooks/01_data_discovery.ipynb'
       - 'notebooks/03_genomic_prediction.ipynb'
-      - 'src/plant_intelligence/**'
-      - 'tests/**'
-      - 'pyproject.toml'
+      - 'src/plant_intelligence/data/**'
+      - 'src/plant_intelligence/genetics/**'
+      - 'src/plant_intelligence/models/**'
+      - 'src/plant_intelligence/forecasting/**'
       - '.github/workflows/case-study-a.yml'
 
 permissions:
