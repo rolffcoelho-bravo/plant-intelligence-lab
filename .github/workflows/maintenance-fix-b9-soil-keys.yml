@@ -1,0 +1,87 @@
+name: Maintenance — Fix B9 soil coordinate keys
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/maintenance-fix-b9-soil-keys.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-b9:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Patch duplicate soil-coordinate handling
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/plant_intelligence/data/maize_prospective_environment.py')
+          text = path.read_text(encoding='utf-8')
+
+          old = '''def acquire_ssurgo(environments: pd.DataFrame) -> pd.DataFrame:
+              rows: list[dict[str, object]] = []
+              unique = environments[["latitude", "longitude", "city"]].drop_duplicates().sort_values(["city", "latitude", "longitude"])
+              for row in unique.itertuples(index=False):
+                  result = query_ssurgo_point(float(row.latitude), float(row.longitude))
+                  rows.append(
+                      {
+                          "city": str(row.city),
+                          "coordinate_key": _coord_key(float(row.latitude), float(row.longitude)),
+                          "latitude": float(row.latitude),
+                          "longitude": float(row.longitude),
+                          "source": "USDA-NRCS Soil Data Access / SSURGO",
+                          **result,
+                      }
+                  )
+              return pd.DataFrame(rows)
+          '''
+          new = '''def acquire_ssurgo(environments: pd.DataFrame) -> pd.DataFrame:
+              rows: list[dict[str, object]] = []
+              # Soil is a point-level static source. Several G2F environment labels can
+              # resolve to the same coordinate, so query each coordinate exactly once.
+              unique = (
+                  environments[["latitude", "longitude"]]
+                  .drop_duplicates()
+                  .sort_values(["latitude", "longitude"])
+              )
+              for row in unique.itertuples(index=False):
+                  result = query_ssurgo_point(float(row.latitude), float(row.longitude))
+                  rows.append(
+                      {
+                          "coordinate_key": _coord_key(float(row.latitude), float(row.longitude)),
+                          "latitude": float(row.latitude),
+                          "longitude": float(row.longitude),
+                          "source": "USDA-NRCS Soil Data Access / SSURGO",
+                          **result,
+                      }
+                  )
+              return pd.DataFrame(rows)
+          '''
+          if old not in text:
+              raise SystemExit('Expected acquire_ssurgo block not found; refusing blind edit.')
+          text = text.replace(old, new, 1)
+
+          old2 = '''    soil_by_key = soil.set_index("coordinate_key", drop=False).to_dict("index") if not soil.empty else {}
+          '''
+          new2 = '''    soil_unique = soil.drop_duplicates("coordinate_key", keep="first") if not soil.empty else soil
+              soil_by_key = soil_unique.set_index("coordinate_key", drop=False).to_dict("index") if not soil_unique.empty else {}
+          '''
+          if old2 not in text:
+              raise SystemExit('Expected soil lookup line not found; refusing blind edit.')
+          text = text.replace(old2, new2, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit correction
+        run: |
+          git config user.name 'plant-intelligence-lab-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add src/plant_intelligence/data/maize_prospective_environment.py
+          git commit -m 'Deduplicate B9 static soil coordinates'
+          git push
