@@ -10,6 +10,11 @@ The source ECOV matrix contains APSIM crop-model outputs named ``yield_*``.
 These are explicitly marked target-proximal and excluded from every B7
 candidate model. The published B6-R all-EC model is retained only as a frozen
 sensitivity/reference benchmark.
+
+For multiple-kernel candidates, block-specific RBF kernels are averaged before
+the Nyström eigendecomposition. This keeps environmental feature rank fixed and
+avoids giving a candidate an artificial advantage or penalty merely because it
+contains more biological blocks.
 """
 
 from __future__ import annotations
@@ -21,12 +26,14 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
 from plant_intelligence.models.maize_environment_transfer import (
     BOOTSTRAP_REPS,
     FeatureMap,
     _attach_folds,
     _load_manifests,
+    _sqeuclidean,
     prepare_cells,
 )
 from plant_intelligence.models.maize_environment_transfer_robustness import (
@@ -155,18 +162,89 @@ def group_columns(audit: pd.DataFrame) -> dict[str, list[str]]:
 
 
 def combine_maps(maps: list[FeatureMap], name: str) -> FeatureMap:
+    """Utility identity used in tests; production MKs average kernels first."""
     active = [m for m in maps if m.values.shape[1] > 0]
     if not active:
         raise ValueError(f"No environmental maps available for {name}.")
     ids = active[0].ids
     if any(m.ids != ids for m in active[1:]):
         raise ValueError("Environmental map identifiers do not align.")
-    # Each component map is already dimension-normalized by environment_map.
-    # Dividing the concatenation by sqrt(B) makes the induced kernel the equal
-    # average of B component kernels rather than allowing a block-count scale
-    # advantage.
     values = np.hstack([m.values for m in active]).astype(np.float32) / np.sqrt(len(active))
-    return FeatureMap(ids, values, {"kind": "equal_weight_multiple_kernel", "components": len(active), "name": name})
+    return FeatureMap(ids, values, {"kind": "equal_weight_map_identity", "components": len(active), "name": name})
+
+
+def _kernel_components(
+    ecov: pd.DataFrame,
+    train_ids: set[str],
+    gamma_multiplier: float,
+) -> tuple[tuple[str, ...], np.ndarray, np.ndarray, float]:
+    ids = tuple(ecov.index.astype(str))
+    lookup = {value: i for i, value in enumerate(ids)}
+    train_rows = np.asarray([lookup[value] for value in sorted(train_ids)], dtype=int)
+    x = ecov.to_numpy(float)
+    scaler = StandardScaler().fit(x[train_rows])
+    z = scaler.transform(x)
+    z_train = z[train_rows]
+    d2_train = _sqeuclidean(z_train, z_train)
+    upper = d2_train[np.triu_indices_from(d2_train, 1)]
+    positive = upper[upper > 1e-12]
+    median_d2 = float(np.median(positive)) if len(positive) else 1.0
+    gamma = float(gamma_multiplier) / max(median_d2, 1e-12)
+    k_train = np.exp(-gamma * d2_train)
+    k_all_train = np.exp(-gamma * _sqeuclidean(z, z_train))
+    return ids, k_train, k_all_train, gamma
+
+
+def multiple_kernel_environment_map(
+    ecov: pd.DataFrame,
+    audit: pd.DataFrame,
+    train_ids: set[str],
+    cfg: TransferConfig,
+    spec: EnvironmentalSpec,
+) -> FeatureMap:
+    groups = group_columns(audit)
+    components = []
+    gammas = []
+    ids: tuple[str, ...] | None = None
+    for group in spec.groups:
+        cols = groups[group]
+        if not cols:
+            continue
+        comp_ids, k_train, k_all_train, gamma = _kernel_components(
+            ecov[cols], train_ids, float(cfg.gamma_multiplier)
+        )
+        if ids is None:
+            ids = comp_ids
+        elif ids != comp_ids:
+            raise ValueError("Environmental identifiers do not align across kernel blocks.")
+        components.append((k_train, k_all_train))
+        gammas.append(gamma)
+    if not components or ids is None:
+        raise ValueError(f"Environmental specification {spec.name} has no usable kernel blocks.")
+
+    # Equal-weight multiple kernel at the relationship level.
+    k_train = np.mean(np.stack([item[0] for item in components], axis=0), axis=0)
+    k_all_train = np.mean(np.stack([item[1] for item in components], axis=0), axis=0)
+    evals, evecs = np.linalg.eigh(k_train)
+    order = np.argsort(evals)[::-1]
+    evals, evecs = evals[order], evecs[:, order]
+    keep = min(int(cfg.e_rank), int(np.sum(evals > 1e-10)), len(train_ids) - 1)
+    if keep < 1:
+        raise ValueError(f"No positive environmental kernel dimensions for {spec.name}.")
+    evals, evecs = evals[:keep], evecs[:, :keep]
+    values = (k_all_train @ (evecs / np.sqrt(evals)[None, :])).astype(np.float32)
+    values /= np.sqrt(keep)
+    return FeatureMap(
+        ids,
+        values,
+        {
+            "kind": "equal_weight_multiple_rbf_kernel_nystrom",
+            "components": len(components),
+            "feature_dim": keep,
+            "mean_component_gamma": float(np.mean(gammas)),
+            "name": spec.name,
+        },
+    )
 
 
 def build_environment_representation(
@@ -177,18 +255,13 @@ def build_environment_representation(
     spec: EnvironmentalSpec,
 ) -> FeatureMap:
     groups = group_columns(audit)
-    maps: list[FeatureMap] = []
-    for group in spec.groups:
-        cols = groups[group]
-        if not cols:
-            continue
-        rank = min(int(cfg.e_rank), len(train_envs) - 1)
-        maps.append(environment_map(ecov[cols], train_envs, rank, float(cfg.gamma_multiplier)))
-    if not maps:
-        raise ValueError(f"Environmental specification {spec.name} has no usable columns.")
     if spec.multiple_kernel:
-        return combine_maps(maps, spec.name)
-    return maps[0]
+        return multiple_kernel_environment_map(ecov, audit, train_envs, cfg, spec)
+    cols = groups[spec.groups[0]]
+    if not cols:
+        raise ValueError(f"Environmental specification {spec.name} has no usable columns.")
+    rank = min(int(cfg.e_rank), len(train_envs) - 1)
+    return environment_map(ecov[cols], train_envs, rank, float(cfg.gamma_multiplier))
 
 
 def load_selected_configs(results: Path) -> dict[int, TransferConfig]:
@@ -210,7 +283,7 @@ def load_selected_configs(results: Path) -> dict[int, TransferConfig]:
 
 
 def _append_prediction(store: list[pd.DataFrame], test: pd.DataFrame, regime: str, scenario: str, model: str, pred: np.ndarray) -> None:
-    f = test[["environment", "observed"]].copy()
+    f = test[["genotype", "environment", "observed"]].copy()
     f["regime"] = regime
     f["scenario"] = scenario
     f["model"] = model
@@ -233,9 +306,6 @@ def run_predictions(root: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFram
     predictions: list[pd.DataFrame] = []
     design_rows: list[dict[str, object]] = []
 
-    # Primary unseen-environment transfer. Genomic representation and B6-R
-    # selected hyperparameters are frozen; only the environmental information
-    # block is changed.
     for outer in sorted(envm.environment_fold.unique()):
         outer = int(outer)
         cfg = selected[outer]
@@ -259,10 +329,6 @@ def run_predictions(root: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFram
                 "multiple_kernel": bool(spec.multiple_kernel),
             })
 
-    # Strict unseen-genotype + unseen-environment transfer. The environment map
-    # depends only on the held-out environment fold and can be reused across the
-    # five genotype folds. The genomic map is rebuilt without the held-out
-    # genotype fold.
     strict_g = {}
     for gf in sorted(genom.genotype_fold.unique()):
         gf = int(gf)
@@ -304,31 +370,39 @@ def summarize(predictions: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return p, pd.DataFrame(env_rows)
 
 
+def _environment_sse(part: pd.DataFrame, model: str, value_name: str) -> pd.DataFrame:
+    q = part[part.model == model][["environment", "observed", "predicted"]].copy()
+    q[value_name] = (q.observed - q.predicted) ** 2
+    return q.groupby("environment").agg(**{f"sum_{value_name}": (value_name, "sum")}, n=(value_name, "size")).reset_index()
+
+
 def paired_environment_bootstrap(predictions: pd.DataFrame, reps: int = BOOTSTRAP_REPS) -> pd.DataFrame:
     rng = np.random.default_rng(20260813)
-    comparisons = []
-    for model in MODEL_ORDER[1:]:
-        comparisons.append((model, "B6R-all-EC-reference"))
+    comparisons = [(model, "B6R-all-EC-reference") for model in MODEL_ORDER[1:]]
     comparisons += [
         ("Process-MK", "All-nonleaky"),
         ("Stage-MK", "All-nonleaky"),
         ("Thermal+water-MK", "All-nonleaky"),
+        ("Reproductive-transition", "All-nonleaky"),
     ]
     rows = []
     for regime, part in predictions.groupby("regime"):
-        pivot = part.pivot_table(index=["environment", "observed"], columns="model", values="predicted", aggfunc="first").reset_index()
-        envs = np.asarray(sorted(pivot.environment.unique()))
         for challenger, reference in comparisons:
-            a = (pivot.observed - pivot[challenger]) ** 2
-            b = (pivot.observed - pivot[reference]) ** 2
-            stats = pd.DataFrame({"environment": pivot.environment, "a": a, "b": b}).groupby("environment").agg(sa=("a", "sum"), sb=("b", "sum"), n=("a", "size"))
-            delta = float(np.sqrt(a.mean()) - np.sqrt(b.mean()))
+            a = _environment_sse(part, challenger, "a")
+            b = _environment_sse(part, reference, "b")
+            stats = a.merge(b, on="environment", suffixes=("_a", "_b"))
+            if not np.array_equal(stats.n_a.to_numpy(), stats.n_b.to_numpy()):
+                raise ValueError("Paired environment comparison has unequal observation counts.")
+            envs = np.asarray(stats.environment)
+            total_n = stats.n_a.sum()
+            delta = float(np.sqrt(stats.sum_a.sum() / total_n) - np.sqrt(stats.sum_b.sum() / total_n))
+            indexed = stats.set_index("environment")
             boots = np.empty(reps, dtype=float)
             for i in range(reps):
                 sample = rng.choice(envs, len(envs), replace=True)
-                s = stats.loc[sample]
-                n = s.n.sum()
-                boots[i] = np.sqrt(s.sa.sum() / n) - np.sqrt(s.sb.sum() / n)
+                s = indexed.loc[sample]
+                n = s.n_a.sum()
+                boots[i] = np.sqrt(s.sum_a.sum() / n) - np.sqrt(s.sum_b.sum() / n)
             rows.append({
                 "regime": regime, "challenger": challenger, "reference": reference,
                 "metric": "RMSE", "delta_challenger_minus_reference": delta,
@@ -350,18 +424,18 @@ def block_summary(audit: pd.DataFrame) -> pd.DataFrame:
 
 
 def make_figure(summary: pd.DataFrame, path: Path) -> None:
-    focus = ["B6R-all-EC-reference", "All-nonleaky", "Thermal", "Water-soil", "Canopy-growth", "Process-MK", "Stage-MK"]
+    focus = ["B6R-all-EC-reference", "All-nonleaky", "Thermal", "Water-soil", "Canopy-growth", "Reproductive-transition", "Process-MK", "Stage-MK"]
     regimes = ["CV-E-B7", "CV-GE-B7"]
     x = np.arange(len(regimes), dtype=float)
-    width = 0.105
-    fig, ax = plt.subplots(figsize=(13.5, 6.8))
+    width = 0.092
+    fig, ax = plt.subplots(figsize=(14.0, 6.9))
     for j, model in enumerate(focus):
         vals = []
         for regime in regimes:
             row = summary[(summary.regime == regime) & (summary.model == model)]
             vals.append(float(row.iloc[0].rmse))
         bars = ax.bar(x + (j - (len(focus)-1)/2) * width, vals, width, label=model)
-        ax.bar_label(bars, fmt="%.3f", padding=2, fontsize=7.5, rotation=90)
+        ax.bar_label(bars, fmt="%.3f", padding=2, fontsize=7.2, rotation=90)
     ax.set_xticks(x, ["Unseen environment", "Unseen genotype + environment"])
     ax.set_ylabel("RMSE")
     ax.set_title("Case Study B7 — biologically structured environmental representation")
