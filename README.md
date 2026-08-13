@@ -338,6 +338,30 @@ For `T2 - T1`, the environment-cluster 95% RMSE-difference interval is **[0.2082
 
 ![Case Study B10 forecast-time-safe Value of Waiting](reports/figures/case_study_b10_value_of_waiting.png)
 
+## B10-R — Support-aware forward-time geometry diagnosis
+
+B10-R diagnoses the B10 T2 failure without changing the B9 horizons or promoting a post-hoc champion. Across 113 held-out environments, lower maximum training-kernel similarity and greater weather-space distance are associated with larger T2-minus-T1 error. The severe 2016 collapse is highly sensitive to environmental rank/bandwidth: the frozen rank-16/gamma-2 T2 model has RMSE 6.6486, while diagnostic-only alternatives reach roughly 2.23. However, 2017 remains worse than T1 across the tested geometry neighborhood, so the result is not reducible to one bad hyperparameter choice.
+
+The defensible conclusion is that later environmental information is **conditionally usable**: deployment risk depends jointly on historical support, spectral representation, and year-specific environmental state. The B10-R grid is diagnostic only and is not admitted for deployment selection.
+
+![Case Study B10-R support diagnostic](reports/figures/case_study_b10r_support_diagnostic.png)
+
+## B10-S — Training-only forward geometry selection
+
+B10-S asks whether the B10-R oracle insight can be converted into a valid selection rule using only earlier years. The candidate grid is frozen to the same 12 B10-R geometries. For outer year `t`, each candidate is scored only on chronological inner years `y < t`, and each inner year itself uses training years `< y`. The outer-year outcome is never used. Because 2016 has only one usable inner validation year, it is explicitly classified as `INSUFFICIENT_HISTORY_FALLBACK` and retains the frozen B10 geometry.
+
+| Forward model | RMSE | $R^2$ | Correlation |
+|---|---:|---:|---:|
+| Frozen T1 | **2.6614** | **0.0595** | **0.3405** |
+| Frozen T2 | 3.2843 | -0.4322 | 0.1977 |
+| **Training-only selected T2** | **3.4095** | **-0.5435** | **0.1457** |
+
+The result is deliberately preserved as a **negative finding**. Training-only expanding-window selection makes T2 worse than frozen T2 by **0.1252 RMSE**; the environment-cluster 95% interval is **[0.0303, 0.2323]**, and the six-year cluster interval is **[0.0231, 0.2865]**. It is also materially worse than frozen T1. Historical average predictive performance therefore does not reliably identify the next deployment year's best environmental spectral geometry.
+
+This blocks a naive adaptive T2 controller. The next methodological question is temporal stability: whether geometry rankings themselves are persistent enough to support any prospective selector.
+
+![Case Study B10-S training-only geometry selection](reports/figures/case_study_b10s_training_only_geometry.png)
+
 Detailed Case Study B evidence:
 
 - [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 data and first transfer benchmark
@@ -346,6 +370,8 @@ Detailed Case Study B evidence:
 - [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md) — B8 decision-horizon information ablation
 - [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md) — B9 forecast-time-safe input and forward-year validation lock
 - [`docs/case_study_b_forecast_time_prediction.md`](docs/case_study_b_forecast_time_prediction.md) — B10 forward-year prediction, Value of Waiting, and support-failure evidence
+- [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md) — B10-R support/spectral-geometry diagnosis
+- [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md) — B10-S training-only selection and negative deployment result
 
 ---
 
@@ -403,7 +429,7 @@ No proprietary biotechnology data are used.
 
 The project avoids naive random splitting when biological structure can leak between train and test partitions. Genotype-aware, environment-aware, sparse multi-environment, and double-cold-start manifests are defined explicitly for the deployment problem being tested.
 
-Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted. B10 then consumes those frozen states with no new hyperparameter search and makes the chronological forward-year benchmark primary.
+Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted. B10 then consumes those frozen states with no new hyperparameter search and makes the chronological forward-year benchmark primary. B10-R then diagnoses the T2 support/geometry failure without selecting a replacement model. B10-S finally converts that diagnostic grid into a strictly training-only expanding-window selection test and preserves its negative result when historical performance fails to transfer.
 
 Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster-bootstrap uncertainty, environmental-support diagnostics, biological information ablation, decision-horizon availability auditing, and grounded-answer verification.
 
@@ -426,6 +452,8 @@ GitHub Actions separates lightweight software checks from real-data executions. 
 - `case-study-b8-decision-horizons.yml` — decision-time availability audit and temporal information-frontier benchmark.
 - `case-study-b9-prospective-environment.yml` — forecast-time-safe weather/soil/management data and forward-year validation lock.
 - `case-study-b10-forecast-time-prediction.yml` — frozen-horizon forward-year prediction and Value-of-Waiting benchmark.
+- `case-study-b10r-support-diagnostics.yml` — support-aware forward-time environmental geometry diagnosis.
+- `case-study-b10s-training-only-geometry.yml` — training-only chronological T2 geometry-selection reproduction.
 
 Install the core package with:
 
@@ -451,6 +479,8 @@ python -m plant_intelligence.models.maize_environment_process_kernels --output-r
 python -m plant_intelligence.models.maize_environment_decision_horizons --output-root .
 python -m plant_intelligence.data.maize_prospective_environment --output-root .
 python -m plant_intelligence.models.maize_forecast_time_prediction --output-root .
+python -m plant_intelligence.models.maize_forward_support_diagnostics --output-root .
+python -m plant_intelligence.models.maize_training_only_geometry_selection --output-root .
 ```
 
 # Repository structure
@@ -507,11 +537,14 @@ Performance claims apply only to the evaluated public datasets, target definitio
 - that B10 proves waiting to 60 DAP is generally harmful: the pooled forward-year failure is strongly year-dependent and concentrated when historical environmental support is thin;
 - that B10 establishes a final deployment horizon or an optimal environmental kernel: the 2016 T2 failure requires a support/geometry diagnostic before model complexity is changed;
 - that the six-year forward bootstrap provides a precise year-level uncertainty distribution;
+- that B10-R establishes a deployable spectral geometry or validated support threshold: its rank/bandwidth grid is diagnostic and uses held-out outcomes only for explanation;
+- that B10-S proves adaptive geometry selection is impossible: it rejects the tested expanding-window outcome-based selector, not every possible training-only stability criterion;
+- that the B10-S oracle-regret table is a prospective benchmark: oracle configurations explicitly use outer-year outcomes and are never admitted for deployment;
 - that genomic information is generally unimportant because it did not improve one Case Study A forecast;
 - that a language model may override or extrapolate beyond validated quantitative evidence;
 - that the deterministic grounding benchmark measures a real external LLM's scientific accuracy.
 
-See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md), [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md), [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md), and [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md) for the detailed boundaries.
+See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md), [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md), [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md), and [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md), [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md), and [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md) for the detailed boundaries.
 
 # Documentation
 

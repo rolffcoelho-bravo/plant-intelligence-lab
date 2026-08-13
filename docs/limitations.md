@@ -124,6 +124,16 @@ The environment-cluster bootstrap supports the pooled T2 deterioration relative 
 
 B10 remains a retrospective backtest with issuance-safe historical inputs, not a live prospective field trial. T1/T2 use observed-to-date historical weather, not archived operational forecasts.
 
+## B10-R and B10-S spectral-geometry boundary
+
+B10-R is a diagnostic analysis, not a post-hoc model promotion step. Its support measures are computed without yield, but its rank/bandwidth sensitivity grid is interpreted after observing held-out errors. The best diagnostic geometry therefore cannot be reported as a prospectively selected champion. The 2016 collapse is strongly geometry-sensitive, while the 2017 disadvantage persists across the tested grid; neither a single support variable nor kernel effective rank alone is established as the failure mechanism.
+
+B10-S converts the same fixed grid into a genuinely training-only expanding-window selector. The outer-year outcome is excluded from selection, and 2016 is explicitly assigned an insufficient-history fallback. The selected T2 model nevertheless performs worse than both frozen T2 and frozen T1 in pooled forward-year prediction, with the selected-versus-frozen-T2 cluster intervals above zero. This rejects the tested historical-performance selector under the frozen design.
+
+The B10-S result must not be generalized into a claim that adaptive geometry is impossible. It shows that expanding-window historical yield performance is not sufficiently deployment-stable here. Any future adaptive controller must be justified by a criterion that can be calculated before the outer outcome and whose temporal stability is demonstrated separately.
+
+The oracle-regret audit remains explanatory only: its oracle configurations use the corresponding outer-year outcomes and are explicitly marked as not admitted for deployment.
+
 ## Uncertainty calibration
 
 Conformal intervals are calibrated empirically on the available out-of-fold residual structure. Coverage close to nominal levels in Case Study A and the supported wheat regimes does not guarantee identical coverage after distribution shift, under new protocols, in another species, or in a prospective deployment.
