@@ -1,0 +1,12 @@
+diagnostic,value,interpretation
+primary_environment_count,113.0,forward-year held-out environments aligned to B10 T1/T2 errors
+2016_training_environment_count,23.0,smallest historical environmental support set
+2016_fraction_t2_worse,0.7222222222222222,fraction of 2016 environments with higher T2 than T1 RMSE
+2016_median_t2_nearest_percentile,0.34782608695652173,T2 nearest-distance percentile relative to training-environment spacing
+later_year_median_t2_nearest_percentile,0.4375,median across 2017-2021 yearly medians
+strongest_positive_support_error_association,0.35573955964123066,t2_weather_nearest_z
+strongest_negative_support_error_association,-0.3919188391024013,t2_full_max_training_kernel_similarity
+frozen_t2_pooled_rmse_reproduced,3.2843411041341266,diagnostic grid cell matching frozen B10 rank/gamma
+2016_frozen_t2_rmse_reproduced,6.64859641978489,diagnostic grid cell matching frozen B10 rank/gamma
+2016_diagnostic_grid_min_rmse,2.228323542707684,oracle diagnostic only: diagnostic_rank8_gamma4; not selected for deployment
+pooled_diagnostic_grid_min_rmse,2.5392307846642597,oracle diagnostic only: diagnostic_rank32_gamma4; not selected for deployment
