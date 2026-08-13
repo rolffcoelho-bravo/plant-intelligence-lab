@@ -1,0 +1,8 @@
+dimension,block,n_covariates,n_target_proximal
+process,canopy_growth,36,0
+process,target_proximal,5,5
+process,thermal,36,0
+process,water_soil,125,0
+phenology,grain_fill_maturity,68,3
+phenology,reproductive_transition,68,2
+phenology,vegetative,66,0
