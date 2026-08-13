@@ -1,0 +1,81 @@
+name: Case Study B — Decision Horizons
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/plant_intelligence/models/maize_environment_decision_horizons.py'
+      - 'src/plant_intelligence/models/maize_environment_process_kernels.py'
+      - 'src/plant_intelligence/models/maize_environment_transfer_robustness.py'
+      - 'src/plant_intelligence/data/maize_environment_transfer.py'
+      - 'tests/test_case_study_b8_decision_horizons.py'
+      - '.github/workflows/case-study-b8-decision-horizons.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  decision-horizons:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Validate Step B8 implementation
+        run: pytest -q tests/test_case_study_b8_decision_horizons.py
+
+      - name: Materialize locked B5 public data and manifests
+        run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
+
+      - name: Verify frozen B6-R configuration evidence
+        run: test -s reports/results/case_study_b6r_selected_configs.csv
+
+      - name: Execute Step B8 decision-horizon forecasting
+        run: python -u -m plant_intelligence.models.maize_environment_decision_horizons --output-root .
+
+      - name: Verify Step B8 evidence
+        run: |
+          test -s reports/results/case_study_b8_decision_horizon_summary.csv
+          test -s reports/results/case_study_b8_decision_horizon_bootstrap.csv
+          test -s reports/results/case_study_b8_environment_metrics.csv
+          test -s reports/results/case_study_b8_availability_audit.csv
+          test -s reports/results/case_study_b8_preseason_history_audit.csv
+          test -s reports/results/case_study_b8_design_audit.csv
+          test -s reports/figures/case_study_b8_decision_horizon.png
+          cat reports/results/case_study_b8_decision_horizon_summary.csv
+          cat reports/results/case_study_b8_availability_audit.csv
+          cat reports/results/case_study_b8_preseason_history_audit.csv
+          cat reports/results/case_study_b8_decision_horizon_bootstrap.csv
+
+      - name: Publish compact Step B8 evidence
+        run: |
+          git config user.name 'plant-intelligence-lab-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add \
+            reports/results/case_study_b8_decision_horizon_summary.csv \
+            reports/results/case_study_b8_decision_horizon_bootstrap.csv \
+            reports/results/case_study_b8_environment_metrics.csv \
+            reports/results/case_study_b8_availability_audit.csv \
+            reports/results/case_study_b8_preseason_history_audit.csv \
+            reports/results/case_study_b8_design_audit.csv \
+            reports/figures/case_study_b8_decision_horizon.png
+          if git diff --cached --quiet; then
+            echo 'No new Step B8 outputs to publish.'
+          else
+            git commit -m 'Publish Case Study B8 decision-horizon evidence [skip ci]'
+            git push
+          fi
