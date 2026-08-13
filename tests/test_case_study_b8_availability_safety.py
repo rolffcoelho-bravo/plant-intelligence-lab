@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from plant_intelligence.models.maize_environment_decision_horizon_safety import (
+from plant_intelligence.models.maize_environment_decision_horizon_execution import (
     availability_audit,
     historical_location_proxy,
 )
@@ -13,8 +13,7 @@ def test_training_fallback_excludes_its_own_environment_row():
         {"x": [1.0, 3.0, 5.0], "z": [2.0, 4.0, 6.0]},
         index=["2018-LOC1", "2019-LOC2", "2020-LOC3"],
     )
-    train = set(ecov.index)
-    proxy, audit = historical_location_proxy(ecov, train)
+    proxy, audit = historical_location_proxy(ecov, set(ecov.index))
     expected = ecov.loc[["2019-LOC2", "2020-LOC3"]].mean(axis=0)
     assert np.allclose(proxy.loc["2018-LOC1"], expected)
     row = audit[audit.environment == "2018-LOC1"].iloc[0]
@@ -54,8 +53,10 @@ def test_availability_audit_separates_source_provenance_from_current_year_use():
     history = frame[frame.horizon == "Pre-season-location-history"].iloc[0]
     early = frame[frame.horizon == "Pre-flowering-observed"].iloc[0]
 
+    assert genomic.availability_state == "PRESEASON_GENOMICS_ONLY"
+    assert history.availability_state == "PRESEASON_TRAINING_HISTORY"
     assert not bool(genomic.source_ecov_uses_observed_silking_calibration)
     assert bool(history.source_ecov_uses_observed_silking_calibration)
     assert not bool(history.uses_heldout_current_year_ecov_or_silking)
-    assert bool(early.source_ecov_uses_observed_silking_calibration)
     assert bool(early.uses_heldout_current_year_ecov_or_silking)
+    assert not bool(early.forward_time_validation)

@@ -6,7 +6,8 @@ on:
     branches: [main]
     paths:
       - 'src/plant_intelligence/models/maize_environment_decision_horizons.py'
-      - 'src/plant_intelligence/models/maize_environment_decision_horizon_safety.py'
+      - 'src/plant_intelligence/models/maize_environment_decision_horizons_core.py'
+      - 'src/plant_intelligence/models/maize_environment_decision_horizon_execution.py'
       - 'src/plant_intelligence/models/maize_environment_process_kernels.py'
       - 'src/plant_intelligence/models/maize_environment_transfer_robustness.py'
       - 'src/plant_intelligence/data/maize_environment_transfer.py'
@@ -37,7 +38,7 @@ jobs:
           python -m pip install -e .
           python -m pip install pytest
 
-      - name: Validate Step B8 implementation and availability safety
+      - name: Validate Step B8 implementation and availability boundary
         run: |
           pytest -q tests/test_case_study_b8_decision_horizons.py
           pytest -q tests/test_case_study_b8_availability_safety.py
@@ -49,7 +50,7 @@ jobs:
         run: test -s reports/results/case_study_b6r_selected_configs.csv
 
       - name: Execute Step B8 decision-horizon forecasting
-        run: python -u -m plant_intelligence.models.maize_environment_decision_horizon_safety --output-root .
+        run: python -u -m plant_intelligence.models.maize_environment_decision_horizons --output-root .
 
       - name: Verify Step B8 evidence
         run: |

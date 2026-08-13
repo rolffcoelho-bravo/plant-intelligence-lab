@@ -68,7 +68,7 @@ def test_training_proxy_excludes_its_own_environment_row():
     assert row.n_same_location_history_environments == 1
 
 
-def test_availability_audit_marks_source_level_caveat():
+def test_availability_audit_separates_source_and_current_year_information():
     ecov = pd.DataFrame(
         {
             "TT_GerEme": [1.0, 2.0],
@@ -80,11 +80,14 @@ def test_availability_audit_marks_source_level_caveat():
         index=["e1", "e2"],
     )
     frame = availability_audit(build_ec_audit(ecov))
-    g = frame[frame.horizon == "Pre-season-G-only"].iloc[0]
-    hist = frame[frame.horizon == "Pre-season-location-history"].iloc[0]
+    genomic = frame[frame.horizon == "Pre-season-G-only"].iloc[0]
+    history = frame[frame.horizon == "Pre-season-location-history"].iloc[0]
     early = frame[frame.horizon == "Pre-flowering-observed"].iloc[0]
-    assert g.availability_state == "PROSPECTIVE_SUPPORTED_G_ONLY"
-    assert hist.availability_state == "PROSPECTIVE_PROXY_TRAINING_HISTORY_ONLY"
+    assert genomic.availability_state == "PRESEASON_GENOMICS_ONLY"
+    assert history.availability_state == "PRESEASON_TRAINING_HISTORY"
     assert early.availability_state == "RETROSPECTIVE_HORIZON_PROXY"
-    assert not bool(g.source_phenology_calibrated_to_observed_silking)
-    assert bool(early.source_phenology_calibrated_to_observed_silking)
+    assert not bool(genomic.source_ecov_uses_observed_silking_calibration)
+    assert bool(history.source_ecov_uses_observed_silking_calibration)
+    assert not bool(history.uses_heldout_current_year_ecov_or_silking)
+    assert bool(early.uses_heldout_current_year_ecov_or_silking)
+    assert not bool(early.forward_time_validation)
