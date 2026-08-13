@@ -100,6 +100,18 @@ The B8 pre-season location-history representation is stricter with respect to th
 
 A genuinely prospective extension must reconstruct environmental state using only information that exists at the forecast issuance date, such as prior climate history, soil/management variables known before planting, weather forecasts available on that date, and observed-to-date weather. It must not use future realized weather or future observed phenology to define earlier environmental states.
 
+## Forecast-time-safe environmental reconstruction
+
+B9 reconstructs environmental state using fixed issuance dates rather than observed future phenology. T0 excludes all current-year realized weather, while T1 and T2 use only weather observed through 30 and 60 days after planting respectively. Observed yield, harvest date, anthesis, silking, ASI, and related future-phenology fields are explicitly forbidden. The executed audit records zero future-weather and zero observed-phenology violations.
+
+This makes B9 **forecast-time safe with respect to the information cutoff**, but it does not make the study prospective. NASA POWER observations are retrieved retrospectively and truncated at the historical issuance date. T1 and T2 are observed-to-date weather reconstructions, not archived operational weather forecasts. A true live deployment would require predictions to be issued before future outcomes occur and, if future weather forecasts are used, their historically issued forecast vintages must be preserved.
+
+The T2 60-DAP state is a fixed calendar-time proxy and must not be described as observed reproductive stage, flowering, anthesis, or silking. Its purpose is to remove the observed-silking calibration problem exposed in B8.
+
+The SSURGO layer is a public static soil-map representation at the resolved coordinate. It is not a plot-level soil assay and cannot represent all within-field soil heterogeneity. Management metadata are admitted only when their provenance supports availability at issuance.
+
+B9 also registers a forward-year stress test in which every training year precedes the test year. This is stronger temporal backtesting than shuffled environment folds, but it remains retrospective historical evaluation rather than prospective field validation.
+
 ## Uncertainty calibration
 
 Conformal intervals are calibrated empirically on the available out-of-fold residual structure. Coverage close to nominal levels in Case Study A and the supported wheat regimes does not guarantee identical coverage after distribution shift, under new protocols, in another species, or in a prospective deployment.
