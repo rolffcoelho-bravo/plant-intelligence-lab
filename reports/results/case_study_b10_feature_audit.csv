@@ -1,0 +1,4 @@
+model,horizon,n_environments,n_features,n_weather_features,n_static_soil_features,includes_coordinates,includes_planting_day,includes_plant_population_proxy,uses_future_weather,uses_observed_phenology
+G+E_T0,T0_preseason,136,70,7,57,True,True,True,False,False
+G+E_T1,T1_30DAP,136,70,7,57,True,True,True,False,False
+G+E_T2,T2_60DAP_reproductive_window_proxy,136,70,7,57,True,True,True,False,False
