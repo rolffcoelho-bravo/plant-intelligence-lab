@@ -112,6 +112,18 @@ The SSURGO layer is a public static soil-map representation at the resolved coor
 
 B9 also registers a forward-year stress test in which every training year precedes the test year. This is stronger temporal backtesting than shuffled environment folds, but it remains retrospective historical evaluation rather than prospective field validation.
 
+## B10 forecast-time prediction and support dependence
+
+B10 makes the B9 chronological forward-year backtest the primary performance benchmark and freezes `G`, `G+E_T0`, `G+E_T1`, and `G+E_T2` without a new hyperparameter search.
+
+The pooled forward-year result is non-monotonic. T0 improves over G in the point estimate, T1 is essentially tied with T0, and T2 is substantially worse. This must not be translated into a biological claim that 60-DAP weather is harmful or that later information is intrinsically detrimental.
+
+The T2 failure is strongly heterogeneous and concentrated in the earliest forward backtests, especially 2016, when only 23 prior training environments are available. Later years have more historical environmental support and do not show the same catastrophic behavior. B10 therefore points to a support/representation problem but does not yet identify whether environmental distance, kernel bandwidth, rank, nonstationarity, location composition, or another geometry component is responsible.
+
+The environment-cluster bootstrap supports the pooled T2 deterioration relative to T1. The year-cluster bootstrap has only six test-year clusters and is wide; it must not be presented as a precise year-level uncertainty distribution. Secondary B5 CV-E/CV-GE continuity checks cannot override a failure in the primary chronological design.
+
+B10 remains a retrospective backtest with issuance-safe historical inputs, not a live prospective field trial. T1/T2 use observed-to-date historical weather, not archived operational forecasts.
+
 ## Uncertainty calibration
 
 Conformal intervals are calibrated empirically on the available out-of-fold residual structure. Coverage close to nominal levels in Case Study A and the supported wheat regimes does not guarantee identical coverage after distribution shift, under new protocols, in another species, or in a prospective deployment.

@@ -6,7 +6,7 @@
 
 Plant Intelligence Lab is an open computational biotechnology project built around a practical question: **what information is actually useful for forecasting biological outcomes and making better experimental decisions?**
 
-The repository combines quantitative genetics, high-dimensional machine learning, multi-environment genomic prediction, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, continuous-environment transfer, biological environmental representation, decision-horizon forecasting, prospective environmental-state reconstruction, and a grounded scientific interface using real public plant data.
+The repository combines quantitative genetics, high-dimensional machine learning, multi-environment genomic prediction, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, continuous-environment transfer, biological environmental representation, decision-horizon forecasting, prospective environmental-state reconstruction, Value-of-Waiting analysis, and a grounded scientific interface using real public plant data.
 
 The empirical program has two complementary case studies:
 
@@ -313,6 +313,31 @@ The locked forward-year tests cover **113 environments** across six test years, 
 
 A critical boundary remains: B9 reconstructs historical observations as if they were cut off at the issuance date. It is therefore a **retrospective forecast-time-safe backtest substrate**, not a live prospective trial and not an archived weather-forecast benchmark.
 
+## B10 — Forecast-time-safe prediction and Value of Waiting
+
+B10 consumes the frozen B9 issuance-safe states with no new hyperparameter search:
+
+$$
+G \rightarrow G+E_{T0} \rightarrow G+E_{T1} \rightarrow G+E_{T2}.
+$$
+
+The primary benchmark is the B9 forward-year lock, so every training year precedes its test year. B5 CV-E/CV-GE remain secondary continuity checks.
+
+| Primary forward-year model | RMSE | $R^2$ | Correlation |
+|---|---:|---:|---:|
+| G | 2.7642 | -0.0145 | 0.2847 |
+| **G+E_T0** | **2.6635** | 0.0581 | **0.3631** |
+| G+E_T1 | 2.6614 | **0.0595** | 0.3405 |
+| G+E_T2 | **3.2843** | **-0.4322** | **0.1977** |
+
+T0 improves pooled RMSE over G by about **3.64%**, but its cluster intervals cross zero. Waiting from T0 to 30 DAP changes pooled RMSE by only **0.08%**. The key result is non-monotonic: waiting from 30 to 60 DAP makes pooled forward-year RMSE **23.4% worse** under the frozen representation.
+
+The failure is concentrated in early forward backtests. In 2016, with only **23 prior training environments**, T2 RMSE reaches **6.6486**. The catastrophic behavior disappears as historical environmental support expands. B10 therefore identifies a **support-dependent transfer failure**, not evidence that 60-DAP weather is biologically harmful.
+
+For `T2 - T1`, the environment-cluster 95% RMSE-difference interval is **[0.2082, 1.0774]** with zero bootstrap improvement frequency. The year-cluster interval is much wider and crosses zero because only six forward test years are available and the effect is strongly heterogeneous.
+
+![Case Study B10 forecast-time-safe Value of Waiting](reports/figures/case_study_b10_value_of_waiting.png)
+
 Detailed Case Study B evidence:
 
 - [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 data and first transfer benchmark
@@ -320,6 +345,7 @@ Detailed Case Study B evidence:
 - [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md) — B7 target-proximal audit, process/stage ablations, and multiple-kernel evidence
 - [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md) — B8 decision-horizon information ablation
 - [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md) — B9 forecast-time-safe input and forward-year validation lock
+- [`docs/case_study_b_forecast_time_prediction.md`](docs/case_study_b_forecast_time_prediction.md) — B10 forward-year prediction, Value of Waiting, and support-failure evidence
 
 ---
 
@@ -377,7 +403,7 @@ No proprietary biotechnology data are used.
 
 The project avoids naive random splitting when biological structure can leak between train and test partitions. Genotype-aware, environment-aware, sparse multi-environment, and double-cold-start manifests are defined explicitly for the deployment problem being tested.
 
-Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted.
+Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted. B10 then consumes those frozen states with no new hyperparameter search and makes the chronological forward-year benchmark primary.
 
 Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster-bootstrap uncertainty, environmental-support diagnostics, biological information ablation, decision-horizon availability auditing, and grounded-answer verification.
 
@@ -399,6 +425,7 @@ GitHub Actions separates lightweight software checks from real-data executions. 
 - `case-study-b7-process-kernels.yml` — target-proximal audit and biological process/phenology environmental representation;
 - `case-study-b8-decision-horizons.yml` — decision-time availability audit and temporal information-frontier benchmark.
 - `case-study-b9-prospective-environment.yml` — forecast-time-safe weather/soil/management data and forward-year validation lock.
+- `case-study-b10-forecast-time-prediction.yml` — frozen-horizon forward-year prediction and Value-of-Waiting benchmark.
 
 Install the core package with:
 
@@ -423,6 +450,7 @@ python -m plant_intelligence.models.maize_environment_transfer_robustness --outp
 python -m plant_intelligence.models.maize_environment_process_kernels --output-root .
 python -m plant_intelligence.models.maize_environment_decision_horizons --output-root .
 python -m plant_intelligence.data.maize_prospective_environment --output-root .
+python -m plant_intelligence.models.maize_forecast_time_prediction --output-root .
 ```
 
 # Repository structure
@@ -476,6 +504,9 @@ Performance claims apply only to the evaluated public datasets, target definitio
 - that B8's reproductive-stage information jump proves early environmental conditions are biologically unimportant;
 - that historical-location environmental summaries improve pre-season RMSE in the current representation;
 - that B9 is prospective field validation: its inputs are reconstructed retrospectively with strict issuance cutoffs, T1/T2 use observed-to-date weather rather than archived forecasts, and T2 is a fixed 60-DAP proxy rather than observed reproductive phenology;
+- that B10 proves waiting to 60 DAP is generally harmful: the pooled forward-year failure is strongly year-dependent and concentrated when historical environmental support is thin;
+- that B10 establishes a final deployment horizon or an optimal environmental kernel: the 2016 T2 failure requires a support/geometry diagnostic before model complexity is changed;
+- that the six-year forward bootstrap provides a precise year-level uncertainty distribution;
 - that genomic information is generally unimportant because it did not improve one Case Study A forecast;
 - that a language model may override or extrapolate beyond validated quantitative evidence;
 - that the deterministic grounding benchmark measures a real external LLM's scientific accuracy.
@@ -493,6 +524,7 @@ See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environmen
 - [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md) — B7 process/phenology environmental ablation and target-proximal sensitivity
 - [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md) — B8 decision-time information accumulation and source-level availability boundary
 - [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md) — B9 issuance-safe environmental inputs and forward-year validation lock
+- [`docs/case_study_b_forecast_time_prediction.md`](docs/case_study_b_forecast_time_prediction.md) — B10 forecast-time prediction, Value of Waiting, and forward-support diagnostics
 - [`docs/limitations.md`](docs/limitations.md) — interpretation boundaries
 - [`docs/transferability.md`](docs/transferability.md) — transfer to biotechnology applications
 - [`docs/Plant_Intelligence_Lab_Technical_Architecture.pdf`](docs/Plant_Intelligence_Lab_Technical_Architecture.pdf) — technical architecture document
