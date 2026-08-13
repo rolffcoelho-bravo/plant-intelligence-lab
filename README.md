@@ -6,12 +6,12 @@
 
 Plant Intelligence Lab is an open computational biotechnology project built around a practical question: **what information is actually useful for forecasting biological outcomes and making better experimental decisions?**
 
-The repository combines quantitative genetics, high-dimensional machine learning, multi-environment genomic prediction, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, continuous-environment transfer, biological environmental representation, and a grounded scientific interface using real public plant data.
+The repository combines quantitative genetics, high-dimensional machine learning, multi-environment genomic prediction, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, continuous-environment transfer, biological environmental representation, decision-horizon forecasting, and a grounded scientific interface using real public plant data.
 
 The empirical program has two complementary case studies:
 
 - **Case Study A — Arabidopsis longitudinal decision intelligence:** genomic prediction, protocol response, Day-15 → Day-21 phenotype forecasting, uncertainty, abstention, and retrospective experiment prioritization.
-- **Case Study B — Genotype × environment and environmental transfer:** wheat establishes predictive G×E value within represented environments and exposes the categorical-environment transfer limit; a larger Genomes-to-Fields maize extension tests transfer to physically characterized unseen environments and then asks which environmental information is actually useful.
+- **Case Study B — Genotype × environment and environmental transfer:** wheat establishes predictive G×E value within represented environments and exposes the categorical-environment transfer limit; a larger Genomes-to-Fields maize extension tests transfer to physically characterized unseen environments, asks which environmental information is useful, and maps when that information becomes predictive.
 
 ---
 
@@ -264,11 +264,35 @@ Third, an equal-weight process-specific multiple kernel gives the best pooled po
 
 ![Case Study B7 biological environmental representation](reports/figures/case_study_b7_process_kernel_ablation.png)
 
+## B8 — When does environmental information become useful?
+
+B8 keeps the B5 cold-start folds and the B6-R outer-fold representation settings fixed. It accumulates only non-target-proximal environmental information through successive source phenological intervals.
+
+| Decision-horizon representation | CV-E RMSE | CV-GE RMSE |
+|---|---:|---:|
+| Pre-season G only | 2.6876 | 2.6917 |
+| Pre-season training-location history | 2.7160 | 2.7177 |
+| Pre-flowering proxy — 44 ECs | 2.7653 | 2.7686 |
+| Through `EnJFlo` — 66 ECs | 2.8437 | 2.8465 |
+| **Through reproductive stage — 132 ECs** | **2.6108** | **2.6141** |
+| Full-season non-target-proximal — 197 ECs | **2.5772** | **2.5805** |
+
+The result is **not monotonic information accumulation**. Historical-location information does not improve RMSE over genomics alone, and the early current-year representations are weaker under the frozen model. The large transition occurs when the cumulative representation expands through the reproductive-stage intervals: RMSE falls by **8.19%** in CV-E and **8.16%** in CV-GE relative to the preceding 66-variable horizon.
+
+That transition is robust to the 2,000-replicate environment-cluster bootstrap. The reproductive-stage minus preceding-horizon RMSE difference is **-0.2329** with 95% interval **[-0.3688, -0.0933]** in CV-E and **-0.2324** with interval **[-0.3791, -0.0953]** in CV-GE. Improvement frequency is **1.000** in both regimes.
+
+The additional full-season improvement beyond the reproductive-stage representation is small and its environment-cluster interval crosses zero. Likewise, reproductive-stage performance is better than G-only in the pooled point estimate, but that comparison is not 95%-robust across environment clusters.
+
+A critical deployment boundary is explicit. The G2F ECOV source was constructed retrospectively with APSIM phenological intervals whose year-location flowering calibration used average observed silking. Therefore the current-year B8 horizons are **retrospective information-frontier proxies**, not prospective live forecasts. The pre-season history representation uses no held-out current-year ECOV row, but the frozen environment folds are not forward-time folds.
+
+![Case Study B8 decision-horizon information frontier](reports/figures/case_study_b8_decision_horizon.png)
+
 Detailed Case Study B evidence:
 
 - [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 data and first transfer benchmark
 - [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md) — B6-R nested robustness and novelty audit
 - [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md) — B7 target-proximal audit, process/stage ablations, and multiple-kernel evidence
+- [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md) — B8 availability audit and decision-horizon information frontier
 
 ---
 
@@ -326,9 +350,9 @@ No proprietary biotechnology data are used.
 
 The project avoids naive random splitting when biological structure can leak between train and test partitions. Genotype-aware, environment-aware, sparse multi-environment, and double-cold-start manifests are defined explicitly for the deployment problem being tested.
 
-Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate.
+Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 keeps those representation choices frozen again and changes only the information horizon; post-horizon environmental columns are prohibited from earlier horizons.
 
-Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster-bootstrap uncertainty, environmental-support diagnostics, biological information ablation, and grounded-answer verification.
+Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster-bootstrap uncertainty, environmental-support diagnostics, biological information ablation, decision-horizon availability auditing, and grounded-answer verification.
 
 # Reproducibility
 
@@ -345,7 +369,8 @@ GitHub Actions separates lightweight software checks from real-data executions. 
 - `case-study-b5-data-lock.yml` — continuous-environment Genomes-to-Fields data lock;
 - `case-study-b6-environment-transfer.yml` — first unseen-environment and double-cold-start transfer benchmark;
 - `case-study-b6r-transfer-robustness.yml` — nested environmental-representation robustness and novelty audit;
-- `case-study-b7-process-kernels.yml` — target-proximal audit and biological process/phenology environmental representation.
+- `case-study-b7-process-kernels.yml` — target-proximal audit and biological process/phenology environmental representation;
+- `case-study-b8-decision-horizons.yml` — decision-time availability audit and temporal information-frontier benchmark.
 
 Install the core package with:
 
@@ -368,6 +393,7 @@ python -m plant_intelligence.data.maize_environment_transfer --output-root .
 python -m plant_intelligence.models.maize_environment_transfer --output-root .
 python -m plant_intelligence.models.maize_environment_transfer_robustness --output-root .
 python -m plant_intelligence.models.maize_environment_process_kernels --output-root .
+python -m plant_intelligence.models.maize_environment_decision_horizons --output-root .
 ```
 
 # Repository structure
@@ -398,7 +424,7 @@ plant-intelligence-lab/
 
 # Industrial relevance
 
-The repository demonstrates a reusable decision architecture rather than one fitted model. The relevant industry problem is to determine which biological information is sufficient for a decision, whether a prediction is supported in the deployment context, whether additional complexity creates measurable value, and where the model should decline to extrapolate.
+The repository demonstrates a reusable decision architecture rather than one fitted model. The relevant industry problem is to determine which biological information is sufficient for a decision, whether a prediction is supported in the deployment context, whether additional complexity creates measurable value, **when new information becomes worth waiting for**, and where the model should decline to extrapolate.
 
 The demonstrated capabilities are transferable to breeding, multi-environment testing, propagation/regeneration analytics, high-dimensional omics, treatment-response modelling, early biological monitoring, experimental prioritization, uncertainty-aware decision support, and evidence-grounded scientific interfaces.
 
@@ -417,12 +443,14 @@ Performance claims apply only to the evaluated public datasets, target definitio
 - that the five excluded crop-model `yield_*` variables prove direct target leakage; B7 treats them conservatively as target-proximal and reports a sensitivity analysis;
 - that the B7 process multiple kernel establishes a robust accuracy gain; its environment-cluster interval crosses zero;
 - that phenology-block predictive differences establish causal stage-specific mechanisms;
-- that retrospective full-season or reproductive-stage environmental descriptors are necessarily available for a pre-season forecast;
+- that B8 is prospective deployment validation: the source ECOV table is retrospective and the frozen environment folds are not forward-time folds;
+- that B8's reproductive-stage information jump proves early environmental conditions are biologically unimportant;
+- that historical-location environmental summaries improve pre-season RMSE in the current representation;
 - that genomic information is generally unimportant because it did not improve one Case Study A forecast;
 - that a language model may override or extrapolate beyond validated quantitative evidence;
 - that the deterministic grounding benchmark measures a real external LLM's scientific accuracy.
 
-See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md), and [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md) for the detailed boundaries.
+See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md), [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md), and [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md) for the detailed boundaries.
 
 # Documentation
 
@@ -433,6 +461,7 @@ See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environmen
 - [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 continuous-environment data lock and transfer evidence
 - [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md) — B6-R environmental-representation robustness and novelty evidence
 - [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md) — B7 process/phenology environmental ablation and target-proximal sensitivity
+- [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md) — B8 decision-time availability and temporal information frontier
 - [`docs/limitations.md`](docs/limitations.md) — interpretation boundaries
 - [`docs/transferability.md`](docs/transferability.md) — transfer to biotechnology applications
 - [`docs/Plant_Intelligence_Lab_Technical_Architecture.pdf`](docs/Plant_Intelligence_Lab_Technical_Architecture.pdf) — technical architecture document

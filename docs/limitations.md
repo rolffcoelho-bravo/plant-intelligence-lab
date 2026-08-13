@@ -66,7 +66,7 @@ Environmental distance is therefore a candidate reliability feature, not a valid
 
 ## Target-proximal environmental variables
 
-B7 identifies five `yield_*` columns in the environmental matrix and treats them conservatively as target-proximal crop-model outputs. They are excluded from every new B7 candidate representation.
+B7 identifies five `yield_*` columns in the environmental matrix and treats them conservatively as target-proximal crop-model outputs. They are excluded from every new B7 and B8 environmental candidate representation.
 
 The frozen B6-R all-environment model is retained only as a sensitivity reference. Removing the five variables changes pooled RMSE by only about 0.008 in either cold-start regime, with environment-cluster intervals crossing zero.
 
@@ -80,11 +80,25 @@ The reproductive-transition block nearly matches the all-environment point perfo
 
 The equal-weight process multiple kernel has the best B7 pooled point estimate, but its paired environment-cluster interval crosses zero. It must therefore not be presented as a robust accuracy breakthrough.
 
-## Decision-time availability of environmental information
+## B8 decision-horizon information frontier
 
-A retrospective year-location environmental descriptor can be informative while still being unavailable when a real decision must be made. Several environmental variables summarize conditions accumulated over phenological intervals.
+B8 freezes the B5 cold-start folds and B6-R outer-fold representation settings, then changes only the amount of environmental information admitted through the source phenological intervals.
 
-Consequently, a model using reproductive-stage or full-season environmental information must not be presented as a pre-season forecast unless a separate availability audit shows that all inputs are knowable at that prediction horizon. The next deployment-oriented validation should explicitly separate pre-season, early-season, and later in-season information sets.
+The pre-season training-location history representation does not improve RMSE over genomics alone. The pre-flowering and through-`EnJFlo` current-year representations also have weaker pooled RMSE under the frozen model. The largest change occurs only when cumulative reproductive-stage information is admitted: RMSE falls by approximately **8.19%** in CV-E and **8.16%** in CV-GE relative to the immediately preceding horizon.
+
+That reproductive-stage transition is supported by the paired environment-cluster bootstrap, with the 95% RMSE-difference interval entirely below zero in both regimes. This does **not** mean that early environmental conditions are biologically unimportant. It means the evaluated early environmental similarity representation does not translate them into lower cold-start RMSE under the frozen architecture.
+
+The reproductive-stage point estimate is also better than the genomic-only baseline, but that broader comparison is not 95%-robust across environment clusters. The additional full-season gain beyond the reproductive-stage representation is likewise small and not robust.
+
+## Decision-time availability and prospective interpretation
+
+The Genomes-to-Fields ECOV table is a retrospective research object. Its APSIM environmental covariates were summarized over phenological intervals, and the source workflow calibrated year-location thermal time so simulated flowering aligned with average observed silking. Consequently, a current-year ECOV block can be restricted to columns from an early interval while still depending on retrospectively constructed source phenology.
+
+B8 therefore labels the current-year pre-flowering, through-floral-initiation, reproductive-stage, and full-season results as **retrospective decision-horizon proxies**, not prospective deployment validation.
+
+The B8 pre-season location-history representation is stricter with respect to the held-out year-location: it uses no held-out current-year ECOV row, and a training environment's own row is excluded from its own history proxy. However, the B5 environment folds are environment cold-start folds rather than calendar forward-chaining folds. The history result is therefore an input-availability experiment under the frozen CV design, not evidence from a real-time future forecasting trial.
+
+A genuinely prospective extension must reconstruct environmental state using only information that exists at the forecast issuance date, such as prior climate history, soil/management variables known before planting, weather forecasts available on that date, and observed-to-date weather. It must not use future realized weather or future observed phenology to define earlier environmental states.
 
 ## Uncertainty calibration
 
@@ -112,7 +126,7 @@ These objectives should remain explicit rather than being interpreted as one uni
 
 ## Causality and biological mechanism
 
-Predictive importance, association, regression coefficients, model rankings, genomic similarity, environmental similarity, stage ablations, kernel weights, or acquisition scores do not by themselves establish causal biological mechanisms.
+Predictive importance, association, regression coefficients, model rankings, genomic similarity, environmental similarity, stage ablations, decision-horizon differences, kernel weights, or acquisition scores do not by themselves establish causal biological mechanisms.
 
 The repository is a prediction and decision-support project, not a causal genomics or causal environmental-mechanism study.
 
@@ -122,7 +136,7 @@ A fitted model should not be transferred unchanged across species, laboratories,
 
 ## Decision support
 
-The integrated decision architecture combines forecast, uncertainty, reliability, environmental support, and experimental objective. It is intended to support scientific prioritization, not replace biological expertise, safety controls, laboratory or breeding judgement, or operational constraints.
+The integrated decision architecture combines forecast, uncertainty, reliability, environmental support, information horizon, and experimental objective. It is intended to support scientific prioritization, not replace biological expertise, safety controls, laboratory or breeding judgement, or operational constraints.
 
 ## GenAI
 
