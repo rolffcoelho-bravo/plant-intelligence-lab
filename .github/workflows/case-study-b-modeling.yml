@@ -116,3 +116,5 @@ jobs:
             git commit -m 'Publish Case Study B normalized GxE robustness evidence [skip ci]'
             git push
           fi
+
+# Regeneration trigger: use the corrected horizontal legend below the plot.
