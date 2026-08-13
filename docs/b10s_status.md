@@ -1,1 +1,0 @@
-Case Study B10-S status: implementation in progress.
