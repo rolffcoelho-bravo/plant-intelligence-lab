@@ -34,16 +34,13 @@ jobs:
           python -m pip install pytest
 
       - name: Validate B9 time-safety implementation
-        run: |
-          pytest -q tests/test_case_study_b9_prospective_environment.py
+        run: pytest -q tests/test_case_study_b9_prospective_environment.py
 
       - name: Materialize locked B5 public data and manifests
-        run: |
-          python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
+        run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
 
       - name: Execute B9 prospective environmental-state data lock
-        run: |
-          python -u -m plant_intelligence.data.maize_prospective_environment --output-root .
+        run: python -u -m plant_intelligence.data.maize_prospective_environment --output-root .
 
       - name: Verify B9 evidence and leakage boundaries
         run: |
@@ -59,28 +56,21 @@ jobs:
           test -s reports/figures/case_study_b9_input_coverage.png
           python - <<'PY'
           import pandas as pd
-
           audit = pd.read_csv('reports/results/case_study_b9_source_audit.csv')
           assert int(audit.loc[0, 'future_weather_violations']) == 0
           assert int(audit.loc[0, 'observed_phenology_violations']) == 0
           assert int(audit.loc[0, 'n_horizons']) == 3
-
           horizons = pd.read_csv('reports/results/case_study_b9_horizon_lock.csv')
           assert not horizons['uses_future_realized_weather'].astype(bool).any()
           for c in ['uses_observed_anthesis','uses_observed_silking','uses_observed_harvest','uses_observed_yield']:
               assert not horizons[c].astype(bool).any()
-
           states = pd.read_csv('reports/results/case_study_b9_safe_environment_states.csv')
           assert not states['uses_future_weather'].astype(bool).any()
           assert not states['uses_observed_phenology'].astype(bool).any()
-
           forward = pd.read_csv('reports/results/case_study_b9_forward_year_folds.csv')
           assert (forward['train_year_max'] < forward['test_year']).all()
-
           print(audit.to_string(index=False))
-          print('\nHorizon lock')
           print(horizons.to_string(index=False))
-          print('\nForward-year scenarios')
           print(forward.groupby('test_year').size().to_string())
           PY
 
@@ -88,20 +78,12 @@ jobs:
         run: |
           git config user.name 'plant-intelligence-lab-bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add \
-            reports/results/case_study_b9_source_audit.csv \
-            reports/results/case_study_b9_environment_manifest.csv \
-            reports/results/case_study_b9_power_weather_audit.csv \
-            reports/results/case_study_b9_ssurgo_audit.csv \
-            reports/results/case_study_b9_safe_environment_states.csv \
-            reports/results/case_study_b9_horizon_lock.csv \
-            reports/results/case_study_b9_feature_provenance.csv \
-            reports/results/case_study_b9_forward_year_folds.csv \
-            reports/results/case_study_b9_validation_lock.csv \
-            reports/figures/case_study_b9_input_coverage.png
+          git add reports/results/case_study_b9_*.csv reports/figures/case_study_b9_input_coverage.png
           if git diff --cached --quiet; then
             echo 'No new B9 outputs to publish.'
           else
             git commit -m 'Publish Case Study B9 prospective environment data lock [skip ci]'
             git push
           fi
+
+# corrected soil-coordinate rerun
