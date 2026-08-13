@@ -15,18 +15,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Patch README and limitations
-        run: python .github/scripts/patch_b9_docs.py
-
-      - name: Commit B9 documentation consolidation
+      - name: Apply documentation consolidation
         run: |
-          git config user.name 'plant-intelligence-lab-bot'
-          git config user.email 'actions@users.noreply.github.com'
+          python .github/scripts/patch_b9_docs.py
+          python .github/scripts/cleanup_b9_docs.py
+      - name: Commit documentation
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
           git add README.md docs/limitations.md
           if git diff --cached --quiet; then
-            echo 'No B9 documentation changes required.'
+            echo 'No documentation changes.'
           else
-            git commit -m 'Integrate Case Study B9 into public documentation [skip ci]'
+            git commit -m 'Finalize B9 public documentation [skip ci]'
             git push
           fi
