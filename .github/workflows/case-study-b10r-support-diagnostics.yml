@@ -6,7 +6,6 @@ on:
     branches: [main]
     paths:
       - 'src/plant_intelligence/models/maize_forward_support_diagnostics.py'
-      - 'src/plant_intelligence/models/maize_training_only_geometry_selection.py'
       - 'tests/test_case_study_b10r_support_diagnostics.py'
       - '.github/workflows/case-study-b10r-support-diagnostics.yml'
 
@@ -16,12 +15,10 @@ permissions:
 jobs:
   support-diagnostics:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 120
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: pip
@@ -30,91 +27,26 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install pytest
-      - name: Validate B10-R implementation
+      - name: Validate B10-R
         run: pytest -q tests/test_case_study_b10r_support_diagnostics.py
-      - name: Validate B10-S selection boundary
-        run: |
-          python - <<'PY'
-          import pandas as pd
-          from plant_intelligence.models.maize_forecast_time_prediction import FROZEN_CONFIG
-          from plant_intelligence.models.maize_training_only_geometry_selection import CANDIDATES, MIN_INNER_YEARS, inner_years_for_outer, select_candidate
-          assert len(CANDIDATES)==12
-          assert {c.e_rank for c in CANDIDATES}=={8,16,32}
-          assert {c.gamma_multiplier for c in CANDIDATES}=={0.5,1.0,2.0,4.0}
-          assert MIN_INNER_YEARS==2
-          assert inner_years_for_outer([2014,2015,2016],2016)==[2015]
-          rows=[]
-          for i,cfg in enumerate(CANDIDATES):
-              for j,year in enumerate([2015,2016,2017]):
-                  rmse=3+i*.01+j*.001-(.5 if cfg.name=='diagnostic_rank8_gamma4' else 0)
-                  n=100+j
-                  rows.append({'inner_test_year':year,'config':cfg.name,'n':n,'rmse':rmse,'mae':rmse*.8,'sse':rmse*rmse*n,'sae':rmse*.8*n})
-          ev=pd.DataFrame(rows)
-          s16=select_candidate(ev,2016)
-          assert s16['selection_status']=='INSUFFICIENT_HISTORY_FALLBACK'
-          assert s16['selected_config']==FROZEN_CONFIG.name
-          s17=select_candidate(ev,2017)
-          assert s17['selection_status']=='TRAINING_ONLY_SELECTED'
-          assert s17['inner_years']=='2015;2016'
-          assert s17['selected_config']=='diagnostic_rank8_gamma4'
-          changed=ev.copy()
-          changed.loc[changed.inner_test_year.eq(2017),'rmse']=999.0
-          changed.loc[changed.inner_test_year.eq(2017),'sse']=999.0**2*changed.loc[changed.inner_test_year.eq(2017),'n']
-          assert select_candidate(changed,2017)['selected_config']==s17['selected_config']
-          PY
-      - name: Verify locked B9 and B10 evidence exists
-        run: |
-          test -s reports/results/case_study_b9_safe_environment_states.csv
-          test -s reports/results/case_study_b9_environment_manifest.csv
-          test -s reports/results/case_study_b9_forward_year_folds.csv
-          test -s reports/results/case_study_b10_environment_metrics.csv
-          test -s reports/results/case_study_b10_forward_year_metrics.csv
-          test -s reports/results/case_study_b10r_geometry_sensitivity_by_year.csv
-      - name: Materialize locked B5 public genotype and phenotype data
+      - name: Materialize B5 public data
         run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
-      - name: Execute B10-R support-aware diagnostics
+      - name: Execute B10-R
         run: python -u -m plant_intelligence.models.maize_forward_support_diagnostics --output-root .
-      - name: Execute B10-S training-only geometry selection
-        run: python -u -m plant_intelligence.models.maize_training_only_geometry_selection --output-root .
-      - name: Verify B10-S evidence
+      - name: Verify B10-R outputs
         run: |
-          test -s reports/results/case_study_b10s_inner_chronological_evidence.csv
-          test -s reports/results/case_study_b10s_selection_audit.csv
-          test -s reports/results/case_study_b10s_forward_summary.csv
-          test -s reports/results/case_study_b10s_forward_year_metrics.csv
-          test -s reports/results/case_study_b10s_environment_metrics.csv
-          test -s reports/results/case_study_b10s_paired_bootstrap.csv
-          test -s reports/results/case_study_b10s_b10_reproduction_audit.csv
-          test -s reports/results/case_study_b10s_oracle_regret.csv
-          test -s reports/figures/case_study_b10s_training_only_geometry.png
-          python - <<'PY'
-          import pandas as pd
-          sel=pd.read_csv('reports/results/case_study_b10s_selection_audit.csv')
-          assert sel.outer_test_year.astype(int).tolist()==[2016,2017,2018,2019,2020,2021]
-          assert sel.loc[sel.outer_test_year.eq(2016),'selection_status'].iloc[0]=='INSUFFICIENT_HISTORY_FALLBACK'
-          assert (sel.loc[sel.outer_test_year.gt(2016),'selection_status']=='TRAINING_ONLY_SELECTED').all()
-          assert not sel.outer_outcome_used_for_selection.astype(bool).any()
-          rep=pd.read_csv('reports/results/case_study_b10s_b10_reproduction_audit.csv')
-          assert len(rep)==12 and rep.within_tolerance.astype(bool).all()
-          print('\nB10-S selections')
-          print(sel.to_string(index=False))
-          print('\nB10-S pooled summary')
-          print(pd.read_csv('reports/results/case_study_b10s_forward_summary.csv').to_string(index=False))
-          print('\nB10-S yearly metrics')
-          print(pd.read_csv('reports/results/case_study_b10s_forward_year_metrics.csv').to_string(index=False))
-          print('\nB10-S paired bootstrap')
-          print(pd.read_csv('reports/results/case_study_b10s_paired_bootstrap.csv').to_string(index=False))
-          print('\nB10-S oracle regret')
-          print(pd.read_csv('reports/results/case_study_b10s_oracle_regret.csv').to_string(index=False))
-          PY
-      - name: Publish B10-R and B10-S evidence
+          test -s reports/results/case_study_b10r_environment_support.csv
+          test -s reports/results/case_study_b10r_kernel_geometry.csv
+          test -s reports/results/case_study_b10r_t2_failure_diagnostic.csv
+          test -s reports/results/case_study_b10r_geometry_sensitivity_by_year.csv
+          test -s reports/results/case_study_b10r_geometry_sensitivity_pooled.csv
+          test -s reports/figures/case_study_b10r_support_diagnostic.png
+      - name: Publish B10-R evidence
         run: |
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
-          git add reports/results/case_study_b10r_*.csv reports/figures/case_study_b10r_support_diagnostic.png reports/results/case_study_b10s_*.csv reports/figures/case_study_b10s_training_only_geometry.png
-          if git diff --cached --quiet; then
-            echo 'No new Case Study B outputs to publish.'
-          else
-            git commit -m 'Publish Case Study B10-S training-only geometry [skip ci]'
+          git add reports/results/case_study_b10r_*.csv reports/figures/case_study_b10r_support_diagnostic.png
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish Case Study B10-R support diagnostics [skip ci]'
             git push
           fi
