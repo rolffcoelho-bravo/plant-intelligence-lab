@@ -1,0 +1,61 @@
+name: Maintenance — Fix Case Study B GxE legend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/maintenance-fix-b-gxe-legend.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-legend-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Patch figure generator
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/plant_intelligence/models/wheat_gxe_baseline.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''    ax.legend(frameon=False, ncol=2)
+              ax.grid(axis="y", alpha=0.2)
+              fig.tight_layout()
+          '''
+          new = '''    ax.legend(
+                  loc="upper center",
+                  bbox_to_anchor=(0.5, -0.10),
+                  ncol=4,
+                  frameon=False,
+                  columnspacing=1.6,
+                  handlelength=1.5,
+              )
+              ax.grid(axis="y", alpha=0.2)
+              fig.subplots_adjust(bottom=0.22)
+          '''
+          if old not in text:
+              if 'bbox_to_anchor=(0.5, -0.10)' in text and 'ncol=4' in text:
+                  print('Legend source already corrected.')
+              else:
+                  raise SystemExit('Expected original legend block not found; refusing blind edit.')
+          else:
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+              print('Patched Case Study B legend generator.')
+          PY
+
+      - name: Commit generator correction
+        run: |
+          if git diff --quiet -- src/plant_intelligence/models/wheat_gxe_baseline.py; then
+            echo 'No source change required.'
+            exit 0
+          fi
+          git config user.name 'plant-intelligence-lab-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add src/plant_intelligence/models/wheat_gxe_baseline.py
+          git commit -m 'Move Case Study B ablation legend below plot'
+          git push
