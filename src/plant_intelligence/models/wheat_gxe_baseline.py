@@ -628,9 +628,16 @@ def plot_ablation(summary: pd.DataFrame, destination: Path) -> None:
     ax.set_xticks(x, regimes)
     ax.set_ylabel("Out-of-sample RMSE")
     ax.set_title("Case Study B — genomic / environment / G×E information ablation")
-    ax.legend(frameon=False, ncol=2)
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.10),
+        ncol=4,
+        frameon=False,
+        columnspacing=1.6,
+        handlelength=1.5,
+    )
     ax.grid(axis="y", alpha=0.2)
-    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.22)
     fig.savefig(destination, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
