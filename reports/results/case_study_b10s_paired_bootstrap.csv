@@ -1,0 +1,7 @@
+comparison,challenger,reference,bootstrap_cluster,n_clusters,bootstrap_reps,delta_rmse_challenger_minus_reference,ci95_low,ci95_high,improvement_frequency
+selected_T2_vs_frozen_T2,Selected-T2,Frozen-T2,environment,113,2000,0.1251573407074491,0.030330470540053323,0.23230400726538525,0.0045
+selected_T2_vs_frozen_T2,Selected-T2,Frozen-T2,test_year,6,2000,0.1251573407074491,0.023083981581180017,0.2865259866589708,0.006
+selected_T2_vs_frozen_T1,Selected-T2,Frozen-T1,environment,113,2000,0.748079457601265,0.35702087239894326,1.1994955037114727,0.0
+selected_T2_vs_frozen_T1,Selected-T2,Frozen-T1,test_year,6,2000,0.748079457601265,0.005326458048122706,2.0171749661250753,0.0215
+frozen_T2_vs_frozen_T1_reproduction,Frozen-T2,Frozen-T1,environment,113,2000,0.6229221168938159,0.21730423187011277,1.1283412163038624,0.0
+frozen_T2_vs_frozen_T1_reproduction,Frozen-T2,Frozen-T1,test_year,6,2000,0.6229221168938159,-0.11858301999428808,2.0373193921740183,0.1995
