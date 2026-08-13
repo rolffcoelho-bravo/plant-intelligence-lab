@@ -1,0 +1,14 @@
+feature_group,source,T0,T1,T2,admission
+weather,NASA POWER Daily API,prior-year climatology only,observed through 30 DAP,observed through 60 DAP,ALLOWED_WITH_ISSUANCE_CUTOFF
+soil,USDA-NRCS Soil Data Access / SSURGO,static point soil map unit/component,static,static,ALLOWED_STATIC
+management,G2F curated PHENO metadata,planting date and plant-population proxy when available,same locked management metadata,same locked management metadata,ALLOWED_IF_KNOWN_AT_ISSUANCE
+forbidden:date_harvest,G2F phenotype/outcome field,excluded,excluded,excluded,FORBIDDEN_OUTCOME_OR_FUTURE_PHENOLOGY
+forbidden:date_anthesis,G2F phenotype/outcome field,excluded,excluded,excluded,FORBIDDEN_OUTCOME_OR_FUTURE_PHENOLOGY
+forbidden:date_silking,G2F phenotype/outcome field,excluded,excluded,excluded,FORBIDDEN_OUTCOME_OR_FUTURE_PHENOLOGY
+forbidden:yield,G2F phenotype/outcome field,excluded,excluded,excluded,FORBIDDEN_OUTCOME_OR_FUTURE_PHENOLOGY
+forbidden:anthesis,G2F phenotype/outcome field,excluded,excluded,excluded,FORBIDDEN_OUTCOME_OR_FUTURE_PHENOLOGY
+forbidden:silking,G2F phenotype/outcome field,excluded,excluded,excluded,FORBIDDEN_OUTCOME_OR_FUTURE_PHENOLOGY
+forbidden:ASI,G2F phenotype/outcome field,excluded,excluded,excluded,FORBIDDEN_OUTCOME_OR_FUTURE_PHENOLOGY
+forbidden:anthesis_GDD,G2F phenotype/outcome field,excluded,excluded,excluded,FORBIDDEN_OUTCOME_OR_FUTURE_PHENOLOGY
+forbidden:silking_GDD,G2F phenotype/outcome field,excluded,excluded,excluded,FORBIDDEN_OUTCOME_OR_FUTURE_PHENOLOGY
+forbidden:ASI_GDD,G2F phenotype/outcome field,excluded,excluded,excluded,FORBIDDEN_OUTCOME_OR_FUTURE_PHENOLOGY

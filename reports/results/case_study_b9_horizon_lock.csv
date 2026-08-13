@@ -1,0 +1,4 @@
+horizon_order,horizon,offset_days_after_planting,uses_current_year_weather,availability_state,uses_future_realized_weather,uses_observed_anthesis,uses_observed_silking,uses_observed_harvest,uses_observed_yield,description
+0,T0_preseason,0,False,PROSPECTIVE_INPUT_LOCK,False,False,False,False,False,Prior-year weather climatology + static soil + planting/management metadata; no current-year realized weather.
+1,T1_30DAP,30,True,PROSPECTIVE_OBSERVED_TO_DATE,False,False,False,False,False,Observed current-year weather from planting through 30 days after planting; no later weather.
+2,T2_60DAP_reproductive_window_proxy,60,True,PROSPECTIVE_OBSERVED_TO_DATE,False,False,False,False,False,"Observed current-year weather from planting through 60 days after planting; fixed-time proxy, not observed flowering/silking."
