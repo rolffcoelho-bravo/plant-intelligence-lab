@@ -410,12 +410,17 @@ def query_ssurgo_point(latitude: float, longitude: float) -> dict[str, object]:
 
 def acquire_ssurgo(environments: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
-    unique = environments[["latitude", "longitude", "city"]].drop_duplicates().sort_values(["city", "latitude", "longitude"])
+    # Soil is a point-level static source. Several G2F environment labels can
+    # resolve to the same coordinate, so query each coordinate exactly once.
+    unique = (
+        environments[["latitude", "longitude"]]
+        .drop_duplicates()
+        .sort_values(["latitude", "longitude"])
+    )
     for row in unique.itertuples(index=False):
         result = query_ssurgo_point(float(row.latitude), float(row.longitude))
         rows.append(
             {
-                "city": str(row.city),
                 "coordinate_key": _coord_key(float(row.latitude), float(row.longitude)),
                 "latitude": float(row.latitude),
                 "longitude": float(row.longitude),
@@ -468,7 +473,8 @@ def build_safe_states(
     weather: dict[str, pd.DataFrame],
     soil: pd.DataFrame,
 ) -> pd.DataFrame:
-    soil_by_key = soil.set_index("coordinate_key", drop=False).to_dict("index") if not soil.empty else {}
+    soil_unique = soil.drop_duplicates("coordinate_key", keep="first") if not soil.empty else soil
+    soil_by_key = soil_unique.set_index("coordinate_key", drop=False).to_dict("index") if not soil_unique.empty else {}
     rows: list[dict[str, object]] = []
     for env in environments.itertuples(index=False):
         planting = pd.Timestamp(env.planting_date)
