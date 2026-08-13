@@ -1,0 +1,95 @@
+name: Case Study B - Support-Aware Forward-Time Diagnostics
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/plant_intelligence/models/maize_forward_support_diagnostics.py'
+      - 'tests/test_case_study_b10r_support_diagnostics.py'
+      - '.github/workflows/case-study-b10r-support-diagnostics.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  support-diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Validate B10-R implementation
+        run: pytest -q tests/test_case_study_b10r_support_diagnostics.py
+      - name: Verify locked B9 and B10 evidence exists
+        run: |
+          test -s reports/results/case_study_b9_safe_environment_states.csv
+          test -s reports/results/case_study_b9_environment_manifest.csv
+          test -s reports/results/case_study_b9_forward_year_folds.csv
+          test -s reports/results/case_study_b10_environment_metrics.csv
+          test -s reports/results/case_study_b10_forward_year_metrics.csv
+      - name: Materialize locked B5 public genotype and phenotype data
+        run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
+      - name: Execute B10-R support-aware diagnostics
+        run: python -u -m plant_intelligence.models.maize_forward_support_diagnostics --output-root .
+      - name: Verify B10-R evidence
+        run: |
+          test -s reports/results/case_study_b10r_environment_support.csv
+          test -s reports/results/case_study_b10r_kernel_geometry.csv
+          test -s reports/results/case_study_b10r_t2_failure_diagnostic.csv
+          test -s reports/results/case_study_b10r_support_error_associations.csv
+          test -s reports/results/case_study_b10r_year_summary.csv
+          test -s reports/results/case_study_b10r_support_quartiles.csv
+          test -s reports/results/case_study_b10r_geometry_sensitivity_by_year.csv
+          test -s reports/results/case_study_b10r_geometry_sensitivity_pooled.csv
+          test -s reports/results/case_study_b10r_diagnosis_summary.csv
+          test -s reports/figures/case_study_b10r_support_diagnostic.png
+          python - <<'PY'
+          import numpy as np
+          import pandas as pd
+
+          years = pd.read_csv('reports/results/case_study_b10r_year_summary.csv')
+          assert years.test_year.astype(int).tolist() == [2016,2017,2018,2019,2020,2021]
+          assert (years.n_train_environments.diff().dropna() > 0).all()
+
+          grid = pd.read_csv('reports/results/case_study_b10r_geometry_sensitivity_pooled.csv')
+          assert len(grid) == 12
+          assert grid.diagnostic_only_no_selection.astype(bool).all()
+          baseline = grid[(grid.e_rank_requested == 16) & np.isclose(grid.gamma_multiplier, 2.0)]
+          assert len(baseline) == 1
+
+          failure = pd.read_csv('reports/results/case_study_b10r_t2_failure_diagnostic.csv')
+          assert len(failure) == 113
+          assert not failure.rmse_t2_minus_t1.isna().any()
+
+          print('\nB10-R yearly support diagnostic')
+          print(years.to_string(index=False))
+          print('\nB10-R strongest support-error associations')
+          assoc = pd.read_csv('reports/results/case_study_b10r_support_error_associations.csv')
+          print(assoc.head(12).to_string(index=False))
+          print('\nB10-R diagnostic T2 geometry grid')
+          print(grid.sort_values('rmse').to_string(index=False))
+          print('\nB10-R compact diagnosis')
+          print(pd.read_csv('reports/results/case_study_b10r_diagnosis_summary.csv').to_string(index=False))
+          PY
+      - name: Publish compact B10-R evidence
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add reports/results/case_study_b10r_*.csv reports/figures/case_study_b10r_support_diagnostic.png
+          if git diff --cached --quiet; then
+            echo 'No new B10-R outputs to publish.'
+          else
+            git commit -m 'Publish Case Study B10-R support diagnostics [skip ci]'
+            git push
+          fi
