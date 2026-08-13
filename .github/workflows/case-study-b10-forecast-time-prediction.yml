@@ -1,0 +1,81 @@
+name: Case Study B - Forecast-Time Prediction and Value of Waiting
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/plant_intelligence/models/maize_forecast_time_prediction.py'
+      - 'tests/test_case_study_b10_forecast_time_prediction.py'
+      - '.github/workflows/case-study-b10-forecast-time-prediction.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  forecast-time-prediction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Validate B10 implementation
+        run: pytest -q tests/test_case_study_b10_forecast_time_prediction.py
+      - name: Materialize locked B5 public data and manifests
+        run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
+      - name: Reconstruct frozen B9 forecast-time-safe states
+        run: python -u -m plant_intelligence.data.maize_prospective_environment --output-root .
+      - name: Execute B10 forecast-time-safe prediction
+        run: python -u -m plant_intelligence.models.maize_forecast_time_prediction --output-root .
+      - name: Verify B10 evidence and chronology
+        run: |
+          test -s reports/results/case_study_b10_forecast_time_summary.csv
+          test -s reports/results/case_study_b10_forward_year_metrics.csv
+          test -s reports/results/case_study_b10_environment_metrics.csv
+          test -s reports/results/case_study_b10_value_of_waiting.csv
+          test -s reports/results/case_study_b10_value_of_waiting_bootstrap.csv
+          test -s reports/results/case_study_b10_design_audit.csv
+          test -s reports/results/case_study_b10_feature_audit.csv
+          test -s reports/figures/case_study_b10_value_of_waiting.png
+          python - <<'PY'
+          import pandas as pd
+          summary = pd.read_csv('reports/results/case_study_b10_forecast_time_summary.csv')
+          assert set(summary['model']) == {'G','G+E_T0','G+E_T1','G+E_T2'}
+          assert {'FORWARD-YEAR-B10','CV-E-B10','CV-GE-B10'}.issubset(set(summary['regime']))
+          design = pd.read_csv('reports/results/case_study_b10_design_audit.csv')
+          primary = design[design['regime'].eq('FORWARD-YEAR-B10')]
+          assert sorted(primary['test_year'].astype(int).tolist()) == [2016,2017,2018,2019,2020,2021]
+          assert (primary['train_year_max'].astype(int) < primary['test_year'].astype(int)).all()
+          assert not design['hyperparameter_search_in_b10'].astype(bool).any()
+          feature = pd.read_csv('reports/results/case_study_b10_feature_audit.csv')
+          assert len(feature) == 3
+          assert not feature['uses_future_weather'].astype(bool).any()
+          assert not feature['uses_observed_phenology'].astype(bool).any()
+          boot = pd.read_csv('reports/results/case_study_b10_value_of_waiting_bootstrap.csv')
+          primary_boot = boot[boot['regime'].eq('FORWARD-YEAR-B10')]
+          assert {'environment','test_year'}.issubset(set(primary_boot['bootstrap_cluster']))
+          print(summary.to_string(index=False))
+          print(pd.read_csv('reports/results/case_study_b10_value_of_waiting.csv').query("regime == 'FORWARD-YEAR-B10'").to_string(index=False))
+          print(primary_boot.to_string(index=False))
+          PY
+      - name: Publish compact B10 evidence
+        run: |
+          git config user.name 'plant-intelligence-lab-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add reports/results/case_study_b10_*.csv reports/figures/case_study_b10_value_of_waiting.png
+          if git diff --cached --quiet; then
+            echo 'No new B10 outputs to publish.'
+          else
+            git commit -m 'Publish Case Study B10 forecast-time prediction [skip ci]'
+            git push
+          fi
