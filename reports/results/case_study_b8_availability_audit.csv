@@ -1,7 +1,7 @@
-horizon_order,horizon,admitted_stages,n_current_year_ecov_columns,uses_current_year_ecov,availability_state,strict_no_post_horizon_columns,source_phenology_calibrated_to_observed_silking,description
-0,Pre-season-G-only,,0,False,PROSPECTIVE_SUPPORTED_G_ONLY,True,False,No current-year ECOV information is admitted.
-1,Pre-season-location-history,,0,False,PROSPECTIVE_PROXY_TRAINING_HISTORY_ONLY,True,False,Environmental representation is a training-only historical location climatology; held-out current-year ECOV is never used.
-2,Pre-flowering-observed,GerEme|EmeEnJ,44,True,RETROSPECTIVE_HORIZON_PROXY,True,True,Uses only completed GerEme and EmeEnJ current-year ECOV intervals; later stages are excluded.
-3,At-flowering-observed,GerEme|EmeEnJ|EnJFlo,66,True,RETROSPECTIVE_HORIZON_PROXY,True,True,"Adds EnJFlo, so information is accumulated through the flowering boundary."
-4,Reproductive-stage-observed,GerEme|EmeEnJ|EnJFlo|FloFla|FlaFlw|FlwStG,132,True,RETROSPECTIVE_HORIZON_PROXY,True,True,Accumulates non-target-proximal ECOV information through FlwStG.
-5,Full-season-nonleaky,GerEme|EmeEnJ|EnJFlo|FloFla|FlaFlw|FlwStG|StGEnG|EnGMat|MatHar,197,True,RETROSPECTIVE_REFERENCE_ONLY,True,True,Uses all non-target-proximal stage ECOVs and is not an early-decision representation.
+horizon_order,horizon,admitted_stages,n_current_year_ecov_columns,uses_current_year_ecov,availability_state,strict_no_post_horizon_columns,source_ecov_uses_observed_silking_calibration,uses_heldout_current_year_ecov_or_silking,description
+0,Pre-season-G-only,,0,False,PROSPECTIVE_SUPPORTED_G_ONLY,True,False,False,No current-year ECOV information is admitted.
+1,Pre-season-location-history,,0,False,PROSPECTIVE_PROXY_TRAINING_HISTORY_ONLY,True,True,False,Environmental representation is a training-only historical location climatology; held-out current-year ECOV is never used.
+2,Pre-flowering-observed,GerEme|EmeEnJ,44,True,RETROSPECTIVE_HORIZON_PROXY,True,True,True,Uses only completed GerEme and EmeEnJ current-year ECOV intervals; later stages are excluded.
+3,At-flowering-observed,GerEme|EmeEnJ|EnJFlo,66,True,RETROSPECTIVE_HORIZON_PROXY,True,True,True,"Adds EnJFlo, so information is accumulated through the flowering boundary."
+4,Reproductive-stage-observed,GerEme|EmeEnJ|EnJFlo|FloFla|FlaFlw|FlwStG,132,True,RETROSPECTIVE_HORIZON_PROXY,True,True,True,Accumulates non-target-proximal ECOV information through FlwStG.
+5,Full-season-nonleaky,GerEme|EmeEnJ|EnJFlo|FloFla|FlaFlw|FlwStG|StGEnG|EnGMat|MatHar,197,True,RETROSPECTIVE_REFERENCE_ONLY,True,True,True,Uses all non-target-proximal stage ECOVs and is not an early-decision representation.
