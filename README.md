@@ -6,12 +6,12 @@
 
 Plant Intelligence Lab is an open computational biotechnology project built around a practical question: **what information is actually useful for forecasting biological outcomes and making better experimental decisions?**
 
-The repository combines quantitative genetics, high-dimensional machine learning, multi-environment genomic prediction, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, continuous-environment transfer, and a grounded scientific interface using real public plant data.
+The repository combines quantitative genetics, high-dimensional machine learning, multi-environment genomic prediction, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, continuous-environment transfer, biological environmental representation, and a grounded scientific interface using real public plant data.
 
 The empirical program has two complementary case studies:
 
 - **Case Study A — Arabidopsis longitudinal decision intelligence:** genomic prediction, protocol response, Day-15 → Day-21 phenotype forecasting, uncertainty, abstention, and retrospective experiment prioritization.
-- **Case Study B — Genotype × environment and environmental transfer:** wheat establishes predictive G×E value within represented environments and exposes the categorical-environment transfer limit; a larger Genomes-to-Fields maize extension then tests transfer to physically characterized unseen environments.
+- **Case Study B — Genotype × environment and environmental transfer:** wheat establishes predictive G×E value within represented environments and exposes the categorical-environment transfer limit; a larger Genomes-to-Fields maize extension tests transfer to physically characterized unseen environments and then asks which environmental information is actually useful.
 
 ---
 
@@ -135,7 +135,7 @@ To attack the categorical-environment limitation directly, Case Study B adds the
 | Genotyped / phenotyped hybrids | **4,372** |
 | SNP markers | **98,026** |
 | Year-location environments | **136** |
-| Continuous environmental covariates | **202** |
+| Environmental covariates in the curated matrix | **202** |
 | Environment covariate missing fraction | **0.0** |
 | Phenotype ↔ environment overlap | **136 / 136** |
 | Phenotype ↔ genomic overlap | **4,372 / 4,372** |
@@ -171,31 +171,17 @@ $$
 
 Plot-level phenotype records are aggregated to **52,167 genotype-environment means** so replicate plots are not treated as independent deployment cases.
 
-### Primary unseen-environment result
+### First unseen-environment benchmark
 
-| Model | RMSE | MAE | $R^2$ | Correlation |
-|---|---:|---:|---:|---:|
-| Mean | 2.8105 | 2.2412 | -0.0175 | -0.1694 |
-| G | 2.6876 | 2.1524 | 0.0696 | 0.2722 |
-| E | 2.6935 | 2.1581 | 0.0655 | 0.2940 |
-| **G+E** | **2.6495** | 2.1232 | **0.0958** | 0.3497 |
-| G+E+G×E | 2.6812 | **2.1160** | 0.0740 | **0.3859** |
+| Model | CV-E RMSE | CV-GE RMSE |
+|---|---:|---:|
+| Mean | 2.8105 | 2.8109 |
+| G | 2.6876 | 2.6917 |
+| E | 2.6935 | 2.6939 |
+| **G+E** | **2.6495** | **2.6527** |
+| G+E+G×E | 2.6812 | 2.6825 |
 
-`G+E` reduces pooled RMSE by about **5.73%** versus the mean benchmark and **1.42%** versus `G` alone. However, the 2,000-replicate paired environment-cluster bootstrap gives a `G+E − G` RMSE difference of **-0.0381** with 95% interval **[-0.1844, 0.1132]**. The interval crosses zero.
-
-The explicit product-kernel interaction does **not** improve pooled RMSE relative to additive `G+E`: its difference is **+0.0317**, with 95% interval **[-0.1215, 0.1947]**.
-
-### Strict unseen-genotype + unseen-environment result
-
-| Model | RMSE | MAE | $R^2$ | Correlation |
-|---|---:|---:|---:|---:|
-| Mean | 2.8109 | 2.2414 | -0.0178 | -0.1705 |
-| G | 2.6917 | 2.1558 | 0.0668 | 0.2681 |
-| E | 2.6939 | 2.1586 | 0.0652 | 0.2936 |
-| **G+E** | **2.6527** | 2.1261 | **0.0936** | 0.3474 |
-| G+E+G×E | 2.6825 | **2.1167** | 0.0731 | **0.3845** |
-
-The same pattern survives the 25 double-cold-start scenarios. Continuous environment information enables a legitimate prediction problem for unseen environments, but its incremental RMSE advantage over genomics alone is **small and not yet robust across environment clusters** under this first representation. The simple multiplicative G×E kernel also does not earn a pooled RMSE advantage.
+Continuous environment information enables a legitimate prediction problem for unseen environments, but the first `G+E` representation improves RMSE over genomics alone by only about 1.4%, with environment-cluster intervals crossing zero. The simple multiplicative G×E kernel also does not earn a pooled RMSE advantage.
 
 That distinction is central:
 
@@ -215,33 +201,74 @@ $$
 
 B6-R keeps every B5 outer fold fixed and applies a **nine-configuration nested robustness neighborhood** around the B6 representation. The inner search varies environmental RBF bandwidth, environmental rank, genomic rank, and ridge regularization; selection uses additive `G+E` only, and the selected representation is then reused unchanged for the interaction challenger and strict double-cold-start scenarios.
 
-Three outer folds select a **narrower environmental kernel** (`2×` the B6 bandwidth), while two select a **higher environmental rank** (`32` rather than `16`). None selects a different genomic rank or ridge penalty. This points to environmental geometry, rather than generic genomic complexity, as the main representation bottleneck.
+Three outer folds select a **narrower environmental kernel**, while two select a **higher environmental rank**. None selects a different genomic rank or ridge penalty. This points to environmental geometry, rather than generic genomic complexity, as the main representation bottleneck.
 
 | Regime | Model | RMSE | MAE | $R^2$ | Correlation |
 |---|---|---:|---:|---:|---:|
 | Unseen environment | B6 fixed G+E | 2.6495 | 2.1232 | 0.0958 | 0.3497 |
 | Unseen environment | Selected G | 2.6876 | 2.1524 | 0.0696 | 0.2722 |
 | **Unseen environment** | **Selected G+E** | **2.5693** | 2.0507 | 0.1497 | 0.4002 |
-| Unseen environment | Selected G+E+G×E | **2.5666** | **2.0445** | **0.1514** | **0.4260** |
+| Unseen environment | Selected G+E+G×E | 2.5666 | **2.0445** | **0.1514** | **0.4260** |
 | Double cold start | B6 fixed G+E | 2.6527 | 2.1261 | 0.0936 | 0.3474 |
 | Double cold start | Selected G | 2.6917 | 2.1558 | 0.0668 | 0.2681 |
 | **Double cold start** | **Selected G+E** | **2.5726** | 2.0537 | 0.1475 | 0.3979 |
-| Double cold start | Selected G+E+G×E | **2.5724** | **2.0499** | **0.1477** | **0.4229** |
+| Double cold start | Selected G+E+G×E | 2.5724 | **2.0499** | **0.1477** | **0.4229** |
 
-Nested representation selection improves additive `G+E` RMSE by approximately **3.03%** over the fixed B6 representation in the primary unseen-environment regime and **3.02%** in the strict double cold start. Relative to selected genomics alone, the point-estimate improvement is about **4.4%** in both regimes.
+Nested representation selection improves additive `G+E` RMSE by about **3.0%** over the fixed B6 representation in both deployment regimes. Relative to selected genomics alone, the point-estimate improvement is about **4.4%**.
 
-Environment-cluster uncertainty remains important. The `Selected-G+E − Selected-G` RMSE difference is **-0.1183** with 95% interval **[-0.2594, 0.0336]** in the primary regime and **-0.1190** with interval **[-0.2645, 0.0280]** in the strict regime. The intervals still cross zero, so the project does **not** claim a universal 95%-robust transfer gain.
+The environment-cluster intervals for `Selected-G+E − Selected-G` still narrowly cross zero, so the project does **not** claim a universal 95%-robust transfer gain. The explicit product interaction contributes essentially no further RMSE reduction after representation tuning and is not promoted as a transfer champion.
 
-After environmental representation is improved, the explicit product interaction contributes essentially no further RMSE reduction. Its improvement frequency relative to selected additive `G+E` is approximately **0.5** in both regimes.
-
-B6-R also quantifies environmental novelty from the measured environmental vectors. For selected additive `G+E`, nearest-training-environment novelty has a weak positive association with environment-level RMSE: Spearman **0.190** (`p = 0.0267`) in primary CV-E and **0.187** (`p = 0.0296`) in strict CV-GE. The high-novelty quartile is approximately **0.38 RMSE units harder** than the low-novelty quartile. This supports environmental support distance as a candidate reliability signal, but not yet as a hard abstention threshold.
+Environmental novelty is also measurable. Nearest-training-environment novelty has a weak positive association with environment-level RMSE, and the highest-novelty quartile is about **0.38 RMSE units harder** than the lowest-novelty quartile. This supports environmental support distance as a candidate reliability signal, but not yet as a hard abstention threshold.
 
 ![Case Study B6-R environmental novelty versus transfer error](reports/figures/case_study_b6r_novelty_vs_error.png)
 
-Detailed evidence:
+## B7 — Which environmental information is actually useful?
+
+B7 freezes the B5 folds and the B6-R outer-fold representation choices. It then audits the environmental matrix and tests biologically structured information blocks without opening another hyperparameter search.
+
+Five `yield_*` environmental columns are treated conservatively as **target-proximal crop-model outputs** and excluded from every new B7 candidate. The frozen B6-R all-EC model remains only as a sensitivity reference. That leaves **197** environmental covariates for the leakage-conservative B7 candidates.
+
+The retained environmental information is separated into process blocks and phenological blocks:
+
+| Block | Retained covariates |
+|---|---:|
+| Thermal | **36** |
+| Water / soil | **125** |
+| Canopy / growth | **36** |
+| Vegetative | **66** |
+| Reproductive transition | **66** |
+| Grain fill / maturity | **65** |
+
+### Biological representation results
+
+| Environmental representation | CV-E RMSE | CV-GE RMSE |
+|---|---:|---:|
+| B6-R all-EC sensitivity reference | 2.5693 | 2.5726 |
+| All non-target-proximal | 2.5772 | 2.5805 |
+| Thermal | 2.6315 | 2.6351 |
+| Water / soil | 2.6183 | 2.6215 |
+| Canopy / growth | 2.6923 | 2.6963 |
+| Vegetative | **2.8437** | **2.8465** |
+| **Reproductive transition** | **2.5729** | **2.5765** |
+| Grain fill / maturity | 2.6510 | 2.6547 |
+| **Process multiple kernel** | **2.5610** | **2.5642** |
+| Stage multiple kernel | 2.6002 | 2.6037 |
+
+Three results matter most.
+
+First, excluding the five target-proximal crop-model outputs changes pooled RMSE by only about **+0.008** in either regime, and the paired environment-cluster intervals cross zero. The B6-R transfer result is therefore not materially dependent on those five variables in this sensitivity test.
+
+Second, the **66-variable reproductive-transition representation nearly recovers the all-EC point performance**, while vegetative-only information is decisively weaker. Relative to the all-EC reference, vegetative-only RMSE is about **+0.274** worse in both regimes, with 95% environment-cluster intervals entirely above zero.
+
+Third, an equal-weight process-specific multiple kernel gives the best pooled point estimate, but its advantage is tiny: about **-0.008 RMSE** versus the all-EC sensitivity reference, with intervals crossing zero. It is therefore an interpretability/representation result, **not a robust accuracy breakthrough**.
+
+![Case Study B7 biological environmental representation](reports/figures/case_study_b7_process_kernel_ablation.png)
+
+Detailed Case Study B evidence:
 
 - [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 data and first transfer benchmark
 - [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md) — B6-R nested robustness and novelty audit
+- [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md) — B7 target-proximal audit, process/stage ablations, and multiple-kernel evidence
 
 ---
 
@@ -299,9 +326,9 @@ No proprietary biotechnology data are used.
 
 The project avoids naive random splitting when biological structure can leak between train and test partitions. Genotype-aware, environment-aware, sparse multi-environment, and double-cold-start manifests are defined explicitly for the deployment problem being tested.
 
-Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R then performs a deliberately small nested representation search **inside each outer training partition**, using only the remaining frozen environment folds, so environmental representation does not receive information from its held-out deployment environments.
+Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate.
 
-Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster bootstrap uncertainty, environmental-support diagnostics, and grounded-answer verification.
+Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster-bootstrap uncertainty, environmental-support diagnostics, biological information ablation, and grounded-answer verification.
 
 # Reproducibility
 
@@ -317,7 +344,8 @@ GitHub Actions separates lightweight software checks from real-data executions. 
 - `case-study-b-uncertainty.yml` — wheat uncertainty and deployment boundaries;
 - `case-study-b5-data-lock.yml` — continuous-environment Genomes-to-Fields data lock;
 - `case-study-b6-environment-transfer.yml` — first unseen-environment and double-cold-start transfer benchmark;
-- `case-study-b6r-transfer-robustness.yml` — nested environmental-representation robustness and novelty audit.
+- `case-study-b6r-transfer-robustness.yml` — nested environmental-representation robustness and novelty audit;
+- `case-study-b7-process-kernels.yml` — target-proximal audit and biological process/phenology environmental representation.
 
 Install the core package with:
 
@@ -339,6 +367,7 @@ python -m plant_intelligence.models.wheat_gxe_baseline --output-root .
 python -m plant_intelligence.data.maize_environment_transfer --output-root .
 python -m plant_intelligence.models.maize_environment_transfer --output-root .
 python -m plant_intelligence.models.maize_environment_transfer_robustness --output-root .
+python -m plant_intelligence.models.maize_environment_process_kernels --output-root .
 ```
 
 # Repository structure
@@ -385,11 +414,15 @@ Performance claims apply only to the evaluated public datasets, target definitio
 - that the B6-R continuous-environment gain is universal across environments: its 95% environment-cluster intervals still cross zero;
 - that environmental novelty is already strong enough to define a prospective abstention threshold;
 - that the B6/B6-R product kernel is a causal G×E decomposition or a robust RMSE improvement over additive environmental transfer;
+- that the five excluded crop-model `yield_*` variables prove direct target leakage; B7 treats them conservatively as target-proximal and reports a sensitivity analysis;
+- that the B7 process multiple kernel establishes a robust accuracy gain; its environment-cluster interval crosses zero;
+- that phenology-block predictive differences establish causal stage-specific mechanisms;
+- that retrospective full-season or reproductive-stage environmental descriptors are necessarily available for a pre-season forecast;
 - that genomic information is generally unimportant because it did not improve one Case Study A forecast;
 - that a language model may override or extrapolate beyond validated quantitative evidence;
 - that the deterministic grounding benchmark measures a real external LLM's scientific accuracy.
 
-See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), and [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md) for the detailed boundaries.
+See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md), and [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md) for the detailed boundaries.
 
 # Documentation
 
@@ -399,6 +432,7 @@ See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environmen
 - [`docs/case_study_b_modeling.md`](docs/case_study_b_modeling.md) — classical wheat G×E benchmark
 - [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 continuous-environment data lock and transfer evidence
 - [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md) — B6-R environmental-representation robustness and novelty evidence
+- [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md) — B7 process/phenology environmental ablation and target-proximal sensitivity
 - [`docs/limitations.md`](docs/limitations.md) — interpretation boundaries
 - [`docs/transferability.md`](docs/transferability.md) — transfer to biotechnology applications
 - [`docs/Plant_Intelligence_Lab_Technical_Architecture.pdf`](docs/Plant_Intelligence_Lab_Technical_Architecture.pdf) — technical architecture document
