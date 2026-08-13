@@ -1,0 +1,17 @@
+regime,challenger,reference,metric,delta_challenger_minus_reference,ci95_low,ci95_high,improvement_frequency,bootstrap_clusters,bootstrap_reps
+CV-E-B8,Pre-season-location-history,Pre-season-G-only,RMSE,0.0315776130669958,-0.1606727313714196,0.23933628861310377,0.3825,environment,2000
+CV-E-B8,Pre-flowering-observed,Pre-season-location-history,RMSE,0.04610053751399734,-0.18934307591304417,0.2526941625449645,0.2925,environment,2000
+CV-E-B8,At-flowering-observed,Pre-flowering-observed,RMSE,0.07840084074547615,-0.002747316142470246,0.16067537580058755,0.029,environment,2000
+CV-E-B8,Reproductive-stage-observed,At-flowering-observed,RMSE,-0.2329336799843058,-0.3688338394254661,-0.09327802538383607,1.0,environment,2000
+CV-E-B8,Full-season-nonleaky,Reproductive-stage-observed,RMSE,-0.03353247535596138,-0.12750536425734507,0.05443726547052915,0.7615,environment,2000
+CV-E-B8,Reproductive-stage-observed,Pre-season-G-only,RMSE,-0.07685468865783651,-0.22792621080701267,0.09250851113403598,0.833,environment,2000
+CV-E-B8,Full-season-nonleaky,Pre-season-G-only,RMSE,-0.11038716401379789,-0.2561691160673211,0.037638065132582554,0.9295,environment,2000
+CV-E-B8,Full-season-nonleaky,Reproductive-stage-observed,RMSE,-0.03353247535596138,-0.1290842116502499,0.05857857913883341,0.7635,environment,2000
+CV-GE-B8,Pre-season-location-history,Pre-season-G-only,RMSE,0.029128972113383167,-0.16595648270538757,0.2477419441757471,0.4015,environment,2000
+CV-GE-B8,Pre-flowering-observed,Pre-season-location-history,RMSE,0.0477984303781982,-0.1732444813881942,0.2450239631507832,0.3225,environment,2000
+CV-GE-B8,At-flowering-observed,Pre-flowering-observed,RMSE,0.07788765829702626,-0.006253158431088512,0.1625751264673659,0.0345,environment,2000
+CV-GE-B8,Reproductive-stage-observed,At-flowering-observed,RMSE,-0.23235544602996905,-0.3791323503378826,-0.09533824109257884,1.0,environment,2000
+CV-GE-B8,Full-season-nonleaky,Reproductive-stage-observed,RMSE,-0.0336306856682933,-0.12620747268396054,0.05587943397033512,0.757,environment,2000
+CV-GE-B8,Reproductive-stage-observed,Pre-season-G-only,RMSE,-0.07754038524136142,-0.23709308885291883,0.08191068459144304,0.831,environment,2000
+CV-GE-B8,Full-season-nonleaky,Pre-season-G-only,RMSE,-0.11117107090965472,-0.25010255362597894,0.03624820672526204,0.9295,environment,2000
+CV-GE-B8,Full-season-nonleaky,Reproductive-stage-observed,RMSE,-0.0336306856682933,-0.12774239006426788,0.0541791306488484,0.7635,environment,2000

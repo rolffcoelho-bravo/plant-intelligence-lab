@@ -1,0 +1,6 @@
+outer_environment_fold,n_held_out_environments,n_with_same_location_training_history,same_location_history_fraction,n_global_fallback,uses_outer_test_ecov
+0,28,25,0.8928571428571429,3,False
+1,27,25,0.9259259259259259,2,False
+2,27,23,0.8518518518518519,4,False
+3,27,26,0.9629629629629629,1,False
+4,27,22,0.8148148148148148,5,False
