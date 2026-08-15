@@ -55,6 +55,7 @@ from plant_intelligence.models.maize_forecast_time_prediction import (
     build_environment_state_matrices,
     validate_b9_inputs,
 )
+from plant_intelligence.models.maize_geometry_robust_aggregation import run_forward_predictions as run_b10u_forward_predictions
 from plant_intelligence.models.maize_forward_support_diagnostics import (
     _forward_partitions,
     context_support,
@@ -148,36 +149,27 @@ def build_forward_t1_predictions(
     env_manifest: pd.DataFrame,
     forward: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Reproduce only the frozen B10 T1 forward-year predictions."""
+    """Reproduce frozen T1 through the already-validated B10-U code path.
 
-    pheno, geno, ecov = load_materialized(root)
-    cells, geno, _, cols = prepare_cells(pheno, geno, ecov)
-    matrices, _ = build_environment_state_matrices(states, env_manifest)
-    matrix = matrices[HORIZON]
-    env = env_manifest[["environment", "year"]].copy()
-    env["environment"] = env["environment"].astype(str)
-    env["year"] = env["year"].astype(int)
+    B10-U previously passed the exact B10 reproduction audit. B11 filters only
+    its Frozen-T1 predictions; no T2 geometry is selected, tuned, promoted, or
+    used by the B11 reliability layer.
+    """
 
-    rows: list[pd.DataFrame] = []
-    for test_year, train_year_max, train_envs, test_envs in _forward_partitions(env_manifest, forward):
-        train = cells[cells["environment"].astype(str).isin(train_envs)].copy()
-        test = cells[cells["environment"].astype(str).isin(test_envs)].copy()
-        if train.empty or test.empty:
-            raise ValueError(f"B11 encountered an empty forward partition for {test_year}.")
-        if int(_year_from_environment(train["environment"]).max()) >= int(test_year):
-            raise ValueError("B11 forward prediction chronology violated.")
-        pred = _predict_t1(train, test, geno, cols["geno_id"], matrix)
-        out = test[["genotype", "environment", "observed"]].copy()
-        out["test_year"] = int(test_year)
-        out["train_year_max"] = int(train_year_max)
-        out["predicted"] = np.asarray(pred, float)
-        out["absolute_error"] = np.abs(out["observed"].to_numpy(float) - out["predicted"].to_numpy(float))
-        rows.append(out)
-    result = pd.concat(rows, ignore_index=True)
-    if result["predicted"].isna().any():
+    reproduced = run_b10u_forward_predictions(root, states, env_manifest, forward)
+    out = reproduced[reproduced["model"].astype(str).eq("Frozen-T1")][
+        ["genotype", "environment", "observed", "test_year", "predicted"]
+    ].copy()
+    lock = forward[["test_year", "train_year_max"]].drop_duplicates().copy()
+    lock["test_year"] = lock["test_year"].astype(int)
+    out = out.merge(lock, on="test_year", how="left", validate="many_to_one")
+    if out["train_year_max"].isna().any():
+        raise ValueError("B11 could not align reproduced T1 predictions with the B9 chronology lock.")
+    out["train_year_max"] = out["train_year_max"].astype(int)
+    out["absolute_error"] = np.abs(out["observed"].to_numpy(float) - out["predicted"].to_numpy(float))
+    if out["predicted"].isna().any():
         raise ValueError("B11 T1 prediction reproduction contains missing predictions.")
-    return result
-
+    return out
 
 def build_t1_support_table(
     states: pd.DataFrame,
