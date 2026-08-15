@@ -156,6 +156,16 @@ The branch closure also means that learned stacking weights, another geometry gr
 
 T1 should be understood here as the supported reference horizon for the T2 branch, not as proof of universal superiority over T0. In B10, T0 and T1 were nearly tied in pooled forward-year performance.
 
+## B11 forward-time uncertainty boundary
+
+B11 freezes the supported B10 T1 predictor and calibrates absolute residual intervals only from earlier forward-validation years. The current test year and future years are excluded. Because the design requires at least two earlier forward years, 2016 and 2017 are explicitly assigned `INSUFFICIENT_CALIBRATION_HISTORY`; the interval evaluation covers only 2018–2021.
+
+The pooled 90% empirical coverage is 88.58%, with a 95% environment-cluster interval of approximately [85.09%, 91.54%] for the support-adaptive implementation. This satisfies the predeclared B11 interval-admission rule, but it must not be interpreted as a universal exchangeability or distribution-shift guarantee. Year-specific 90% coverage ranges from 83.47% in 2019 to 93.20% in 2021.
+
+The environmental-support abstention component is not validated. All 77 interval-eligible environments remain inside the predeclared training nearest-neighbour envelope, so there are zero hard abstentions. Moreover, softer retrospective filtering by the same outcome-free support-distance ranking worsens RMSE as retention falls. No support threshold, causal mechanism, or commercial reject rule should therefore be inferred from B11.
+
+The support-adaptive and global interval widths are identical in the current evidence because the low-support stratum is empty. B11 admits a chronological residual-calibration layer while leaving support-based abstention diagnostic. It does not reopen the closed T2 branch, change the predictive model, or permit post-result tuning.
+
 ## Uncertainty calibration
 
 Conformal intervals are calibrated empirically on the available out-of-fold residual structure. Coverage close to nominal levels in Case Study A and the supported wheat regimes does not guarantee identical coverage after distribution shift, under new protocols, in another species, or in a prospective deployment.

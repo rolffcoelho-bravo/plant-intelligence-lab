@@ -405,6 +405,24 @@ This closure is deliberately narrow. It does **not** mean that T2 contains no us
 
 ![Case Study B10-U robust T2 aggregation](reports/figures/case_study_b10u_robust_aggregation.png)
 
+## B11 — Forward-time uncertainty and selective prediction
+
+B11 freezes the supported B10 T1 predictor and asks whether uncertainty can be calibrated **strictly from earlier forward-year residuals**. At least two earlier validation years are required, so 2016 and 2017 are explicitly `INSUFFICIENT_CALIBRATION_HISTORY`; intervals are evaluated only for 2018–2021.
+
+| Forward interval | Nominal | Empirical coverage | Environment-cluster 95% interval | Mean width |
+|---|---:|---:|---:|---:|
+| Global chronological | 80% | 77.54% | [72.59%, 81.89%] | 6.704 |
+| **Global chronological** | **90%** | **88.58%** | **[85.05%, 91.45%]** | **8.503** |
+| Global chronological | 95% | 94.47% | [92.38%, 96.25%] | 10.108 |
+
+The predeclared 90% calibration check passes, so the forward residual-interval layer is admitted. The outcome-free environmental-support abstention rule is **not** admitted: all 77 interval-eligible environments lie inside the training nearest-neighbour envelope, and progressively retaining only nominally closer environments actually worsens RMSE. The machine decision is `ADMIT_FORWARD_INTERVALS_KEEP_SUPPORT_ABSTENTION_DIAGNOSTIC`.
+
+This result is deliberately narrower than a generic conformal guarantee. Coverage varies materially by year, including 83.47% at the 90% nominal level in 2019 and 93.20% in 2021. B11 therefore supports a chronological uncertainty layer while preserving temporal calibration risk and refusing to invent a hard abstention threshold.
+
+![Case Study B11 forward-time coverage](reports/figures/case_study_b11_forward_coverage.png)
+
+![Case Study B11 selective risk](reports/figures/case_study_b11_selective_risk.png)
+
 Detailed Case Study B evidence:
 
 - [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 data and first transfer benchmark
@@ -417,6 +435,7 @@ Detailed Case Study B evidence:
 - [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md) — B10-S training-only selection and negative deployment result
 - [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md) — B10-T year-to-year geometry ranking persistence and lagged-winner regret
 - [`docs/case_study_b_geometry_robust_aggregation.md`](docs/case_study_b_geometry_robust_aggregation.md) — B10-U symmetric T2 aggregation and locked branch-closing decision
+- [`docs/case_study_b_forward_uncertainty.md`](docs/case_study_b_forward_uncertainty.md) — B11 strictly chronological uncertainty calibration and support-aware reliability evidence
 
 ---
 
@@ -500,6 +519,8 @@ GitHub Actions separates lightweight software checks from real-data executions. 
 - `case-study-b10r-support-diagnostics.yml` — support-aware forward-time environmental geometry diagnosis.
 - `case-study-b10s-training-only-geometry.yml` — training-only chronological T2 geometry-selection reproduction.
 - `case-study-b10t-temporal-stability.yml` — temporal geometry ranking, Top-k persistence, lagged-winner regret, and outcome-free shift audit.
+- `case-study-b10u-robust-aggregation.yml` — geometry-agnostic T2 aggregation and branch stopping experiment.
+- `case-study-b11-forward-uncertainty.yml` — frozen-T1 forward residual calibration, coverage, reliability, and selective-risk audit.
 - `case-study-b10u-robust-aggregation.yml` — equal-mean/median T2 geometry aggregation and predeclared stopping decision.
 
 Install the core package with:
@@ -529,6 +550,8 @@ python -m plant_intelligence.models.maize_forecast_time_prediction --output-root
 python -m plant_intelligence.models.maize_forward_support_diagnostics --output-root .
 python -m plant_intelligence.models.maize_training_only_geometry_selection --output-root .
 python -m plant_intelligence.models.maize_geometry_temporal_stability --output-root .
+python -m plant_intelligence.models.maize_geometry_robust_aggregation --output-root .
+python -m plant_intelligence.uncertainty.maize_forward_uncertainty --output-root .
 python -m plant_intelligence.models.maize_geometry_robust_aggregation --output-root .
 ```
 
@@ -591,6 +614,8 @@ Performance claims apply only to the evaluated public datasets, target definitio
 - that the B10-S oracle-regret table is a prospective benchmark: oracle configurations explicitly use outer-year outcomes and are never admitted for deployment;
 - that B10-T establishes a deployable rank-persistence controller: mean adjacent-year rank correlation is near zero, annual winners rarely persist, and the outcome-free shift correlations have only five transitions;
 - that the strongest B10-T outcome-free shift correlation defines a biological mechanism or threshold: those associations are descriptive small-n diagnostics only;
+- that B11 establishes a universal conformal guarantee: its intervals are a strictly chronological residual-calibration backtest over four interval-eligible forward years;
+- that B11 validates environmental-support abstention: no interval-eligible environment crossed the predeclared nearest-neighbour support envelope, and softer support filtering worsened rather than improved retrospective risk;
 - that B10-U proves the median T2 aggregate is a deployment champion: its pooled point estimate is favorable but both paired 95% cluster intervals versus T1 cross zero;
 - that B10-U shows T2 information is useless: symmetric aggregation robustly repairs the frozen-T2 failure, but the predeclared stopping rule still closes the adaptive T2 branch because superiority to T1 is not established;
 - that further optimized T2 ensemble weights should be fitted on these same forward years: B10-U explicitly forbids post-result tuning after the stopping decision;
@@ -612,6 +637,7 @@ See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environmen
 - [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md) — B8 decision-time information accumulation and source-level availability boundary
 - [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md) — B9 issuance-safe environmental inputs and forward-year validation lock
 - [`docs/case_study_b_forecast_time_prediction.md`](docs/case_study_b_forecast_time_prediction.md) — B10 forecast-time prediction, Value of Waiting, and forward-support diagnostics
+- [`docs/case_study_b_forward_uncertainty.md`](docs/case_study_b_forward_uncertainty.md) — B11 forward-time uncertainty calibration and selective prediction
 - [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md) — B10-R support and spectral-geometry diagnosis
 - [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md) — B10-S training-only geometry-selection test
 - [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md) — B10-T temporal ranking-stability audit
