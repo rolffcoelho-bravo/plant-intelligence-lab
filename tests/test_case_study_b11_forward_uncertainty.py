@@ -14,6 +14,8 @@ from plant_intelligence.uncertainty.maize_forward_uncertainty import (
 )
 
 
+# B11 software checks are intentionally lightweight; the GitHub Actions B11
+# workflow performs the frozen real-data T1 reproduction and forward audit.
 def _synthetic_cells() -> pd.DataFrame:
     rows = []
     for year in range(2016, 2022):
