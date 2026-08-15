@@ -1,0 +1,7 @@
+test_year,status,n_calibration_years,calibration_year_min,calibration_year_max,n_calibration_cells,n_calibration_environments,test_year_used_for_calibration,future_year_used_for_calibration,min_calibration_years,support_boundary_uses_outcome,post_result_tuning_permitted
+2016,INSUFFICIENT_CALIBRATION_HISTORY,0,,,0,0,False,False,2,False,False
+2017,INSUFFICIENT_CALIBRATION_HISTORY,1,2016.0,2016.0,4562,18,False,False,2,False,False
+2018,CALIBRATION_AVAILABLE,2,2016.0,2017.0,7871,36,False,False,2,False,False
+2019,CALIBRATION_AVAILABLE,3,2016.0,2018.0,18462,57,False,False,2,False,False
+2020,CALIBRATION_AVAILABLE,4,2016.0,2019.0,29371,78,False,False,2,False,False
+2021,CALIBRATION_AVAILABLE,5,2016.0,2020.0,36086,94,False,False,2,False,False

@@ -1,0 +1,7 @@
+signal,n_environment_years,spearman_rho_with_environment_rmse,descriptive_p_value,outcome_free_at_issuance,interpretation
+adaptive_half_width_90,77,-0.004131264108273501,0.971554349328357,False,descriptive_not_causal
+global_half_width_90,77,-0.004131264108273501,0.971554349328357,False,descriptive_not_causal
+full_nearest_percentile,77,0.08966755448535331,0.43803010046365354,True,descriptive_not_causal
+full_max_training_kernel_similarity,77,-0.08444464897065175,0.46527745873091925,True,descriptive_not_causal
+weather_nearest_percentile,77,-0.05362896900322373,0.6432004427726447,True,descriptive_not_causal
+nearest_training_location_km,77,-0.03402308550948108,0.7689464992123947,True,descriptive_not_causal
