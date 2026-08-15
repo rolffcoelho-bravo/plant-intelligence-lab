@@ -2,12 +2,6 @@ name: Case Study B - Forward-Time Uncertainty & Selective Prediction
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'src/plant_intelligence/uncertainty/maize_forward_uncertainty.py'
-      - 'tests/test_case_study_b11_forward_uncertainty.py'
-      - '.github/workflows/case-study-b11-forward-uncertainty.yml'
 
 permissions:
   contents: write
