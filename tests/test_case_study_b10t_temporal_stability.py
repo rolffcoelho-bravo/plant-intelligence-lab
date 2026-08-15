@@ -17,7 +17,7 @@ from plant_intelligence.models.maize_geometry_temporal_stability import (
 def _inputs(reverse_last=False):
     configs = [f"cfg_{i:02d}" for i in range(12)]
     grid_rows = []
-    for yi, year in enumerate(EXPECTED_YEARS):
+    for year in EXPECTED_YEARS:
         order = list(range(12))
         if reverse_last and year == EXPECTED_YEARS[-1]:
             order = list(reversed(order))
@@ -36,28 +36,39 @@ def _inputs(reverse_last=False):
             )
     grid = pd.DataFrame(grid_rows)
 
+    train_env = [20, 31, 43, 56, 70, 85]
+    full_nearest = [5.0, 4.7, 4.1, 3.9, 3.0, 3.2]
+    max_similarity = [0.50, 0.61, 0.63, 0.75, 0.74, 0.82]
+    local_density = [0.30, 0.34, 0.42, 0.43, 0.55, 0.60]
+    projection = [0.60, 0.50, 0.47, 0.39, 0.42, 0.30]
+    weather_nearest = [1.80, 1.40, 1.55, 1.20, 1.25, 0.95]
+    full_rank = [13.0, 17.0, 16.0, 19.0, 19.5, 22.0]
+    weather_rank = [7.0, 8.2, 9.7, 9.4, 10.8, 12.0]
+    full_gamma = [0.030, 0.021, 0.019, 0.016, 0.017, 0.014]
+    weather_gamma = [0.160, 0.180, 0.185, 0.190, 0.188, 0.200]
+
     year_rows = []
     kernel_rows = []
     for i, year in enumerate(EXPECTED_YEARS):
         year_rows.append(
             {
                 "test_year": year,
-                "n_train_environments": 20 + i * 10,
-                "median_t2_full_nearest_z": 5.0 - i * 0.2,
-                "median_t2_max_kernel_similarity": 0.5 + i * 0.05,
-                "median_t2_local_kernel_density5": 0.3 + i * 0.04,
-                "median_t2_projection_residual": 0.6 - i * 0.03,
-                "median_t2_weather_nearest_z": 1.8 - i * 0.1,
+                "n_train_environments": train_env[i],
+                "median_t2_full_nearest_z": full_nearest[i],
+                "median_t2_max_kernel_similarity": max_similarity[i],
+                "median_t2_local_kernel_density5": local_density[i],
+                "median_t2_projection_residual": projection[i],
+                "median_t2_weather_nearest_z": weather_nearest[i],
             }
         )
         kernel_rows.append(
             {
                 "test_year": year,
                 "horizon": T2_HORIZON,
-                "full_training_kernel_effective_rank": 13.0 + i,
-                "weather_training_kernel_effective_rank": 7.0 + i * 0.5,
-                "full_rbf_gamma": 0.03 - i * 0.002,
-                "weather_rbf_gamma": 0.16 + i * 0.004,
+                "full_training_kernel_effective_rank": full_rank[i],
+                "weather_training_kernel_effective_rank": weather_rank[i],
+                "full_rbf_gamma": full_gamma[i],
+                "weather_rbf_gamma": weather_gamma[i],
             }
         )
     return grid, pd.DataFrame(year_rows), pd.DataFrame(kernel_rows)
