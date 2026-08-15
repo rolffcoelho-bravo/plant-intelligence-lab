@@ -1,0 +1,92 @@
+name: Case Study B - Geometry-Agnostic Robust T2 Aggregation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/plant_intelligence/models/maize_geometry_robust_aggregation.py'
+      - 'tests/test_case_study_b10u_robust_aggregation.py'
+      - '.github/workflows/case-study-b10u-robust-aggregation.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  robust-aggregation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Validate B10-U implementation
+        run: pytest -q tests/test_case_study_b10u_robust_aggregation.py
+      - name: Verify frozen B9 B10 and B10-R evidence
+        run: |
+          test -s reports/results/case_study_b9_safe_environment_states.csv
+          test -s reports/results/case_study_b9_environment_manifest.csv
+          test -s reports/results/case_study_b9_forward_year_folds.csv
+          test -s reports/results/case_study_b10_forward_year_metrics.csv
+          test -s reports/results/case_study_b10r_geometry_sensitivity_by_year.csv
+          python - <<'PY'
+          import pandas as pd
+          grid = pd.read_csv('reports/results/case_study_b10r_geometry_sensitivity_by_year.csv')
+          assert len(grid) == 72
+          assert grid['test_year'].astype(int).nunique() == 6
+          assert grid['config'].nunique() == 12
+          assert grid['diagnostic_only_no_selection'].astype(bool).all()
+          PY
+      - name: Materialize B5 public data
+        run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
+      - name: Execute B10-U robust aggregation
+        run: python -u -m plant_intelligence.models.maize_geometry_robust_aggregation --output-root .
+      - name: Verify B10-U evidence and stopping decision
+        run: |
+          test -s reports/results/case_study_b10u_predictions.csv
+          test -s reports/results/case_study_b10u_summary.csv
+          test -s reports/results/case_study_b10u_forward_year_metrics.csv
+          test -s reports/results/case_study_b10u_environment_metrics.csv
+          test -s reports/results/case_study_b10u_paired_bootstrap.csv
+          test -s reports/results/case_study_b10u_instability_audit.csv
+          test -s reports/results/case_study_b10u_b10_reproduction_audit.csv
+          test -s reports/results/case_study_b10u_branch_decision.csv
+          test -s reports/figures/case_study_b10u_robust_aggregation.png
+          python - <<'PY'
+          import pandas as pd
+          summary = pd.read_csv('reports/results/case_study_b10u_summary.csv')
+          years = pd.read_csv('reports/results/case_study_b10u_forward_year_metrics.csv')
+          boot = pd.read_csv('reports/results/case_study_b10u_paired_bootstrap.csv')
+          decision = pd.read_csv('reports/results/case_study_b10u_branch_decision.csv')
+          repro = pd.read_csv('reports/results/case_study_b10u_b10_reproduction_audit.csv')
+          assert set(summary['model']) == {'Frozen-T1','Frozen-T2','T2-Mean12','T2-Median12'}
+          assert sorted(years['test_year'].astype(int).unique().tolist()) == [2016,2017,2018,2019,2020,2021]
+          assert set(boot['bootstrap_cluster']) == {'environment','test_year'}
+          assert set(decision['aggregate']) == {'T2-Mean12','T2-Median12'}
+          assert decision['post_result_tuning_permitted'].astype(bool).eq(False).all()
+          assert repro['within_tolerance'].astype(bool).all()
+          print('\nB10-U pooled summary')
+          print(summary.to_string(index=False))
+          print('\nB10-U forward-year metrics')
+          print(years.to_string(index=False))
+          print('\nB10-U bootstrap')
+          print(boot.to_string(index=False))
+          print('\nB10-U stopping decision')
+          print(decision.to_string(index=False))
+          PY
+      - name: Publish B10-U evidence
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add reports/results/case_study_b10u_*.csv reports/figures/case_study_b10u_robust_aggregation.png
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish Case Study B10-U robust aggregation [skip ci]'
+            git push
+          fi
