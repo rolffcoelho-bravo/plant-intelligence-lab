@@ -493,7 +493,7 @@ No proprietary biotechnology data are used.
 
 The project avoids naive random splitting when biological structure can leak between train and test partitions. Genotype-aware, environment-aware, sparse multi-environment, and double-cold-start manifests are defined explicitly for the deployment problem being tested.
 
-Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted. B10 then consumes those frozen states with no new hyperparameter search and makes the chronological forward-year benchmark primary. B10-R then diagnoses the T2 support/geometry failure without selecting a replacement model. B10-S finally converts that diagnostic grid into a strictly training-only expanding-window selection test and preserves its negative result when historical performance fails to transfer. B10-T then audits whether the geometry ranking itself is temporally persistent and rejects rank persistence as a sufficient basis for a T2 controller. B10-U finally tests whether representation uncertainty can be diversified without selecting a geometry; aggregation repairs frozen T2 but does not robustly beat T1, so the adaptive T2 branch closes under its locked stopping rule.
+Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted. B10 then consumes those frozen states with no new hyperparameter search and makes the chronological forward-year benchmark primary. B10-R then diagnoses the T2 support/geometry failure without selecting a replacement model. B10-S finally converts that diagnostic grid into a strictly training-only expanding-window selection test and preserves its negative result when historical performance fails to transfer. B10-T then audits whether the geometry ranking itself is temporally persistent and rejects rank persistence as a sufficient basis for a T2 controller. B10-U finally tests whether representation uncertainty can be diversified without selecting a geometry; aggregation repairs frozen T2 but does not robustly beat T1, so the adaptive T2 branch closes under its locked stopping rule. B11 then freezes T1 and evaluates strictly chronological residual calibration, admitting the interval layer while keeping environmental-support abstention diagnostic.
 
 Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster-bootstrap uncertainty, environmental-support diagnostics, biological information ablation, decision-horizon availability auditing, and grounded-answer verification.
 
@@ -519,9 +519,8 @@ GitHub Actions separates lightweight software checks from real-data executions. 
 - `case-study-b10r-support-diagnostics.yml` — support-aware forward-time environmental geometry diagnosis.
 - `case-study-b10s-training-only-geometry.yml` — training-only chronological T2 geometry-selection reproduction.
 - `case-study-b10t-temporal-stability.yml` — temporal geometry ranking, Top-k persistence, lagged-winner regret, and outcome-free shift audit.
-- `case-study-b10u-robust-aggregation.yml` — geometry-agnostic T2 aggregation and branch stopping experiment.
-- `case-study-b11-forward-uncertainty.yml` — frozen-T1 forward residual calibration, coverage, reliability, and selective-risk audit.
 - `case-study-b10u-robust-aggregation.yml` — equal-mean/median T2 geometry aggregation and predeclared stopping decision.
+- `case-study-b11-forward-uncertainty.yml` — frozen-T1 forward residual calibration, coverage, reliability, and selective-risk audit.
 
 Install the core package with:
 
@@ -552,7 +551,6 @@ python -m plant_intelligence.models.maize_training_only_geometry_selection --out
 python -m plant_intelligence.models.maize_geometry_temporal_stability --output-root .
 python -m plant_intelligence.models.maize_geometry_robust_aggregation --output-root .
 python -m plant_intelligence.uncertainty.maize_forward_uncertainty --output-root .
-python -m plant_intelligence.models.maize_geometry_robust_aggregation --output-root .
 ```
 
 # Repository structure
