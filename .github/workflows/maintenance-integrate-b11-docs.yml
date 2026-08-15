@@ -15,99 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Integrate B11 into README and limitations
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          readme = Path('README.md')
-          text = readme.read_text(encoding='utf-8')
-          if '## B11 — Forward-time uncertainty and selective prediction' not in text:
-              marker = 'Detailed Case Study B evidence:\n'
-              section = '''## B11 — Forward-time uncertainty and selective prediction
-
-B11 freezes the supported B10 T1 predictor and asks whether uncertainty can be calibrated **strictly from earlier forward-year residuals**. At least two earlier validation years are required, so 2016 and 2017 are explicitly `INSUFFICIENT_CALIBRATION_HISTORY`; intervals are evaluated only for 2018–2021.
-
-| Forward interval | Nominal | Empirical coverage | Environment-cluster 95% interval | Mean width |
-|---|---:|---:|---:|---:|
-| Global chronological | 80% | 77.54% | [72.59%, 81.89%] | 6.704 |
-| **Global chronological** | **90%** | **88.58%** | **[85.05%, 91.45%]** | **8.503** |
-| Global chronological | 95% | 94.47% | [92.38%, 96.25%] | 10.108 |
-
-The predeclared 90% calibration check passes, so the forward residual-interval layer is admitted. The outcome-free environmental-support abstention rule is **not** admitted: all 77 interval-eligible environments lie inside the training nearest-neighbour envelope, and progressively retaining only nominally closer environments actually worsens RMSE. The machine decision is `ADMIT_FORWARD_INTERVALS_KEEP_SUPPORT_ABSTENTION_DIAGNOSTIC`.
-
-This result is deliberately narrower than a generic conformal guarantee. Coverage varies materially by year, including 83.47% at the 90% nominal level in 2019 and 93.20% in 2021. B11 therefore supports a chronological uncertainty layer while preserving temporal calibration risk and refusing to invent a hard abstention threshold.
-
-![Case Study B11 forward-time coverage](reports/figures/case_study_b11_forward_coverage.png)
-
-![Case Study B11 selective risk](reports/figures/case_study_b11_selective_risk.png)
-
-'''
-              if marker not in text:
-                  raise SystemExit('README B11 insertion marker not found')
-              text = text.replace(marker, section + marker, 1)
-
-          evidence_anchor = '- [`docs/case_study_b_geometry_robust_aggregation.md`](docs/case_study_b_geometry_robust_aggregation.md) — B10-U symmetric T2 aggregation and locked branch-closing decision\n'
-          evidence_line = '- [`docs/case_study_b_forward_uncertainty.md`](docs/case_study_b_forward_uncertainty.md) — B11 strictly chronological uncertainty calibration and support-aware reliability evidence\n'
-          if evidence_line not in text:
-              if evidence_anchor not in text:
-                  raise SystemExit('README evidence anchor not found')
-              text = text.replace(evidence_anchor, evidence_anchor + evidence_line, 1)
-
-          workflow_anchor = '- `case-study-b10t-temporal-stability.yml` — temporal geometry ranking, Top-k persistence, lagged-winner regret, and outcome-free shift audit.\n'
-          workflow_line = '- `case-study-b11-forward-uncertainty.yml` — frozen-T1 forward residual calibration, coverage, reliability, and selective-risk audit.\n'
-          if workflow_line not in text:
-              if workflow_anchor not in text:
-                  raise SystemExit('README workflow anchor not found')
-              text = text.replace(workflow_anchor, workflow_anchor + '- `case-study-b10u-robust-aggregation.yml` — geometry-agnostic T2 aggregation and branch stopping experiment.\n' + workflow_line, 1)
-
-          command_anchor = 'python -m plant_intelligence.models.maize_geometry_temporal_stability --output-root .\n'
-          command_line = 'python -m plant_intelligence.uncertainty.maize_forward_uncertainty --output-root .\n'
-          if command_line not in text:
-              if command_anchor not in text:
-                  raise SystemExit('README command anchor not found')
-              text = text.replace(command_anchor, command_anchor + 'python -m plant_intelligence.models.maize_geometry_robust_aggregation --output-root .\n' + command_line, 1)
-
-          limit_anchor = '- that the strongest B10-T outcome-free shift correlation defines a biological mechanism or threshold: those associations are descriptive small-n diagnostics only;\n'
-          limit_lines = ('- that B11 establishes a universal conformal guarantee: its intervals are a strictly chronological residual-calibration backtest over four interval-eligible forward years;\n'
-                         '- that B11 validates environmental-support abstention: no interval-eligible environment crossed the predeclared nearest-neighbour support envelope, and softer support filtering worsened rather than improved retrospective risk;\n')
-          if 'that B11 establishes a universal conformal guarantee' not in text:
-              if limit_anchor not in text:
-                  raise SystemExit('README limitation anchor not found')
-              text = text.replace(limit_anchor, limit_anchor + limit_lines, 1)
-
-          doc_anchor = '- [`docs/case_study_b_forecast_time_prediction.md`](docs/case_study_b_forecast_time_prediction.md) — B10 forecast-time prediction, Value of Waiting, and forward-support diagnostics\n'
-          doc_line = '- [`docs/case_study_b_forward_uncertainty.md`](docs/case_study_b_forward_uncertainty.md) — B11 forward-time uncertainty calibration and selective prediction\n'
-          if doc_line not in text:
-              if doc_anchor not in text:
-                  raise SystemExit('README documentation anchor not found')
-              text = text.replace(doc_anchor, doc_anchor + doc_line, 1)
-          readme.write_text(text, encoding='utf-8')
-
-          limitations = Path('docs/limitations.md')
-          lt = limitations.read_text(encoding='utf-8')
-          if '## B11 forward-time uncertainty boundary' not in lt:
-              marker = '## Uncertainty calibration\n'
-              section = '''## B11 forward-time uncertainty boundary
-
-B11 freezes the supported B10 T1 predictor and calibrates absolute residual intervals only from earlier forward-validation years. The current test year and future years are excluded. Because the design requires at least two earlier forward years, 2016 and 2017 are explicitly assigned `INSUFFICIENT_CALIBRATION_HISTORY`; the interval evaluation covers only 2018–2021.
-
-The pooled 90% empirical coverage is 88.58%, with a 95% environment-cluster interval of approximately [85.09%, 91.54%] for the support-adaptive implementation. This satisfies the predeclared B11 interval-admission rule, but it must not be interpreted as a universal exchangeability or distribution-shift guarantee. Year-specific 90% coverage ranges from 83.47% in 2019 to 93.20% in 2021.
-
-The environmental-support abstention component is not validated. All 77 interval-eligible environments remain inside the predeclared training nearest-neighbour envelope, so there are zero hard abstentions. Moreover, softer retrospective filtering by the same outcome-free support-distance ranking worsens RMSE as retention falls. No support threshold, causal mechanism, or commercial reject rule should therefore be inferred from B11.
-
-The support-adaptive and global interval widths are identical in the current evidence because the low-support stratum is empty. B11 admits a chronological residual-calibration layer while leaving support-based abstention diagnostic. It does not reopen the closed T2 branch, change the predictive model, or permit post-result tuning.
-
-'''
-              if marker not in lt:
-                  raise SystemExit('limitations B11 insertion marker not found')
-              lt = lt.replace(marker, section + marker, 1)
-          limitations.write_text(lt, encoding='utf-8')
-          PY
-      - name: Commit integrated documentation and remove maintenance workflow
+        run: python .github/scripts/patch_b11_docs.py
+      - name: Commit integrated documentation and remove temporary files
         run: |
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
-          git rm .github/workflows/maintenance-integrate-b11-docs.yml
+          git rm .github/workflows/maintenance-integrate-b11-docs.yml .github/scripts/patch_b11_docs.py
           git add README.md docs/limitations.md
           git commit -m 'Integrate B11 into public documentation [skip ci]'
           git push
