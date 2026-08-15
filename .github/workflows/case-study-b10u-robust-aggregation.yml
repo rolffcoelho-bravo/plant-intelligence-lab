@@ -2,12 +2,6 @@ name: Case Study B - Geometry-Agnostic Robust T2 Aggregation
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'src/plant_intelligence/models/maize_geometry_robust_aggregation.py'
-      - 'tests/test_case_study_b10u_robust_aggregation.py'
-      - '.github/workflows/case-study-b10u-robust-aggregation.yml'
 
 permissions:
   contents: write
@@ -50,7 +44,6 @@ jobs:
         run: python -u -m plant_intelligence.models.maize_geometry_robust_aggregation --output-root .
       - name: Verify B10-U evidence and stopping decision
         run: |
-          test -s reports/results/case_study_b10u_predictions.csv
           test -s reports/results/case_study_b10u_summary.csv
           test -s reports/results/case_study_b10u_forward_year_metrics.csv
           test -s reports/results/case_study_b10u_environment_metrics.csv
@@ -81,11 +74,19 @@ jobs:
           print('\nB10-U stopping decision')
           print(decision.to_string(index=False))
           PY
-      - name: Publish B10-U evidence
+      - name: Publish compact B10-U evidence
         run: |
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
-          git add reports/results/case_study_b10u_*.csv reports/figures/case_study_b10u_robust_aggregation.png
+          git add \
+            reports/results/case_study_b10u_summary.csv \
+            reports/results/case_study_b10u_forward_year_metrics.csv \
+            reports/results/case_study_b10u_environment_metrics.csv \
+            reports/results/case_study_b10u_paired_bootstrap.csv \
+            reports/results/case_study_b10u_instability_audit.csv \
+            reports/results/case_study_b10u_b10_reproduction_audit.csv \
+            reports/results/case_study_b10u_branch_decision.csv \
+            reports/figures/case_study_b10u_robust_aggregation.png
           if ! git diff --cached --quiet; then
             git commit -m 'Publish Case Study B10-U robust aggregation [skip ci]'
             git push
