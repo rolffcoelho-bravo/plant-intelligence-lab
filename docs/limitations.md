@@ -144,6 +144,18 @@ B10-T also reports descriptive correlations between ranking inversion and outcom
 
 The B10-T machine summary records `NOT_JUSTIFIED_BY_RANK_PERSISTENCE_AUDIT`. This means the current evidence rejects a rank-persistence controller; it does not prove that all adaptive environmental representations are impossible. A future method should reduce sensitivity to selecting one brittle geometry and must still be evaluated without outer-year outcome leakage.
 
+## B10-U geometry aggregation and stopping boundary
+
+B10-U is a finite stopping experiment, not an invitation to optimize an ensemble after observing the six forward years. It aggregates exactly the 12 previously frozen B10-R T2 geometries by equal mean and coordinate-wise median. No member receives an outcome-trained weight and no geometry is selected for an outer year.
+
+Both aggregates materially repair the frozen-T2 representation failure and dramatically reduce its worst-year instability. The median aggregate also has the best pooled point RMSE among the predeclared B10-U models. However, the paired environment-cluster and test-year-cluster 95% intervals for both aggregates versus frozen T1 cross zero. Under the predeclared rule, neither aggregate is admitted and the machine decision is `CLOSE_T2_ADAPTIVE_BRANCH_USE_SUPPORTED_T1`.
+
+This decision must not be rephrased as evidence that T2 contains no useful environmental information. B10-U shows that representation uncertainty can be diversified and that the frozen-T2 collapse is not intrinsic to the 60-DAP information state. The narrower conclusion is that the repaired T2 signal does not establish sufficiently reliable superiority to the T1 reference on these forward years.
+
+The branch closure also means that learned stacking weights, another geometry grid, additional post-hoc thresholds, or a neural ensemble should not now be fitted to these same six years to rescue T2. An independent future block or dataset could test the already frozen Median12 rule, but that would be a new validation stage rather than continued tuning of this evidence.
+
+T1 should be understood here as the supported reference horizon for the T2 branch, not as proof of universal superiority over T0. In B10, T0 and T1 were nearly tied in pooled forward-year performance.
+
 ## Uncertainty calibration
 
 Conformal intervals are calibrated empirically on the available out-of-fold residual structure. Coverage close to nominal levels in Case Study A and the supported wheat regimes does not guarantee identical coverage after distribution shift, under new protocols, in another species, or in a prospective deployment.

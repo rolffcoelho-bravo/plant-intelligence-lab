@@ -382,6 +382,29 @@ Outcome-free support/kernel shifts are also audited, but only five transitions e
 
 ![Case Study B10-T temporal geometry stability](reports/figures/case_study_b10t_temporal_stability.png)
 
+## B10-U — Geometry-agnostic robust T2 aggregation
+
+B10-U is the locked stopping experiment for the T2 adaptive-geometry branch. Instead of trying to identify one temporally unstable geometry, it symmetrically aggregates the exact 12 frozen B10-R T2 predictions using only two predeclared rules: an equal arithmetic mean and a coordinate-wise median. There are **no learned ensemble weights, no geometry selection, and no post-result tuning**.
+
+| Forward model | RMSE | $R^2$ | Correlation |
+|---|---:|---:|---:|
+| Frozen T1 | 2.6614 | 0.0595 | 0.3405 |
+| Frozen T2 | 3.2843 | -0.4322 | 0.1977 |
+| T2 Mean12 | 2.5892 | 0.1099 | 0.3838 |
+| **T2 Median12** | **2.5765** | **0.1186** | **0.3978** |
+
+Aggregation repairs the frozen-T2 collapse. Median12 lowers pooled RMSE by **0.7078** versus frozen T2 and reduces the worst forward-year RMSE from **6.6486** to **2.6953**. Mean12 shows the same qualitative stabilization.
+
+However, the predeclared admission rule requires robust superiority to frozen T1, not only repair of frozen T2. Median12 has a favorable point difference of **-0.0849 RMSE** versus T1, but its environment-cluster 95% interval is **[-0.1712, 0.0042]** and its six-year cluster interval is **[-0.1875, 0.0585]**. Mean12 likewise crosses zero in both views.
+
+Therefore neither aggregate is admitted. The machine decision is:
+
+`CLOSE_T2_ADAPTIVE_BRANCH_USE_SUPPORTED_T1`
+
+This closure is deliberately narrow. It does **not** mean that T2 contains no useful signal: geometry aggregation clearly recovers signal and removes catastrophic representation failure. It means that, on these same locked forward years, the repaired T2 representation still does not establish a reliable advantage over the safer T1 reference. No further post-hoc T2 geometry tuning is permitted on this dataset.
+
+![Case Study B10-U robust T2 aggregation](reports/figures/case_study_b10u_robust_aggregation.png)
+
 Detailed Case Study B evidence:
 
 - [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 data and first transfer benchmark
@@ -393,6 +416,7 @@ Detailed Case Study B evidence:
 - [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md) — B10-R support/spectral-geometry diagnosis
 - [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md) — B10-S training-only selection and negative deployment result
 - [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md) — B10-T year-to-year geometry ranking persistence and lagged-winner regret
+- [`docs/case_study_b_geometry_robust_aggregation.md`](docs/case_study_b_geometry_robust_aggregation.md) — B10-U symmetric T2 aggregation and locked branch-closing decision
 
 ---
 
@@ -450,7 +474,7 @@ No proprietary biotechnology data are used.
 
 The project avoids naive random splitting when biological structure can leak between train and test partitions. Genotype-aware, environment-aware, sparse multi-environment, and double-cold-start manifests are defined explicitly for the deployment problem being tested.
 
-Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted. B10 then consumes those frozen states with no new hyperparameter search and makes the chronological forward-year benchmark primary. B10-R then diagnoses the T2 support/geometry failure without selecting a replacement model. B10-S finally converts that diagnostic grid into a strictly training-only expanding-window selection test and preserves its negative result when historical performance fails to transfer. B10-T then audits whether the geometry ranking itself is temporally persistent and rejects rank persistence as a sufficient basis for a T2 controller.
+Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted. B10 then consumes those frozen states with no new hyperparameter search and makes the chronological forward-year benchmark primary. B10-R then diagnoses the T2 support/geometry failure without selecting a replacement model. B10-S finally converts that diagnostic grid into a strictly training-only expanding-window selection test and preserves its negative result when historical performance fails to transfer. B10-T then audits whether the geometry ranking itself is temporally persistent and rejects rank persistence as a sufficient basis for a T2 controller. B10-U finally tests whether representation uncertainty can be diversified without selecting a geometry; aggregation repairs frozen T2 but does not robustly beat T1, so the adaptive T2 branch closes under its locked stopping rule.
 
 Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster-bootstrap uncertainty, environmental-support diagnostics, biological information ablation, decision-horizon availability auditing, and grounded-answer verification.
 
@@ -476,6 +500,7 @@ GitHub Actions separates lightweight software checks from real-data executions. 
 - `case-study-b10r-support-diagnostics.yml` — support-aware forward-time environmental geometry diagnosis.
 - `case-study-b10s-training-only-geometry.yml` — training-only chronological T2 geometry-selection reproduction.
 - `case-study-b10t-temporal-stability.yml` — temporal geometry ranking, Top-k persistence, lagged-winner regret, and outcome-free shift audit.
+- `case-study-b10u-robust-aggregation.yml` — equal-mean/median T2 geometry aggregation and predeclared stopping decision.
 
 Install the core package with:
 
@@ -504,6 +529,7 @@ python -m plant_intelligence.models.maize_forecast_time_prediction --output-root
 python -m plant_intelligence.models.maize_forward_support_diagnostics --output-root .
 python -m plant_intelligence.models.maize_training_only_geometry_selection --output-root .
 python -m plant_intelligence.models.maize_geometry_temporal_stability --output-root .
+python -m plant_intelligence.models.maize_geometry_robust_aggregation --output-root .
 ```
 
 # Repository structure
@@ -565,11 +591,14 @@ Performance claims apply only to the evaluated public datasets, target definitio
 - that the B10-S oracle-regret table is a prospective benchmark: oracle configurations explicitly use outer-year outcomes and are never admitted for deployment;
 - that B10-T establishes a deployable rank-persistence controller: mean adjacent-year rank correlation is near zero, annual winners rarely persist, and the outcome-free shift correlations have only five transitions;
 - that the strongest B10-T outcome-free shift correlation defines a biological mechanism or threshold: those associations are descriptive small-n diagnostics only;
+- that B10-U proves the median T2 aggregate is a deployment champion: its pooled point estimate is favorable but both paired 95% cluster intervals versus T1 cross zero;
+- that B10-U shows T2 information is useless: symmetric aggregation robustly repairs the frozen-T2 failure, but the predeclared stopping rule still closes the adaptive T2 branch because superiority to T1 is not established;
+- that further optimized T2 ensemble weights should be fitted on these same forward years: B10-U explicitly forbids post-result tuning after the stopping decision;
 - that genomic information is generally unimportant because it did not improve one Case Study A forecast;
 - that a language model may override or extrapolate beyond validated quantitative evidence;
 - that the deterministic grounding benchmark measures a real external LLM's scientific accuracy.
 
-See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md), [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md), [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md), and [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md), [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md), and [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md), and [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md) for the detailed boundaries.
+See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md), [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md), [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md), and [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md), [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md), and [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md), and [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md), and [`docs/case_study_b_geometry_robust_aggregation.md`](docs/case_study_b_geometry_robust_aggregation.md) for the detailed boundaries.
 
 # Documentation
 
@@ -583,6 +612,10 @@ See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environmen
 - [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md) — B8 decision-time information accumulation and source-level availability boundary
 - [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md) — B9 issuance-safe environmental inputs and forward-year validation lock
 - [`docs/case_study_b_forecast_time_prediction.md`](docs/case_study_b_forecast_time_prediction.md) — B10 forecast-time prediction, Value of Waiting, and forward-support diagnostics
+- [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md) — B10-R support and spectral-geometry diagnosis
+- [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md) — B10-S training-only geometry-selection test
+- [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md) — B10-T temporal ranking-stability audit
+- [`docs/case_study_b_geometry_robust_aggregation.md`](docs/case_study_b_geometry_robust_aggregation.md) — B10-U robust geometry aggregation and branch closure
 - [`docs/limitations.md`](docs/limitations.md) — interpretation boundaries
 - [`docs/transferability.md`](docs/transferability.md) — transfer to biotechnology applications
 - [`docs/Plant_Intelligence_Lab_Technical_Architecture.pdf`](docs/Plant_Intelligence_Lab_Technical_Architecture.pdf) — technical architecture document
