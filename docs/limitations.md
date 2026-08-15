@@ -134,6 +134,16 @@ The B10-S result must not be generalized into a claim that adaptive geometry is 
 
 The oracle-regret audit remains explanatory only: its oracle configurations use the corresponding outer-year outcomes and are explicitly marked as not admitted for deployment.
 
+## B10-T temporal ranking stability boundary
+
+B10-T does not fit or select a new predictor. It audits the published B10-R 12-geometry RMSE ranking across the six locked forward years. The mean adjacent-year Spearman rank correlation is approximately zero, Top-3 overlap averages one third, and the annual winner persists in only one of five transitions. Reusing the previous year's winner therefore does not provide a defensible deployment rule.
+
+A particularly important counterexample is 2019→2020 versus 2020→2021. Ranking persistence is very high in the first transition, but the next transition is strongly negative and the previous winner falls to last place. One recent stable transition cannot therefore be interpreted as evidence of future persistence.
+
+B10-T also reports descriptive correlations between ranking inversion and outcome-free support/kernel changes. There are only five transitions. These correlations are hypothesis-generating only, are not significance claims, and must not be converted into thresholds, causal biological mechanisms, or controller admission rules.
+
+The B10-T machine summary records `NOT_JUSTIFIED_BY_RANK_PERSISTENCE_AUDIT`. This means the current evidence rejects a rank-persistence controller; it does not prove that all adaptive environmental representations are impossible. A future method should reduce sensitivity to selecting one brittle geometry and must still be evaluated without outer-year outcome leakage.
+
 ## Uncertainty calibration
 
 Conformal intervals are calibrated empirically on the available out-of-fold residual structure. Coverage close to nominal levels in Case Study A and the supported wheat regimes does not guarantee identical coverage after distribution shift, under new protocols, in another species, or in a prospective deployment.

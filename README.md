@@ -362,6 +362,26 @@ This blocks a naive adaptive T2 controller. The next methodological question is 
 
 ![Case Study B10-S training-only geometry selection](reports/figures/case_study_b10s_training_only_geometry.png)
 
+## B10-T — Temporal geometry stability audit
+
+B10-T asks whether the 12 B10-R environmental geometries are rank-persistent enough across the six locked forward years to justify any adaptive T2 controller. No new predictor is fitted.
+
+| Transition | Spearman rank $\rho$ | Top-3 overlap | Previous winner next-year rank | Lagged-winner regret |
+|---|---:|---:|---:|---:|
+| 2016→2017 | 0.014 | 0/3 | 7 | 0.4439 |
+| 2017→2018 | **-0.587** | 0/3 | **12** | 0.3402 |
+| 2018→2019 | 0.503 | 2/3 | 4 | 0.0715 |
+| 2019→2020 | **0.895** | **3/3** | **1** | **0.0000** |
+| 2020→2021 | **-0.874** | **0/3** | **12** | 0.4436 |
+
+Across the five adjacent transitions, mean Spearman rank correlation is **-0.0098**, mean Top-3 overlap is **33.3%**, and the annual winner persists only **20%** of the time. Carrying the previous year's winner forward has mean regret **0.2598 RMSE** and beats frozen T1 in only **2 of 5** transitions.
+
+The 2019→2020 period is a useful counterexample to simplistic narratives: geometry ranking appears highly stable in that transition, but the next transition nearly reverses the full ranking. The 2020 winner falls to rank **12 of 12** in 2021.
+
+Outcome-free support/kernel shifts are also audited, but only five transitions exist. Their correlations are therefore descriptive and do not justify a threshold or controller. The B10-T conclusion is that **rank persistence is not a defensible basis for T2 deployment under the current evidence**.
+
+![Case Study B10-T temporal geometry stability](reports/figures/case_study_b10t_temporal_stability.png)
+
 Detailed Case Study B evidence:
 
 - [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 data and first transfer benchmark
@@ -372,6 +392,7 @@ Detailed Case Study B evidence:
 - [`docs/case_study_b_forecast_time_prediction.md`](docs/case_study_b_forecast_time_prediction.md) — B10 forward-year prediction, Value of Waiting, and support-failure evidence
 - [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md) — B10-R support/spectral-geometry diagnosis
 - [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md) — B10-S training-only selection and negative deployment result
+- [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md) — B10-T year-to-year geometry ranking persistence and lagged-winner regret
 
 ---
 
@@ -429,7 +450,7 @@ No proprietary biotechnology data are used.
 
 The project avoids naive random splitting when biological structure can leak between train and test partitions. Genotype-aware, environment-aware, sparse multi-environment, and double-cold-start manifests are defined explicitly for the deployment problem being tested.
 
-Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted. B10 then consumes those frozen states with no new hyperparameter search and makes the chronological forward-year benchmark primary. B10-R then diagnoses the T2 support/geometry failure without selecting a replacement model. B10-S finally converts that diagnostic grid into a strictly training-only expanding-window selection test and preserves its negative result when historical performance fails to transfer.
+Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted. B10 then consumes those frozen states with no new hyperparameter search and makes the chronological forward-year benchmark primary. B10-R then diagnoses the T2 support/geometry failure without selecting a replacement model. B10-S finally converts that diagnostic grid into a strictly training-only expanding-window selection test and preserves its negative result when historical performance fails to transfer. B10-T then audits whether the geometry ranking itself is temporally persistent and rejects rank persistence as a sufficient basis for a T2 controller.
 
 Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster-bootstrap uncertainty, environmental-support diagnostics, biological information ablation, decision-horizon availability auditing, and grounded-answer verification.
 
@@ -454,6 +475,7 @@ GitHub Actions separates lightweight software checks from real-data executions. 
 - `case-study-b10-forecast-time-prediction.yml` — frozen-horizon forward-year prediction and Value-of-Waiting benchmark.
 - `case-study-b10r-support-diagnostics.yml` — support-aware forward-time environmental geometry diagnosis.
 - `case-study-b10s-training-only-geometry.yml` — training-only chronological T2 geometry-selection reproduction.
+- `case-study-b10t-temporal-stability.yml` — temporal geometry ranking, Top-k persistence, lagged-winner regret, and outcome-free shift audit.
 
 Install the core package with:
 
@@ -481,6 +503,7 @@ python -m plant_intelligence.data.maize_prospective_environment --output-root .
 python -m plant_intelligence.models.maize_forecast_time_prediction --output-root .
 python -m plant_intelligence.models.maize_forward_support_diagnostics --output-root .
 python -m plant_intelligence.models.maize_training_only_geometry_selection --output-root .
+python -m plant_intelligence.models.maize_geometry_temporal_stability --output-root .
 ```
 
 # Repository structure
@@ -540,11 +563,13 @@ Performance claims apply only to the evaluated public datasets, target definitio
 - that B10-R establishes a deployable spectral geometry or validated support threshold: its rank/bandwidth grid is diagnostic and uses held-out outcomes only for explanation;
 - that B10-S proves adaptive geometry selection is impossible: it rejects the tested expanding-window outcome-based selector, not every possible training-only stability criterion;
 - that the B10-S oracle-regret table is a prospective benchmark: oracle configurations explicitly use outer-year outcomes and are never admitted for deployment;
+- that B10-T establishes a deployable rank-persistence controller: mean adjacent-year rank correlation is near zero, annual winners rarely persist, and the outcome-free shift correlations have only five transitions;
+- that the strongest B10-T outcome-free shift correlation defines a biological mechanism or threshold: those associations are descriptive small-n diagnostics only;
 - that genomic information is generally unimportant because it did not improve one Case Study A forecast;
 - that a language model may override or extrapolate beyond validated quantitative evidence;
 - that the deterministic grounding benchmark measures a real external LLM's scientific accuracy.
 
-See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md), [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md), [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md), and [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md), [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md), and [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md) for the detailed boundaries.
+See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md), [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md), [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md), and [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md), [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md), and [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md), and [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md) for the detailed boundaries.
 
 # Documentation
 
