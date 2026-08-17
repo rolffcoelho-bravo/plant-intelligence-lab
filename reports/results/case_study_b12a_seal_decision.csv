@@ -1,0 +1,2 @@
+stage,decision,prediction_sha256,n_predictions,n_environments,n_genotypes,observed_outcomes_accessed,t2_branch_reopened,post_result_tuning_permitted
+B12A,SEALED_2022_PREDICTIONS_READY_FOR_REVEAL,fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220,420,14,43,False,False,False

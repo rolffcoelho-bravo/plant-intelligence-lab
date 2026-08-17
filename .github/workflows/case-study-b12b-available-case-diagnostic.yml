@@ -1,0 +1,189 @@
+name: Case Study B12B - Available-Case Diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b12-sealed-2022-validation
+    paths:
+      - '.github/workflows/case-study-b12b-available-case-diagnostic.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  available-case-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Validate B12 seal and post-reveal diagnostic guardrails
+        run: |
+          pytest -q \
+            tests/test_case_study_b12_external_temporal_validation.py \
+            tests/test_case_study_b12_available_case_diagnostic.py
+
+      - name: Require immutable committed B12A seal
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import pandas as pd
+
+          prediction = 'reports/results/case_study_b12_2022_sealed_predictions.csv'
+          seal_path = 'reports/results/case_study_b12_2022_prediction_seal.json'
+          decision_path = 'reports/results/case_study_b12a_seal_decision.csv'
+
+          with open(prediction, 'rb') as handle:
+              digest = hashlib.sha256(handle.read()).hexdigest()
+          with open(seal_path, encoding='utf-8') as handle:
+              seal = json.load(handle)
+          decision = pd.read_csv(decision_path)
+
+          expected = 'fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220'
+          assert digest == expected
+          assert seal['prediction_sha256'] == expected
+          assert int(seal['n_predictions']) == 420
+          assert seal['observed_outcomes_accessed'] is False
+          assert seal['t2_branch_reopened'] is False
+          assert seal['post_result_tuning_permitted'] is False
+          assert decision['prediction_sha256'].eq(expected).all()
+          assert decision['decision'].eq('SEALED_2022_PREDICTIONS_READY_FOR_REVEAL').all()
+          print(f'Immutable B12A seal verified: {digest}')
+          PY
+
+      - name: Acquire official answer through the seal-first B12 reveal resolver
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          from plant_intelligence.uncertainty.maize_b12_reveal_runner import (
+              acquire_answer_after_seal,
+          )
+
+          prediction = Path('reports/results/case_study_b12_2022_sealed_predictions.csv')
+          seal = Path('reports/results/case_study_b12_2022_prediction_seal.json')
+          destination = Path('data/raw/case_study_b12_2022_reveal/Test_Set_Observed_Values_ANSWER.csv')
+          answer, provenance = acquire_answer_after_seal(
+              prediction,
+              seal,
+              destination,
+          )
+          print(f'Validated official answer: {answer}')
+          print(f'Answer SHA-256: {provenance["answer_sha256"]}')
+          print(f'Official source DOI: {provenance["official_source_doi"]}')
+          PY
+
+      - name: Run explicitly post-reveal available-case diagnostic
+        id: diagnostic
+        shell: bash
+        run: |
+          set +e
+          python -u -m plant_intelligence.uncertainty.maize_b12_available_case_diagnostic \
+            --output-root . \
+            --answer-file data/raw/case_study_b12_2022_reveal/Test_Set_Observed_Values_ANSWER.csv \
+            > reports/results/case_study_b12_2022_available_case_execution.log 2>&1
+          status=$?
+          cat reports/results/case_study_b12_2022_available_case_execution.log
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Persist diagnostic traceback when execution fails
+        if: steps.diagnostic.outputs.exit_code != '0'
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add reports/results/case_study_b12_2022_available_case_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Capture B12B available-case diagnostic failure [skip ci]'
+            git push
+          fi
+          exit 1
+
+      - name: Verify B12 primary status and diagnostic labels
+        if: steps.diagnostic.outputs.exit_code == '0'
+        run: |
+          python - <<'PY'
+          import pandas as pd
+
+          def as_bool(series):
+              values = series.astype(str).str.strip().str.lower().map({'true': True, 'false': False})
+              assert values.notna().all(), f'Unparseable boolean values: {series.tolist()}'
+              return values
+
+          primary = pd.read_csv('reports/results/case_study_b12_2022_primary_status.csv')
+          summary = pd.read_csv('reports/results/case_study_b12_2022_available_case_summary.csv')
+          coverage = pd.read_csv('reports/results/case_study_b12_2022_available_case_coverage.csv')
+          cohort = pd.read_csv('reports/results/case_study_b12_2022_available_case_cohort_audit.csv')
+
+          expected = 'fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220'
+          assert primary['prediction_sha256'].eq(expected).all()
+          assert primary['primary_status'].eq('B12_PRIMARY_INCOMPLETE_OFFICIAL_OUTCOME_MATCH').all()
+          assert primary['n_sealed_predictions'].astype(int).eq(420).all()
+          assert primary['n_officially_observable'].astype(int).eq(387).all()
+          assert primary['n_missing_official_answer_keys'].astype(int).eq(33).all()
+          assert as_bool(primary['primary_confirmatory_evaluable']).eq(False).all()
+          assert as_bool(primary['sealed_artifact_replaced_or_resealed']).eq(False).all()
+          assert as_bool(primary['post_reveal_protocol_amendment']).eq(True).all()
+          assert as_bool(primary['available_case_diagnostic_confirmatory']).eq(False).all()
+          assert as_bool(primary['selection_uses_outcome_value']).eq(False).all()
+          assert as_bool(primary['t2_branch_reopened']).eq(False).all()
+          assert as_bool(primary['post_result_tuning_permitted']).eq(False).all()
+
+          assert summary['diagnostic'].eq('POST_REVEAL_AVAILABLE_CASE_DIAGNOSTIC').all()
+          assert as_bool(summary['confirmatory']).eq(False).all()
+          assert summary['n_sealed_predictions'].astype(int).eq(420).all()
+          assert summary['n_evaluated_available_cases'].astype(int).eq(387).all()
+          assert summary['n_excluded_missing_official_keys'].astype(int).eq(33).all()
+          assert as_bool(summary['selection_uses_outcome_value']).eq(False).all()
+          assert as_bool(summary['t2_branch_reopened']).eq(False).all()
+          assert as_bool(summary['post_result_tuning_permitted']).eq(False).all()
+          assert summary['decision'].isin({
+              'B12_AVAILABLE_CASE_DIAGNOSTIC_90_CRITERION_MET',
+              'B12_AVAILABLE_CASE_DIAGNOSTIC_90_CRITERION_NOT_MET',
+          }).all()
+
+          assert set(round(v, 2) for v in coverage['nominal']) == {0.80, 0.90, 0.95}
+          assert as_bool(coverage['confirmatory']).eq(False).all()
+          assert as_bool(coverage['selection_uses_outcome_value']).eq(False).all()
+          assert len(cohort) == 420
+          assert as_bool(cohort['official_answer_key_present']).sum() == 387
+          assert as_bool(cohort['selection_uses_outcome_value']).eq(False).all()
+
+          print('\nB12 primary status')
+          print(primary.to_string(index=False))
+          print('\nB12 available-case diagnostic')
+          print(summary.to_string(index=False))
+          print('\nB12 available-case coverage')
+          print(coverage.to_string(index=False))
+          PY
+
+      - name: Publish compact post-reveal diagnostic evidence
+        if: steps.diagnostic.outputs.exit_code == '0'
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add \
+            reports/results/case_study_b12_2022_primary_status.csv \
+            reports/results/case_study_b12_2022_available_case_summary.csv \
+            reports/results/case_study_b12_2022_available_case_coverage.csv \
+            reports/results/case_study_b12_2022_available_case_reliability.csv \
+            reports/results/case_study_b12_2022_available_case_by_environment.csv \
+            reports/results/case_study_b12_2022_available_case_cohort_audit.csv \
+            reports/results/case_study_b12_2022_available_case_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B12B post-reveal available-case diagnostic [skip ci]'
+            git push
+          fi

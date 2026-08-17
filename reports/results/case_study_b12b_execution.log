@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_reveal_runner.py", line 301, in <module>
+    main()
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_reveal_runner.py", line 291, in main
+    paths = run(args.output_root.resolve())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_reveal_runner.py", line 262, in run
+    summary, coverage, reliability = b12.evaluate_reveal(
+                                     ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_external_temporal_validation.py", line 835, in evaluate_reveal
+    raise ValueError("The official answer misses one or more sealed B12 cells.")
+ValueError: The official answer misses one or more sealed B12 cells.

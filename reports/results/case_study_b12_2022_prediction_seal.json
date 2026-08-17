@@ -1,0 +1,19 @@
+{
+  "calibration_years": "2016-2021",
+  "environment_support_rule": "B11_FROZEN_TRAINING_NN_ENVELOPE",
+  "evaluated_horizon": "T1_30DAP",
+  "genotype_support_rule": "SUPPORTED_FROZEN_B5_GENOME",
+  "n_environments": 14,
+  "n_genotypes": 43,
+  "n_predictions": 420,
+  "observed_outcomes_accessed": false,
+  "post_result_tuning_permitted": false,
+  "prediction_file": "case_study_b12_2022_sealed_predictions.csv",
+  "prediction_sha256": "fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220",
+  "predictive_hyperparameters_changed": false,
+  "schema": "plant-intelligence-lab/b12-prediction-seal/v1",
+  "source_doi": "10.25739/tq5e-ak26",
+  "supported_predictor": "G+E_T1",
+  "t2_branch_reopened": false,
+  "target_year": 2022
+}

@@ -1,0 +1,150 @@
+name: Case Study B12A - Sealed 2022 External Prediction
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sealed-prediction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Validate B12 seal implementation
+        run: |
+          pytest -q tests/test_case_study_b12_external_temporal_validation.py
+          pytest -q tests/test_case_study_b11_forward_uncertainty.py
+
+      - name: Verify frozen B10-U and B11 branch decisions
+        run: |
+          test -s reports/results/case_study_b10u_branch_decision.csv
+          test -s reports/results/case_study_b11_branch_decision.csv
+          python - <<'PY'
+          import pandas as pd
+
+          b10u = pd.read_csv('reports/results/case_study_b10u_branch_decision.csv')
+          b11 = pd.read_csv('reports/results/case_study_b11_branch_decision.csv')
+
+          assert b10u['branch_decision'].eq('CLOSE_T2_ADAPTIVE_BRANCH_USE_SUPPORTED_T1').all()
+          assert b10u['post_result_tuning_permitted'].astype(bool).eq(False).all()
+          assert b11['branch_decision'].eq(
+              'ADMIT_FORWARD_INTERVALS_KEEP_SUPPORT_ABSTENTION_DIAGNOSTIC'
+          ).all()
+          assert b11['t2_branch_reopened'].astype(bool).eq(False).all()
+          assert b11['predictive_model_refit_or_tuned_in_b11'].astype(bool).eq(False).all()
+          assert b11['post_result_tuning_permitted'].astype(bool).eq(False).all()
+          PY
+
+      - name: Materialize frozen B5 public data
+        run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
+
+      - name: Enforce Stage-A blind boundary before execution
+        run: |
+          if find data/raw -type f -name 'Test_Set_Observed_Values_ANSWER.csv' -print -quit | grep -q .; then
+            echo 'Observed 2022 answer file is present before B12A seal.' >&2
+            exit 1
+          fi
+
+      - name: Execute B12A sealed 2022 prediction
+        run: |
+          mkdir -p reports/results
+          set -o pipefail
+          {
+            echo '--- Current CyVerse registry resources (metadata only) ---'
+            python -u -m plant_intelligence.uncertainty.maize_b12_cyverse_source --probe
+            echo '--- B12A sealed execution ---'
+            python -u -m plant_intelligence.uncertainty.maize_b12_support_compat_runner \
+              --output-root .
+          } 2>&1 | tee reports/results/case_study_b12a_execution.log
+
+      - name: Publish blind B12A failure diagnostic
+        if: failure()
+        run: |
+          if test -s reports/results/case_study_b12a_execution.log; then
+            git config user.name plant-intelligence-lab-bot
+            git config user.email actions@users.noreply.github.com
+            git add reports/results/case_study_b12a_execution.log
+            if ! git diff --cached --quiet; then
+              git commit -m 'Record B12A blind execution failure [skip ci]'
+              git push
+            fi
+          fi
+
+      - name: Verify B12A seal and blind-state evidence
+        run: |
+          test -s reports/results/case_study_b12_2022_sealed_predictions.csv
+          test -s reports/results/case_study_b12_2022_prediction_seal.json
+          test -s reports/results/case_study_b12_2022_input_audit.csv
+          test -s reports/results/case_study_b12_2022_environment_input_audit.csv
+          test -s reports/results/case_study_b12_2022_support_audit.csv
+          test -s reports/results/case_study_b12a_seal_decision.csv
+
+          if find data/raw/case_study_b12_2022_sealed -type f -name 'Test_Set_Observed_Values_ANSWER.csv' -print -quit | grep -q .; then
+            echo 'Observed answer entered the sealed Stage-A directory.' >&2
+            exit 1
+          fi
+
+          python - <<'PY'
+          import hashlib
+          import json
+          import pandas as pd
+
+          prediction = 'reports/results/case_study_b12_2022_sealed_predictions.csv'
+          seal_path = 'reports/results/case_study_b12_2022_prediction_seal.json'
+          decision_path = 'reports/results/case_study_b12a_seal_decision.csv'
+          audit_path = 'reports/results/case_study_b12_2022_input_audit.csv'
+
+          with open(prediction, 'rb') as handle:
+              digest = hashlib.sha256(handle.read()).hexdigest()
+          with open(seal_path, encoding='utf-8') as handle:
+              seal = json.load(handle)
+          decision = pd.read_csv(decision_path)
+          audit = pd.read_csv(audit_path)
+
+          assert digest == seal['prediction_sha256']
+          assert seal['observed_outcomes_accessed'] is False
+          assert seal['t2_branch_reopened'] is False
+          assert seal['predictive_hyperparameters_changed'] is False
+          assert seal['post_result_tuning_permitted'] is False
+          assert decision['decision'].eq('SEALED_2022_PREDICTIONS_READY_FOR_REVEAL').all()
+          assert decision['observed_outcomes_accessed'].astype(bool).eq(False).all()
+          assert decision['t2_branch_reopened'].astype(bool).eq(False).all()
+          assert decision['post_result_tuning_permitted'].astype(bool).eq(False).all()
+          assert audit['answer_file_accessed'].astype(bool).eq(False).all()
+          assert audit['weather_after_30dap_requested'].astype(bool).eq(False).all()
+          assert audit['predictive_hyperparameters_changed'].astype(bool).eq(False).all()
+          assert audit['t2_branch_reopened'].astype(bool).eq(False).all()
+          assert audit['post_result_tuning_permitted'].astype(bool).eq(False).all()
+          print(decision.to_string(index=False))
+          PY
+
+      - name: Publish compact B12A sealed evidence
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git rm -f reports/results/case_study_b12a_execution.log 2>/dev/null || true
+          git add \
+            reports/results/case_study_b12_2022_sealed_predictions.csv \
+            reports/results/case_study_b12_2022_prediction_seal.json \
+            reports/results/case_study_b12_2022_input_audit.csv \
+            reports/results/case_study_b12_2022_environment_input_audit.csv \
+            reports/results/case_study_b12_2022_support_audit.csv \
+            reports/results/case_study_b12a_seal_decision.csv
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish Case Study B12A sealed 2022 predictions [skip ci]'
+            git push
+          fi
