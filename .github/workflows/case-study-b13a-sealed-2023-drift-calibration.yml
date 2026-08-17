@@ -7,6 +7,7 @@ on:
       - agent/b13-sequential-drift-calibration
     paths:
       - 'src/plant_intelligence/uncertainty/maize_b13_sequential_drift_calibration.py'
+      - 'src/plant_intelligence/uncertainty/maize_b13_transport_runner.py'
       - 'tests/test_case_study_b13_sequential_drift_calibration.py'
       - 'docs/case_study_b13_sequential_drift_calibration.md'
       - '.github/workflows/case-study-b13a-sealed-2023-drift-calibration.yml'
@@ -66,20 +67,6 @@ jobs:
             exit 1
           fi
 
-      - name: Probe outcome-free 2014-2023 EC header
-        run: |
-          python - <<'PY'
-          from io import BytesIO
-          import pandas as pd
-          import requests
-
-          url = 'https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Training_data/6_Training_EC_Data_2014_2023.csv'
-          response = requests.get(url, timeout=(30, 180))
-          response.raise_for_status()
-          frame = pd.read_csv(BytesIO(response.content), nrows=0, low_memory=False)
-          print('SAFE_EC_COLUMNS=' + repr(list(map(str, frame.columns))))
-          PY
-
       - name: Materialize frozen B5 public data
         run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
 
@@ -87,7 +74,7 @@ jobs:
         run: |
           mkdir -p reports/results
           set -o pipefail
-          python -u -m plant_intelligence.uncertainty.maize_b13_sequential_drift_calibration \
+          python -u -m plant_intelligence.uncertainty.maize_b13_transport_runner \
             --stage seal \
             --output-root . \
             2>&1 | tee reports/results/case_study_b13a_execution.log
@@ -127,6 +114,8 @@ jobs:
           assert decision['prediction_sha256'].eq(digest).all()
           assert decision['drift_policy_sha256'].eq(policy_digest).all()
           assert audit['target_outcomes_accessed'].astype(str).str.lower().eq('false').all()
+          assert audit['target_trait_file_accessed'].astype(str).str.lower().eq('false').all()
+          assert audit['planting_date_source_phenotypic_data_accessed'].astype(str).str.lower().eq('false').all()
           assert audit['roster_uses_target_outcomes'].astype(str).str.lower().eq('false').all()
           assert audit['weather_after_30dap_requested'].astype(str).str.lower().eq('false').all()
           assert (policy['adaptive_half_width'].astype(float) + 1e-12 >= policy['baseline_half_width'].astype(float)).all()
