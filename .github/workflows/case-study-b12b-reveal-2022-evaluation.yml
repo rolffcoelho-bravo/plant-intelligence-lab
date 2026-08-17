@@ -1,0 +1,109 @@
+name: Case Study B12B - Reveal 2022 External Evaluation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reveal-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Validate B12 seal implementation
+        run: pytest -q tests/test_case_study_b12_external_temporal_validation.py
+
+      - name: Require committed B12A seal before reveal
+        run: |
+          test -s reports/results/case_study_b12_2022_sealed_predictions.csv
+          test -s reports/results/case_study_b12_2022_prediction_seal.json
+          test -s reports/results/case_study_b12a_seal_decision.csv
+          python - <<'PY'
+          import hashlib
+          import json
+          import pandas as pd
+
+          prediction = 'reports/results/case_study_b12_2022_sealed_predictions.csv'
+          seal_path = 'reports/results/case_study_b12_2022_prediction_seal.json'
+          decision = pd.read_csv('reports/results/case_study_b12a_seal_decision.csv')
+
+          with open(prediction, 'rb') as handle:
+              digest = hashlib.sha256(handle.read()).hexdigest()
+          with open(seal_path, encoding='utf-8') as handle:
+              seal = json.load(handle)
+
+          assert digest == seal['prediction_sha256']
+          assert seal['observed_outcomes_accessed'] is False
+          assert seal['t2_branch_reopened'] is False
+          assert seal['post_result_tuning_permitted'] is False
+          assert decision['decision'].eq('SEALED_2022_PREDICTIONS_READY_FOR_REVEAL').all()
+          assert decision['observed_outcomes_accessed'].astype(bool).eq(False).all()
+          assert decision['t2_branch_reopened'].astype(bool).eq(False).all()
+          assert decision['post_result_tuning_permitted'].astype(bool).eq(False).all()
+          print(f"Verified sealed prediction SHA-256: {digest}")
+          PY
+
+      - name: Reveal official 2022 outcomes and evaluate sealed predictions
+        run: >-
+          python -u -m plant_intelligence.uncertainty.maize_external_temporal_validation
+          --output-root . --stage reveal --download-answer
+
+      - name: Verify B12B external evidence
+        run: |
+          test -s reports/results/case_study_b12_2022_external_validation_summary.csv
+          test -s reports/results/case_study_b12_2022_external_coverage.csv
+          test -s reports/results/case_study_b12_2022_external_reliability.csv
+          python - <<'PY'
+          import pandas as pd
+
+          summary = pd.read_csv(
+              'reports/results/case_study_b12_2022_external_validation_summary.csv'
+          )
+          coverage = pd.read_csv(
+              'reports/results/case_study_b12_2022_external_coverage.csv'
+          )
+
+          assert summary['target_year'].astype(int).eq(2022).all()
+          assert summary['predictive_model_refit_after_reveal'].astype(bool).eq(False).all()
+          assert summary['interval_retuned_after_reveal'].astype(bool).eq(False).all()
+          assert summary['support_threshold_retuned_after_reveal'].astype(bool).eq(False).all()
+          assert summary['t2_branch_reopened'].astype(bool).eq(False).all()
+          assert summary['post_result_tuning_permitted'].astype(bool).eq(False).all()
+          assert summary['decision'].isin({
+              'B12_2022_CALIBRATION_TRANSPORT_FAILURE',
+              'B12_2022_EXTERNAL_INTERVALS_PASS_SUPPORT_ABSTENTION_DIAGNOSTIC',
+              'B12_2022_EXTERNAL_INTERVALS_AND_SUPPORT_ABSTENTION_PASS',
+          }).all()
+          assert set(round(v, 2) for v in coverage['nominal']) == {0.80, 0.90, 0.95}
+          print('\nB12 external validation')
+          print(summary.to_string(index=False))
+          print('\nB12 external coverage')
+          print(coverage.to_string(index=False))
+          PY
+
+      - name: Publish compact B12B external evidence
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add \
+            reports/results/case_study_b12_2022_external_validation_summary.csv \
+            reports/results/case_study_b12_2022_external_coverage.csv \
+            reports/results/case_study_b12_2022_external_reliability.csv
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish Case Study B12B 2022 external validation [skip ci]'
+            git push
+          fi
