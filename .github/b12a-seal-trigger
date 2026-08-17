@@ -1,2 +1,2 @@
-B12A sealed 2022 prediction trigger — diagnostic retry 2.
-The workflow is branch-isolated and does not access the observed-answer file.
+B12A sealed 2022 prediction trigger — current CyVerse resolver retry 3.
+The workflow remains blind to the observed-answer file.
