@@ -1,10 +1,10 @@
 """Resilient safe-source runner for B13A.
 
-CyVerse occasionally returns transient non-CSV payloads from otherwise valid
-public WebDAV paths. This runner changes only transport robustness. It preserves
-B13A's strict allow-list and phenotype boundary, retries only issuance-safe
-files, validates CSV schema before accepting bytes, and then delegates to the
-2023 split-schema adapter.
+CyVerse occasionally returns transient non-CSV payloads from legacy public
+WebDAV aliases. This runner changes only transport robustness. It preserves
+B13A's strict allow-list and phenotype boundary, prefers CyVerse's documented
+DOI-curated endpoint, retries only issuance-safe files, validates CSV schema
+before accepting bytes, and then delegates to the 2023 split-schema adapter.
 """
 
 from __future__ import annotations
@@ -21,6 +21,8 @@ from plant_intelligence.uncertainty import maize_b13a_2023_source_audit_runner a
 
 DATASET = b13a.DATASET
 SAFE_BASES = (
+    f"https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/{DATASET}",
+    f"https://data.cyverse.org/dav/iplant/commons/cyverse_curated/{DATASET}",
     f"https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/{DATASET}",
     f"https://data.cyverse.org/dav/iplant/projects/commons_repo/curated/{DATASET}",
     f"https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/{DATASET}",
@@ -75,7 +77,7 @@ def resilient_download_safe_file(
 
     raise RuntimeError(
         "B13A could not acquire allow-listed 2023 source after resilient retries: "
-        + " | ".join(failures[-24:])
+        + " | ".join(failures[-36:])
     )
 
 
