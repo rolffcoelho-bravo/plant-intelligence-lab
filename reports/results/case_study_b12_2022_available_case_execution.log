@@ -1,0 +1,32 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_available_case_diagnostic.py", line 331, in <module>
+    main()
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_available_case_diagnostic.py", line 309, in main
+    outputs = evaluate_available_case_diagnostic(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_available_case_diagnostic.py", line 115, in evaluate_available_case_diagnostic
+    observed = _load_official_answer(answer_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_available_case_diagnostic.py", line 50, in _load_official_answer
+    answer = pd.read_csv(answer_path, low_memory=False)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 873, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 306, in _read
+    return parser.read(nrows)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1947, in read
+    ) = self._engine.read(  # type: ignore[attr-defined]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/c_parser_wrapper.py", line 219, in read
+    data = self._reader.read(nrows)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "pandas/_libs/parsers.pyx", line 814, in pandas._libs.parsers.TextReader.read
+  File "pandas/_libs/parsers.pyx", line 906, in pandas._libs.parsers.TextReader._read_rows
+  File "pandas/_libs/parsers.pyx", line 885, in pandas._libs.parsers.TextReader._check_tokenize_status
+  File "pandas/_libs/parsers.pyx", line 2084, in pandas._libs.parsers.raise_parser_error
+pandas.errors.ParserError: Error tokenizing data. C error: Expected 1 fields in line 6, saw 2
+
