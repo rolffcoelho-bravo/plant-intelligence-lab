@@ -68,9 +68,13 @@ jobs:
         run: |
           mkdir -p reports/results
           set -o pipefail
-          python -u -m plant_intelligence.uncertainty.maize_external_temporal_validation \
-            --output-root . --stage seal \
-            2>&1 | tee reports/results/case_study_b12a_execution.log
+          {
+            echo '--- Current CyVerse registry resources (metadata only) ---'
+            python -u -m plant_intelligence.uncertainty.maize_b12_cyverse_source --probe
+            echo '--- B12A sealed execution ---'
+            python -u -m plant_intelligence.uncertainty.maize_b12_cyverse_source \
+              --output-root .
+          } 2>&1 | tee reports/results/case_study_b12a_execution.log
 
       - name: Publish blind B12A failure diagnostic
         if: failure()
