@@ -72,7 +72,7 @@ jobs:
             echo '--- Current CyVerse registry resources (metadata only) ---'
             python -u -m plant_intelligence.uncertainty.maize_b12_cyverse_source --probe
             echo '--- B12A sealed execution ---'
-            python -u -m plant_intelligence.uncertainty.maize_b12_registry_runner \
+            python -u -m plant_intelligence.uncertainty.maize_b12_authenticated_runner \
               --output-root .
           } 2>&1 | tee reports/results/case_study_b12a_execution.log
 
