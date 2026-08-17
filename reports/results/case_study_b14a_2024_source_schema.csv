@@ -1,0 +1,44 @@
+logical_name,column_index,column_name,normalized_column_name,explicit_planting_or_sowing_semantics
+submission,0,Env,env,False
+submission,1,Hybrid,hybrid,False
+submission,2,Yield_Mg_ha,yieldmgha,False
+metadata,0,Year,year,False
+metadata,1,Env,env,False
+metadata,2,Experiment_Code,experimentcode,False
+metadata,3,Treatment,treatment,False
+metadata,4,City,city,False
+metadata,5,Farm,farm,False
+metadata,6,Field,field,False
+metadata,7,Trial_ID (Assigned by collaborator for internal reference),trialidassignedbycollaboratorforinternalreference,False
+metadata,8,"Soil_Taxonomic_ID and horizon description, if known",soiltaxonomicidandhorizondescriptionifknown,False
+metadata,9,"Weather_Station_Serial_Number (Last four digits, e.g. m2700s#####)",weatherstationserialnumberlastfourdigitsegm2700s,False
+metadata,10,Weather_Station_Latitude (in decimal numbers NOT DMS),weatherstationlatitudeindecimalnumbersnotdms,False
+metadata,11,Weather_Station_Longitude (in decimal numbers NOT DMS),weatherstationlongitudeindecimalnumbersnotdms,False
+metadata,12,Date_weather_station_placed,dateweatherstationplaced,False
+metadata,13,Date_weather_station_removed,dateweatherstationremoved,False
+metadata,14,Previous_Crop,previouscrop,False
+metadata,15,Pre-plant_tillage_method(s),preplanttillagemethods,False
+metadata,16,In-season_tillage_method(s),inseasontillagemethods,False
+metadata,17,Type_of_planter (fluted cone; belt cone; air planter),typeofplanterflutedconebeltconeairplanter,False
+metadata,18,System_Determining_Moisture,systemdeterminingmoisture,False
+metadata,19,Pounds_Needed_Soil_Moisture,poundsneededsoilmoisture,False
+metadata,20,Latitude_of_Field_Corner_#1 (lower left),latitudeoffieldcorner1lowerleft,False
+metadata,21,Longitude_of_Field_Corner_#1 (lower left),longitudeoffieldcorner1lowerleft,False
+metadata,22,Latitude_of_Field_Corner_#2 (lower right),latitudeoffieldcorner2lowerright,False
+metadata,23,Longitude_of_Field_Corner_#2 (lower right),longitudeoffieldcorner2lowerright,False
+metadata,24,Latitude_of_Field_Corner_#3 (upper right),latitudeoffieldcorner3upperright,False
+metadata,25,Longitude_of_Field_Corner_#3 (upper right),longitudeoffieldcorner3upperright,False
+metadata,26,Latitude_of_Field_Corner_#4 (upper left),latitudeoffieldcorner4upperleft,False
+metadata,27,Longitude_of_Field_Corner_#4 (upper left),longitudeoffieldcorner4upperleft,False
+metadata,28,Cardinal_Heading_Pass_1,cardinalheadingpass1,False
+metadata,29,Issue/comment_#1,issuecomment1,False
+metadata,30,Issue/comment_#2,issuecomment2,False
+metadata,31,Issue/comment_#3,issuecomment3,False
+metadata,32,Issue/comment_#4,issuecomment4,False
+metadata,33,Issue/comment_#5,issuecomment5,False
+metadata,34,Issue/comment_#6,issuecomment6,False
+metadata,35,Issue/comment_#7,issuecomment7,False
+metadata,36,Issue/comment_#8,issuecomment8,False
+metadata,37,Irrigated,irrigated,False
+metadata,38,Date_Planted,dateplanted,True
+metadata,39,Plot_Area_ha,plotareaha,False

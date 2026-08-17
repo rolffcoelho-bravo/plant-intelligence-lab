@@ -1,0 +1,24 @@
+environment,target_year,metadata_environment_column,explicit_planting_column,raw_planting_values,n_distinct_parseable_planting_dates,planting_date,latitude,longitude,city,plant_population_proxy,n_metadata_records,t1_metadata_feasible,t1_metadata_failure_reason,weather_station_placement_used_as_planting_proxy,treatment_date_used_as_planting_proxy,observed_phenology_used,outcome_used
+DEH1_2024,2024,Env,Date_Planted,4/25/2024,1,2024-04-25,38.638917,-75.457194,Georgetown,,1,True,,False,False,False,False
+GAH1_2024,2024,Env,Date_Planted,3/29/2024,1,2024-03-29,31.50568,-83.55713,Tifton,,1,True,,False,False,False,False
+GAH2_2024,2024,Env,Date_Planted,4/15/2024,1,2024-04-15,33.71477,-83.31032,Watkinsville,,1,True,,False,False,False,False
+IAH2_2024,2024,Env,Date_Planted,6/5/2024,1,2024-06-05,42.065893,-94.727731,Carroll,,1,True,,False,False,False,False
+IAH4_2024,2024,Env,Date_Planted,5/29/2024,1,2024-05-29,41.994,-93.688377,Ames,,1,True,,False,False,False,False
+ILH1_2024,2024,Env,Date_Planted,5/13/2024,1,2024-05-13,40.088597,-88.227222,Champaign,,1,True,,False,False,False,False
+INH1_2024,2024,Env,Date_Planted,5/11/2024,1,2024-05-11,40.4829153,-87.0048483,West Lafayette,,1,True,,False,False,False,False
+MIH1_2024,2024,Env,Date_Planted,5/29/2024,1,2024-05-29,42.708205,-84.469631,East Lansing,,1,True,,False,False,False,False
+MNH1_2024,2024,Env,Date_Planted,5/22/2024,1,2024-05-22,,,Waseca,,1,False,ISSUANCE_COORDINATES_NOT_AVAILABLE,False,False,False,False
+MOH1_2024,2024,Env,Date_Planted,5/30/2024,1,2024-05-30,38.89489082,-92.20918642,Columbia,,1,True,,False,False,False,False
+NCH1_2024,2024,Env,Date_Planted,4/15/2024,1,2024-04-15,35.6685823,-78.5120619,Clayton,,1,True,,False,False,False,False
+NEH1_2024,2024,Env,Date_Planted,5/15/2024,1,2024-05-15,40.863628,-96.600976,Lincoln,,1,True,,False,False,False,False
+NEH2_2024,2024,Env,Date_Planted,5/17/2024,1,2024-05-17,41.05210495,-100.7515366,North Platte,,1,True,,False,False,False,False
+NEH3_2024,2024,Env,Date_Planted,5/17/2024,1,2024-05-17,,,North Platte,,1,False,ISSUANCE_COORDINATES_NOT_AVAILABLE,False,False,False,False
+NYH2_2024,2024,Env,Date_Planted,5/20/2024,1,2024-05-20,42.732863,-76.651876,Aurora,,1,True,,False,False,False,False
+NYH3_2024,2024,Env,Date_Planted,5/20/2024,1,2024-05-20,42.732863,-76.651876,Aurora,,1,True,,False,False,False,False
+OHH1_2024,2024,Env,Date_Planted,5/31/2024,1,2024-05-31,40.779879,-81.846666,Apple Creek,,1,True,,False,False,False,False
+ONH3_2024,2024,Env,Date_Planted,5/10/2024,1,2024-05-10,45.38248065,-75.71411532,Ottawa,,1,True,,False,False,False,False
+SCH1_2024,2024,Env,Date_Planted,4/23/2024,1,2024-04-23,,,Pendleton,,1,False,ISSUANCE_COORDINATES_NOT_AVAILABLE,False,False,False,False
+TXH1_2024,2024,Env,Date_Planted,3/8/2024,1,2024-03-08,30.54241313,-96.42847712,College Station,,1,True,,False,False,False,False
+WIH1_2024,2024,Env,Date_Planted,5/6/2024,1,2024-05-06,43.0595087,-89.5312806,Madison,,1,True,,False,False,False,False
+WIH2_2024,2024,Env,Date_Planted,6/3/2024,1,2024-06-03,43.2964141,-89.3878016,Arlington,,1,True,,False,False,False,False
+WIH3_2024,2024,Env,Date_Planted,5/3/2024,1,2024-05-03,44.1155322,-89.5479516,Hancock,,1,True,,False,False,False,False

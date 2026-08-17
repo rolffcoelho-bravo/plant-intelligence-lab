@@ -1,0 +1,10 @@
+Case Study B14A 2024 source compatibility audit complete
+source_manifest: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14a_2024_source_manifest.csv
+source_schema: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14a_2024_source_schema.csv
+environment_audit: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14a_2024_environment_audit.csv
+t1_reconstruction_audit: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14a_2024_t1_reconstruction_audit.csv
+genotype_audit: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14a_2024_genotype_audit.csv
+submission_support_audit: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14a_2024_submission_support_audit.csv
+candidate_universe: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14a_2024_candidate_universe.csv
+decision: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14a_2024_lock_decision.csv
+source_seal: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14a_2024_source_seal.json
