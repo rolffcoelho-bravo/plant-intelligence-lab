@@ -8,7 +8,7 @@ on:
     paths:
       - 'src/plant_intelligence/uncertainty/maize_b13_2023_source_audit.py'
       - 'src/plant_intelligence/uncertainty/maize_b13a_2023_source_audit_runner.py'
-      - 'src/plant_intelligence/uncertainty/maize_b13a_2023_prestaged_runner.py'
+      - 'src/plant_intelligence/uncertainty/maize_b13a_2023_final_audit.py'
       - 'tests/test_case_study_b13a_2023_source_audit.py'
       - '.github/workflows/case-study-b13a-2023-source-audit.yml'
 
@@ -116,14 +116,14 @@ jobs:
             exit 1
           fi
 
-      - name: Run B13A blind source and compatibility audit
+      - name: Run canonical B13A blind source audit
         run: |
           set -o pipefail
-          python -u -m plant_intelligence.uncertainty.maize_b13a_2023_prestaged_runner \
+          python -u -m plant_intelligence.uncertainty.maize_b13a_2023_final_audit \
             --output-root . \
             2>&1 | tee reports/results/case_study_b13a_2023_execution.log
 
-      - name: Verify no phenotype access and compatible state
+      - name: Verify completed blind audit state
         run: |
           python - <<'PY'
           import pandas as pd
@@ -139,9 +139,11 @@ jobs:
 
           assert len(decision) == 1
           row = decision.iloc[0]
-          assert row['decision'] == 'B13A_2023_SOURCE_COMPATIBLE_READY_FOR_SEAL'
+          assert row['decision'] in {
+              'B13A_2023_SOURCE_COMPATIBLE_READY_FOR_SEAL',
+              'B13A_2023_T1_CONTEXT_INSUFFICIENT',
+          }
           assert int(row['n_frozen_supported_genotypes']) == 43
-          assert int(row['n_t1_metadata_feasible_environments']) > 0
           assert int(row['n_candidate_cells']) == len(universe)
           assert as_bool(row['historical_t1_encoder_exactly_reproduced'])
           assert not as_bool(row['phenotype_directory_accessed'])
@@ -150,11 +152,26 @@ jobs:
           assert not as_bool(row['point_predictor_changed'])
           assert not as_bool(row['t2_branch_reopened'])
           assert not as_bool(row['post_result_tuning_permitted'])
+          assert not as_bool(row['application_date_used_as_planting_proxy'])
+          assert not as_bool(row['weather_station_placement_used_as_planting_proxy'])
           assert len(source) == 4
           assert not source['outcome_file'].astype(bool).any()
           assert len(geno) == 43
-          assert env['t1_metadata_feasible'].astype(bool).any()
           assert not env['phenotype_used'].astype(bool).any()
+
+          if row['decision'] == 'B13A_2023_T1_CONTEXT_INSUFFICIENT':
+              assert int(row['n_t1_metadata_feasible_environments']) == 0
+              assert int(row['n_candidate_cells']) == 0
+              assert len(universe) == 0
+              assert env['planting_date_source'].eq('NOT_AVAILABLE').all()
+              assert not env['t1_metadata_feasible'].astype(bool).any()
+              assert env['t1_metadata_failure_reason'].eq(
+                  'PLANTING_DATE_NOT_AVAILABLE_IN_ALLOWLISTED_2023_FIELD_METADATA'
+              ).all()
+          else:
+              assert int(row['n_t1_metadata_feasible_environments']) > 0
+              assert len(universe) > 0
+
           print(decision.to_string(index=False))
           PY
 
