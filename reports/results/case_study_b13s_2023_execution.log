@@ -1,0 +1,5 @@
+Case Study B13-S planting-date recovery audit complete
+recovery: reports/results/case_study_b13s_2023_planting_date_recovery.csv
+source_rows: reports/results/case_study_b13s_2023_source_rows.csv
+decision: reports/results/case_study_b13s_2023_lock_decision.csv
+seal: reports/results/case_study_b13s_2023_source_seal.json
