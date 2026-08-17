@@ -1,2 +1,2 @@
-B12B reveal trigger — fixed sealed-evaluation diagnostic retry 2.
-Predictions, intervals, support threshold, and admission criteria remain unchanged after reveal.
+B12B reveal trigger — answer-key overlap audit retry 3.
+Frozen predictions and criteria remain unchanged; this run audits identifier/outcome availability only.
