@@ -8,7 +8,9 @@ on:
     paths:
       - 'src/plant_intelligence/uncertainty/maize_b13_sequential_drift_calibration.py'
       - 'src/plant_intelligence/uncertainty/maize_b13_transport_runner.py'
+      - 'src/plant_intelligence/uncertainty/maize_b13_seasons_runner.py'
       - 'tests/test_case_study_b13_sequential_drift_calibration.py'
+      - 'tests/test_case_study_b13_seasons_boundary.py'
       - 'docs/case_study_b13_sequential_drift_calibration.md'
       - '.github/workflows/case-study-b13a-sealed-2023-drift-calibration.yml'
 
@@ -37,6 +39,7 @@ jobs:
         run: |
           pytest -q \
             tests/test_case_study_b13_sequential_drift_calibration.py \
+            tests/test_case_study_b13_seasons_boundary.py \
             tests/test_case_study_b12_external_temporal_validation.py \
             tests/test_case_study_b12_available_case_diagnostic.py
 
@@ -74,7 +77,7 @@ jobs:
         run: |
           mkdir -p reports/results
           set -o pipefail
-          python -u -m plant_intelligence.uncertainty.maize_b13_transport_runner \
+          python -u -m plant_intelligence.uncertainty.maize_b13_seasons_runner \
             --stage seal \
             --output-root . \
             2>&1 | tee reports/results/case_study_b13a_execution.log
