@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from plant_intelligence.uncertainty import maize_b13_2023_source_audit as b13a
+from plant_intelligence.uncertainty import maize_b13a_2023_final_audit as final_audit
 
 
 def test_phenotype_directory_and_file_are_forbidden_before_request():
@@ -88,3 +89,60 @@ def test_expected_b13_lock_level_is_exactly_preserved():
 def test_b13a_never_reopens_t2_or_changes_point_predictor_by_design():
     assert b13a.READY == "B13A_2023_SOURCE_COMPATIBLE_READY_FOR_SEAL"
     assert b13a.FORBIDDEN_PATH_TOKEN not in " ".join(b13a.SAFE_REMOTE_PATHS.values())
+
+
+def test_station_placement_is_not_accepted_as_planting_proxy():
+    metadata = pd.DataFrame(
+        {
+            "Experiment_Code": ["IAH1"],
+            "City": ["Crawfordsville"],
+            "Weather_Station_Latitude (in decimal numbers NOT DMS)": [41.200821],
+            "Weather_Station_Longitude (in decimal numbers NOT DMS)": [-91.495311],
+            "Date_weather_station_placed": ["2023-04-20"],
+        }
+    )
+    audit = final_audit.build_safe_environment_audit(metadata)
+    row = audit.iloc[0]
+    assert row["planting_date_source"] == "NOT_AVAILABLE"
+    assert row["planting_date"] == ""
+    assert not bool(row["t1_metadata_feasible"])
+    assert row["t1_metadata_failure_reason"] == (
+        "PLANTING_DATE_NOT_AVAILABLE_IN_ALLOWLISTED_2023_FIELD_METADATA"
+    )
+    assert not bool(row["weather_station_placement_used_as_planting_proxy"])
+    assert not bool(row["treatment_application_date_used_as_planting_proxy"])
+
+
+def test_only_explicit_planting_field_can_make_safe_metadata_t1_feasible():
+    metadata = pd.DataFrame(
+        {
+            "Experiment_Code": ["IAH1"],
+            "Weather_Station_Latitude (in decimal numbers NOT DMS)": [41.200821],
+            "Weather_Station_Longitude (in decimal numbers NOT DMS)": [-91.495311],
+            "Planting_Date": ["2023-05-04"],
+            "Date_weather_station_placed": ["2023-04-20"],
+        }
+    )
+    audit = final_audit.build_safe_environment_audit(metadata)
+    row = audit.iloc[0]
+    assert row["planting_date_source"] == "Planting_Date"
+    assert row["planting_date"] == "2023-05-04"
+    assert bool(row["t1_metadata_feasible"])
+    assert not bool(row["weather_station_placement_used_as_planting_proxy"])
+    assert not bool(row["treatment_application_date_used_as_planting_proxy"])
+
+
+def test_treatment_application_date_is_not_an_explicit_planting_field():
+    agronomic = pd.DataFrame(
+        {
+            "Location": ["IAH1"],
+            "Date_of_application": ["2023-05-10"],
+        }
+    )
+    assert resolve_column_for_test(agronomic) is None
+
+
+def resolve_column_for_test(frame: pd.DataFrame):
+    from plant_intelligence.data.maize_prospective_environment import resolve_column
+
+    return resolve_column(frame, final_audit.PLANTING_CANDIDATES)
