@@ -7,7 +7,9 @@ on:
       - agent/b14a-2024-source-compatibility
     paths:
       - 'src/plant_intelligence/uncertainty/maize_b14a_2024_source_compatibility.py'
+      - 'src/plant_intelligence/uncertainty/maize_b14a_2024_guarded_runner.py'
       - 'tests/test_case_study_b14a_2024_source_compatibility.py'
+      - 'tests/test_case_study_b14a_2024_submission_guard.py'
       - 'docs/case_study_b14a_2024_source_compatibility.md'
       - '.github/workflows/case-study-b14a-2024-source-compatibility.yml'
       - 'reports/results/.b14a_protocol_locked'
@@ -42,7 +44,9 @@ jobs:
 
       - name: Validate B14A guardrails
         run: |
-          pytest -q tests/test_case_study_b14a_2024_source_compatibility.py
+          pytest -q \
+            tests/test_case_study_b14a_2024_source_compatibility.py \
+            tests/test_case_study_b14a_2024_submission_guard.py
 
       - name: Verify immutable pre-source gates
         run: |
@@ -105,10 +109,10 @@ jobs:
             exit 1
           fi
 
-      - name: Run B14A 2024 compatibility audit
+      - name: Run hardened B14A 2024 compatibility audit
         run: |
           set -o pipefail
-          python -u -m plant_intelligence.uncertainty.maize_b14a_2024_source_compatibility \
+          python -u -m plant_intelligence.uncertainty.maize_b14a_2024_guarded_runner \
             --output-root . \
             2>&1 | tee reports/results/case_study_b14a_2024_execution.log
 
@@ -187,6 +191,6 @@ jobs:
             reports/results/case_study_b14a_2024_source_seal.json \
             reports/results/case_study_b14a_2024_execution.log
           if ! git diff --cached --quiet; then
-            git commit -m 'Publish B14A 2024 source compatibility audit [skip ci]'
+            git commit -m 'Publish hardened B14A 2024 source compatibility audit [skip ci]'
             git push
           fi
