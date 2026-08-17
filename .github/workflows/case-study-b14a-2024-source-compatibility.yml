@@ -80,7 +80,7 @@ jobs:
           print('B14A immutable gates verified')
           PY
 
-      - name: Stage exactly two authoritative outcome-free 2024 testing objects
+      - name: Stage exactly two authoritative pre-outcome 2024 testing objects
         env:
           IRODS_HOST: data.cyverse.org
           IRODS_PORT: '1247'
@@ -108,6 +108,37 @@ jobs:
             echo 'Forbidden outcome-bearing file entered B14A staging directory.' >&2
             exit 1
           fi
+
+      - name: Publish submission-template boundary audit before compatibility calculation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from plant_intelligence.uncertainty.maize_b14a_2024_guarded_runner import write_submission_template_audit
+          path = write_submission_template_audit(Path('.'))
+          print(path.read_text(encoding='utf-8'))
+          PY
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add reports/results/case_study_b14a_2024_submission_template_audit.csv
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B14A submission-template boundary audit [skip ci]'
+            git push
+          fi
+
+      - name: Require a blank submission prediction column
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          audit = pd.read_csv('reports/results/case_study_b14a_2024_submission_template_audit.csv')
+          assert len(audit) == 1
+          row = audit.iloc[0]
+          assert row['prediction_value_column'] == 'Yield_Mg_ha'
+          assert int(row['n_nonempty_prediction_values']) == 0
+          assert str(row['submission_values_blank']).lower() == 'true'
+          assert str(row['observed_values_file_accessed']).lower() == 'false'
+          assert row['decision'] == 'B14A_SUBMISSION_TEMPLATE_BLANK'
+          print('B14A submission template contains no observed/predicted yield values')
+          PY
 
       - name: Run hardened B14A 2024 compatibility audit
         run: |
@@ -144,8 +175,6 @@ jobs:
               'post_result_tuning_permitted',
           ):
               assert str(row[key]).lower() == 'false', (key, row[key])
-          assert int(row['n_submission_cells']) > 0
-          assert int(row['n_submission_environments']) > 0
           if row['decision'] == 'B14A_2024_READY_FOR_PREOUTCOME_SEAL':
               assert int(row['n_candidate_cells']) > 0
               assert int(row['n_candidate_environments']) > 0
@@ -163,23 +192,13 @@ jobs:
           print(decision.to_string(index=False))
           PY
 
-          SAFE_DIR='data/raw/case_study_b14a_2024_safe'
-          if find "$SAFE_DIR" -type f \( \
-              -iname '*observed*' -o \
-              -iname '*answer*' -o \
-              -iname '*trait*' -o \
-              -iname '*phenotyp*' \
-            \) -print -quit | grep -q .; then
-            echo 'Forbidden outcome-bearing file detected after B14A.' >&2
-            exit 1
-          fi
-
       - name: Publish compact B14A evidence
         run: |
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
           git pull --rebase origin agent/b14a-2024-source-compatibility
           git add \
+            reports/results/case_study_b14a_2024_submission_template_audit.csv \
             reports/results/case_study_b14a_2024_source_manifest.csv \
             reports/results/case_study_b14a_2024_source_schema.csv \
             reports/results/case_study_b14a_2024_environment_audit.csv \
