@@ -65,9 +65,25 @@ jobs:
           PY
 
       - name: Reveal official 2022 outcomes and evaluate sealed predictions
-        run: >-
-          python -u -m plant_intelligence.uncertainty.maize_b12_reveal_runner
-          --output-root .
+        run: |
+          mkdir -p reports/results
+          set -o pipefail
+          python -u -m plant_intelligence.uncertainty.maize_b12_reveal_runner \
+            --output-root . \
+            2>&1 | tee reports/results/case_study_b12b_execution.log
+
+      - name: Publish fixed B12B reveal diagnostic
+        if: failure()
+        run: |
+          if test -s reports/results/case_study_b12b_execution.log; then
+            git config user.name plant-intelligence-lab-bot
+            git config user.email actions@users.noreply.github.com
+            git add reports/results/case_study_b12b_execution.log
+            if ! git diff --cached --quiet; then
+              git commit -m 'Record fixed B12B reveal failure [skip ci]'
+              git push
+            fi
+          fi
 
       - name: Verify B12B external evidence
         run: |
@@ -119,6 +135,7 @@ jobs:
         run: |
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
+          git rm -f reports/results/case_study_b12b_execution.log 2>/dev/null || true
           git add \
             reports/results/case_study_b12_2022_external_validation_summary.csv \
             reports/results/case_study_b12_2022_external_coverage.csv \
