@@ -29,23 +29,105 @@
 Traceback (most recent call last):
   File "<frozen runpy>", line 198, in _run_module_as_main
   File "<frozen runpy>", line 88, in _run_code
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 111, in <module>
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 239, in <module>
     main()
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 104, in main
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 232, in main
     paths = run(args.output_root.resolve())
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 97, in run
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 223, in run
     return source.run_stage_a(root)
            ^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_cyverse_source.py", line 251, in run_stage_a
     return b12.run_stage_a(root)
            ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_external_temporal_validation.py", line 700, in run_stage_a
-    test_manifest_all = competition_environment_manifest(metadata, submission)
-                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 88, in normalized_manifest
-    return ORIGINAL_MANIFEST(frame, submission)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_external_temporal_validation.py", line 267, in competition_environment_manifest
-    raise ValueError(f"B12 missing planting/coordinates for {environment}")
-ValueError: B12 missing planting/coordinates for IAH1_2022
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_external_temporal_validation.py", line 697, in run_stage_a
+    safe = acquire_stage_a_inputs(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_external_temporal_validation.py", line 162, in acquire_stage_a_inputs
+    url, digest, size = _download_first_available((relative,), path)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_cyverse_source.py", line 242, in download_current_safe_file
+    raise SourceResolutionError(
+plant_intelligence.uncertainty.maize_b12_cyverse_source.SourceResolutionError: Unable to resolve current CyVerse CSV 1_Submission_Template_2022.csv. Candidate diagnostics:
+[
+  {
+    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/COMPETITION_DATA_README.docx/Testing_data/1_Submission_Template_2022.csv",
+    "final_url": "https://unblockme.cyverse.org/",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "size": 13282,
+    "html_like": true
+  },
+  {
+    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/COMPETITION_DATA_README.docx/Testing_Data/1_Submission_Template_2022.csv",
+    "final_url": "https://unblockme.cyverse.org/",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "size": 13282,
+    "html_like": true
+  },
+  {
+    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/readme.txt/Testing_data/1_Submission_Template_2022.csv",
+    "final_url": "https://unblockme.cyverse.org/",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "size": 13282,
+    "html_like": true
+  },
+  {
+    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/readme.txt/Testing_Data/1_Submission_Template_2022.csv",
+    "final_url": "https://unblockme.cyverse.org/",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "size": 13282,
+    "html_like": true
+  },
+  {
+    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_data/1_Submission_Template_2022.csv",
+    "final_url": "https://unblockme.cyverse.org/",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "size": 13282,
+    "html_like": true
+  },
+  {
+    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/Testing_data/1_Submission_Template_2022.csv",
+    "final_url": "https://unblockme.cyverse.org/",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "size": 13282,
+    "html_like": true
+  },
+  {
+    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/Testing_Data/1_Submission_Template_2022.csv",
+    "final_url": "https://unblockme.cyverse.org/",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "size": 13282,
+    "html_like": true
+  },
+  {
+    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_Data/1_Submission_Template_2022.csv",
+    "final_url": "https://unblockme.cyverse.org/",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "size": 13282,
+    "html_like": true
+  },
+  {
+    "url": "https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_data/1_Submission_Template_2022.csv",
+    "final_url": "https://unblockme.cyverse.org/",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "size": 13282,
+    "html_like": true
+  },
+  {
+    "url": "https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_Data/1_Submission_Template_2022.csv",
+    "final_url": "https://unblockme.cyverse.org/",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "size": 13282,
+    "html_like": true
+  }
+]
