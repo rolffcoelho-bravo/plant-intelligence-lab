@@ -14,7 +14,7 @@ permissions:
 jobs:
   safe-source-probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,89 +22,180 @@ jobs:
           python-version: '3.11'
       - name: Install safe probe dependencies
         run: python -m pip install pandas requests python-docx
-      - name: Audit outcome-free competition documentation for season boundaries
+      - name: Resolve outcome-free competition documentation through CKAN registry
         run: |
           python - <<'PY'
           from io import BytesIO
+          import json
           import re
+          from urllib.parse import urljoin, urlsplit, urlunsplit
           import pandas as pd
           import requests
           from docx import Document
 
-          auth = ('anonymous', '')
-          headers = {'User-Agent': 'plant-intelligence-lab/0.1 B13-safe-probe'}
-          root = (
-              'https://data.cyverse.org/dav/iplant/projects/commons_repo/curated/'
-              'GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025'
+          CKAN = (
+              'https://dc.cyverse.org/api/3/action/package_show'
+              '?id=genomes_to_fields_2024_maize_genotype_by_environment_prediction_competition'
           )
-          forbidden = '1_training_trait_data_2014_2023.csv'
+          USER_AGENT = 'plant-intelligence-lab/0.1 B13-safe-probe'
+          FORBIDDEN = '1_training_trait_data_2014_2023.csv'
+          TARGETS = (
+              'readme.txt',
+              'COMPETITION_DATA_README.docx',
+              '4_Training_Weather_Data_2014_2023_seasons_only.csv',
+          )
+          REDIRECTS = {301, 302, 303, 307, 308}
 
-          def safe_get(url, **kwargs):
-              if forbidden in url.lower():
-                  raise RuntimeError('Safety violation: target trait requested')
-              response = requests.get(
-                  url,
-                  auth=auth,
-                  headers={**headers, **kwargs.pop('headers', {})},
-                  timeout=(30, 240),
-                  allow_redirects=True,
-                  **kwargs,
+          def all_strings(value):
+              if isinstance(value, dict):
+                  for v in value.values():
+                      yield from all_strings(v)
+              elif isinstance(value, (list, tuple)):
+                  for v in value:
+                      yield from all_strings(v)
+              elif isinstance(value, str):
+                  yield value
+
+          registry = requests.get(
+              CKAN,
+              headers={'User-Agent': USER_AGENT, 'Accept': 'application/json'},
+              timeout=(20, 90),
+          )
+          registry.raise_for_status()
+          payload = registry.json()
+          if not payload.get('success'):
+              raise RuntimeError('CKAN package_show failed')
+          strings = list(all_strings(payload.get('result', {})))
+
+          def clean_http(value):
+              value = value.strip().replace('\\u0026', '&')
+              if value.startswith('http://'):
+                  value = 'https://' + value[len('http://'):]
+              return value if value.startswith('https://') else None
+
+          def authenticated(url):
+              parts = urlsplit(url)
+              path = parts.path.replace('/dav-anon/', '/dav/', 1)
+              return urlunsplit(('https', parts.netloc, path, parts.query, ''))
+
+          def candidates(basename):
+              found = []
+              def add(url):
+                  if FORBIDDEN in url.lower():
+                      raise RuntimeError('Safety violation: forbidden trait candidate')
+                  if url not in found:
+                      found.append(url)
+              for value in strings:
+                  if basename.lower() not in value.lower():
+                      continue
+                  clean = clean_http(value)
+                  if clean:
+                      add(authenticated(clean))
+                      add(clean)
+                  # CKAN often embeds iRODS paths rather than plain HTTP URLs.
+                  marker = '/iplant/'
+                  idx = value.find(marker)
+                  if idx >= 0:
+                      path = value[idx:].split('?', 1)[0].strip('"\' ')
+                      add('https://data.cyverse.org/dav' + path)
+                      add('https://data.cyverse.org/dav-anon' + path)
+              # Known historical roots are registry-consistent fallbacks, not guessed outcomes.
+              roots = (
+                  '/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025',
+                  '/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025',
               )
-              if forbidden in str(response.url).lower():
-                  raise RuntimeError('Safety violation: redirect entered target trait')
-              return response
+              folder = 'Training_data/' if basename.startswith('4_Training_') else ''
+              for root in roots:
+                  add('https://data.cyverse.org/dav' + root + '/' + folder + basename)
+                  add('https://data.cyverse.org/dav-anon' + root + '/' + folder + basename)
+              return found
+
+          def safe_fetch(basename):
+              diagnostics = []
+              for initial in candidates(basename):
+                  current = initial
+                  visited = set()
+                  for _ in range(8):
+                      if current in visited:
+                          diagnostics.append({'url': current, 'error': 'redirect_loop'})
+                          break
+                      visited.add(current)
+                      if FORBIDDEN in current.lower():
+                          raise RuntimeError('Safety violation: forbidden trait redirect')
+                      needs_auth = '/dav/' in current and '/dav-anon/' not in current
+                      try:
+                          response = requests.get(
+                              current,
+                              auth=('anonymous', '') if needs_auth else None,
+                              headers={'User-Agent': USER_AGENT, 'Accept': '*/*'},
+                              timeout=(30, 240),
+                              allow_redirects=False,
+                          )
+                          diagnostics.append({
+                              'url': current,
+                              'status': response.status_code,
+                              'location': response.headers.get('location', ''),
+                              'content_type': response.headers.get('content-type', ''),
+                              'size': len(response.content),
+                          })
+                          if response.status_code in REDIRECTS:
+                              location = response.headers.get('location')
+                              if not location:
+                                  break
+                              current = urljoin(current, location)
+                              continue
+                          response.raise_for_status()
+                          if not response.content or b'<html' in response.content[:1500].lower():
+                              break
+                          print('SAFE_FETCH_SELECTED', basename, current, response.status_code, response.headers.get('content-type'), len(response.content))
+                          return response.content, current, diagnostics
+                      except Exception as exc:
+                          diagnostics.append({'url': current, 'error': f'{type(exc).__name__}: {exc}'})
+                          break
+              raise RuntimeError('Could not fetch safe file ' + basename + ': ' + json.dumps(diagnostics[-40:], indent=2))
 
           def relevant_lines(text):
               lines = [re.sub(r'\s+', ' ', line).strip() for line in text.splitlines()]
               tokens = ('season', 'weather', 'plant', 'sow', 'harvest', 'date', 'dap')
               return [line for line in lines if line and any(t in line.lower() for t in tokens)]
 
-          for name in ('readme.txt', 'README.txt'):
-              r = safe_get(root + '/' + name)
-              print('COMP_README_STATUS', name, r.status_code, r.headers.get('content-type'), len(r.content), r.url)
-              if r.ok and r.content and b'<html' not in r.content[:1500].lower():
-                  print('COMP_README_RELEVANT_BEGIN')
-                  for line in relevant_lines(r.text)[:1000]:
-                      print(line)
-                  print('COMP_README_RELEVANT_END')
-                  break
+          readme_body, _, _ = safe_fetch('readme.txt')
+          print('COMP_README_RELEVANT_BEGIN')
+          for line in relevant_lines(readme_body.decode('utf-8', errors='replace'))[:1500]:
+              print(line)
+          print('COMP_README_RELEVANT_END')
 
-          doc = safe_get(root + '/COMPETITION_DATA_README.docx')
-          print('COMP_DOCX_STATUS', doc.status_code, doc.headers.get('content-type'), len(doc.content), doc.url)
-          if doc.ok and doc.content[:2] == b'PK':
-              document = Document(BytesIO(doc.content))
-              chunks = [p.text for p in document.paragraphs]
-              for table in document.tables:
-                  for row in table.rows:
-                      chunks.append(' | '.join(cell.text for cell in row.cells))
-              text = '\n'.join(chunks)
-              print('COMP_DOCX_RELEVANT_BEGIN')
-              for line in relevant_lines(text)[:2000]:
-                  print(line)
-              print('COMP_DOCX_RELEVANT_END')
+          doc_body, _, _ = safe_fetch('COMPETITION_DATA_README.docx')
+          if doc_body[:2] != b'PK':
+              raise RuntimeError('Competition README is not a DOCX payload')
+          document = Document(BytesIO(doc_body))
+          chunks = [p.text for p in document.paragraphs]
+          for table in document.tables:
+              for row in table.rows:
+                  chunks.append(' | '.join(cell.text for cell in row.cells))
+          doc_text = '\n'.join(chunks)
+          print('COMP_DOCX_RELEVANT_BEGIN')
+          for line in relevant_lines(doc_text)[:3000]:
+              print(line)
+          print('COMP_DOCX_RELEVANT_END')
 
-          weather_url = root + '/Training_data/4_Training_Weather_Data_2014_2023_seasons_only.csv'
-          w = safe_get(weather_url)
-          print('SEASONS_WEATHER_STATUS', w.status_code, w.headers.get('content-type'), len(w.content), w.url)
-          if w.ok and w.content and b'<html' not in w.content[:1500].lower():
-              frame = pd.read_csv(BytesIO(w.content), low_memory=False)
-              print('SEASONS_WEATHER_COLUMNS=' + repr(list(map(str, frame.columns))))
-              env_candidates = [c for c in frame.columns if 'env' in str(c).lower() or 'location' in str(c).lower()]
-              date_candidates = [c for c in frame.columns if 'date' in str(c).lower()]
-              year_candidates = [c for c in frame.columns if str(c).lower() == 'year']
-              print('SEASONS_ENV_CANDIDATES=' + repr(env_candidates))
-              print('SEASONS_DATE_CANDIDATES=' + repr(date_candidates))
-              print('SEASONS_YEAR_CANDIDATES=' + repr(year_candidates))
-              if date_candidates:
-                  date_col = date_candidates[0]
-                  dates = pd.to_datetime(frame[date_col], errors='coerce')
-                  mask = dates.dt.year.eq(2023)
-                  target = frame.loc[mask].copy()
-                  target['_date'] = dates.loc[mask]
-                  if env_candidates and not target.empty:
-                      env_col = env_candidates[0]
-                      bounds = target.groupby(env_col)['_date'].agg(['min','max','count']).reset_index()
-                      print('SEASONS_2023_BOUNDS_BEGIN')
-                      print(bounds.to_string(index=False, max_rows=200))
-                      print('SEASONS_2023_BOUNDS_END')
+          weather_body, _, _ = safe_fetch('4_Training_Weather_Data_2014_2023_seasons_only.csv')
+          weather = pd.read_csv(BytesIO(weather_body), low_memory=False)
+          print('SEASONS_WEATHER_COLUMNS=' + repr(list(map(str, weather.columns))))
+          env_candidates = [c for c in weather.columns if 'env' in str(c).lower() or 'location' in str(c).lower()]
+          date_candidates = [c for c in weather.columns if 'date' in str(c).lower()]
+          print('SEASONS_ENV_CANDIDATES=' + repr(env_candidates))
+          print('SEASONS_DATE_CANDIDATES=' + repr(date_candidates))
+          if date_candidates:
+              date_col = date_candidates[0]
+              dates = pd.to_datetime(weather[date_col], errors='coerce')
+              mask = dates.dt.year.eq(2023)
+              target = weather.loc[mask].copy()
+              target['_date'] = dates.loc[mask]
+              if env_candidates and not target.empty:
+                  env_col = env_candidates[0]
+                  bounds = target.groupby(env_col)['_date'].agg(['min','max','count']).reset_index()
+                  print('SEASONS_2023_BOUNDS_BEGIN')
+                  print(bounds.to_string(index=False, max_rows=300))
+                  print('SEASONS_2023_BOUNDS_END')
           PY
