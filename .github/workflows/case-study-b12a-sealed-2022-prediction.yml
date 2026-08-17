@@ -2,11 +2,6 @@ name: Case Study B12A - Sealed 2022 External Prediction
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - agent/b12-sealed-2022-validation
-    paths:
-      - '.github/b12a-seal-trigger'
 
 permissions:
   contents: write
