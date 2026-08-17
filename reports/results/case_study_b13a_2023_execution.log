@@ -1,0 +1,6 @@
+Case Study B13A canonical source audit complete
+source_manifest: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b13a_2023_source_manifest.csv
+environment_audit: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b13a_2023_environment_audit.csv
+genotype_audit: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b13a_2023_genotype_audit.csv
+candidate_universe: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b13a_2023_candidate_universe.csv
+decision: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b13a_2023_lock_decision.csv
