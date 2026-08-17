@@ -1,0 +1,2 @@
+source_doi,target_year,n_submission_cells,n_submission_environments,n_supported_prediction_cells,n_supported_genotypes,n_supported_environments,n_calibration_years,calibration_year_min,calibration_year_max,answer_file_accessed,weather_after_30dap_requested,predictive_hyperparameters_changed,t2_branch_reopened,post_result_tuning_permitted
+10.25739/tq5e-ak26,2022,11555,26,420,43,14,6,2016,2021,False,False,False,False,False

@@ -1,0 +1,27 @@
+environment,environment_input_state,reason
+DEH1_2022,SUPPORTED_T1_CONTEXT,
+GAH1_2022,SUPPORTED_T1_CONTEXT,
+GAH2_2022,SUPPORTED_T1_CONTEXT,
+IAH1_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+IAH2_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+IAH3_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+IAH4_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+ILH1_2022,SUPPORTED_T1_CONTEXT,
+INH1_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+MIH1_2022,SUPPORTED_T1_CONTEXT,
+MNH1_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+MOH2_2022,SUPPORTED_T1_CONTEXT,
+NCH1_2022,SUPPORTED_T1_CONTEXT,
+NEH1_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+NEH2_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+NEH3_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+NYH2_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+NYH3_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+OHH1_2022,SUPPORTED_T1_CONTEXT,
+SCH1_2022,UNSUPPORTED_T1_CONTEXT,missing planting date or coordinates in official 2022 testing metadata
+TXH1_2022,SUPPORTED_T1_CONTEXT,
+TXH2_2022,SUPPORTED_T1_CONTEXT,
+TXH3_2022,SUPPORTED_T1_CONTEXT,
+WIH1_2022,SUPPORTED_T1_CONTEXT,
+WIH2_2022,SUPPORTED_T1_CONTEXT,
+WIH3_2022,SUPPORTED_T1_CONTEXT,
