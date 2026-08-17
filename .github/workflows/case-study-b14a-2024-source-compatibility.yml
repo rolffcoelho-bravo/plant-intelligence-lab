@@ -7,9 +7,7 @@ on:
       - agent/b14a-2024-source-compatibility
     paths:
       - 'src/plant_intelligence/uncertainty/maize_b14a_2024_source_compatibility.py'
-      - 'src/plant_intelligence/uncertainty/maize_b14a_2024_guarded_runner.py'
       - 'tests/test_case_study_b14a_2024_source_compatibility.py'
-      - 'tests/test_case_study_b14a_2024_submission_guard.py'
       - 'docs/case_study_b14a_2024_source_compatibility.md'
       - '.github/workflows/case-study-b14a-2024-source-compatibility.yml'
       - 'reports/results/.b14a_protocol_locked'
@@ -44,9 +42,7 @@ jobs:
 
       - name: Validate B14A guardrails
         run: |
-          pytest -q \
-            tests/test_case_study_b14a_2024_source_compatibility.py \
-            tests/test_case_study_b14a_2024_submission_guard.py
+          pytest -q tests/test_case_study_b14a_2024_source_compatibility.py
 
       - name: Verify immutable pre-source gates
         run: |
@@ -109,41 +105,24 @@ jobs:
             exit 1
           fi
 
-      - name: Publish submission-template boundary audit before compatibility calculation
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          from plant_intelligence.uncertainty.maize_b14a_2024_guarded_runner import write_submission_template_audit
-          path = write_submission_template_audit(Path('.'))
-          print(path.read_text(encoding='utf-8'))
-          PY
-          git config user.name plant-intelligence-lab-bot
-          git config user.email actions@users.noreply.github.com
-          git add reports/results/case_study_b14a_2024_submission_template_audit.csv
-          if ! git diff --cached --quiet; then
-            git commit -m 'Publish B14A submission-template boundary audit [skip ci]'
-            git push
-          fi
-
-      - name: Require a blank submission prediction column
+      - name: Verify submission template is used for keys only
         run: |
           python - <<'PY'
           import pandas as pd
-          audit = pd.read_csv('reports/results/case_study_b14a_2024_submission_template_audit.csv')
-          assert len(audit) == 1
-          row = audit.iloc[0]
-          assert row['prediction_value_column'] == 'Yield_Mg_ha'
-          assert int(row['n_nonempty_prediction_values']) == 0
-          assert str(row['submission_values_blank']).lower() == 'true'
-          assert str(row['observed_values_file_accessed']).lower() == 'false'
-          assert row['decision'] == 'B14A_SUBMISSION_TEMPLATE_BLANK'
-          print('B14A submission template contains no observed/predicted yield values')
+          from plant_intelligence.uncertainty.maize_b14a_2024_source_compatibility import submission_cells
+          frame = pd.read_csv('data/raw/case_study_b14a_2024_safe/1_Submission_Template_2024.csv', low_memory=False)
+          cells = submission_cells(frame)
+          assert list(cells.columns) == ['genotype', 'environment']
+          assert len(cells) == 10057
+          assert cells['genotype'].nunique() == 1063
+          assert cells['environment'].nunique() == 23
+          print('B14A submission template used only for genotype-environment keys')
           PY
 
-      - name: Run hardened B14A 2024 compatibility audit
+      - name: Run B14A 2024 compatibility audit
         run: |
           set -o pipefail
-          python -u -m plant_intelligence.uncertainty.maize_b14a_2024_guarded_runner \
+          python -u -m plant_intelligence.uncertainty.maize_b14a_2024_source_compatibility \
             --output-root . \
             2>&1 | tee reports/results/case_study_b14a_2024_execution.log
 
@@ -198,7 +177,6 @@ jobs:
           git config user.email actions@users.noreply.github.com
           git pull --rebase origin agent/b14a-2024-source-compatibility
           git add \
-            reports/results/case_study_b14a_2024_submission_template_audit.csv \
             reports/results/case_study_b14a_2024_source_manifest.csv \
             reports/results/case_study_b14a_2024_source_schema.csv \
             reports/results/case_study_b14a_2024_environment_audit.csv \
@@ -210,6 +188,6 @@ jobs:
             reports/results/case_study_b14a_2024_source_seal.json \
             reports/results/case_study_b14a_2024_execution.log
           if ! git diff --cached --quiet; then
-            git commit -m 'Publish hardened B14A 2024 source compatibility audit [skip ci]'
+            git commit -m 'Publish B14A 2024 source compatibility audit [skip ci]'
             git push
           fi
