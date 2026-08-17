@@ -8,7 +8,7 @@ on:
     paths:
       - 'src/plant_intelligence/uncertainty/maize_b13_2023_source_audit.py'
       - 'src/plant_intelligence/uncertainty/maize_b13a_2023_source_audit_runner.py'
-      - 'src/plant_intelligence/uncertainty/maize_b13a_2023_resilient_runner.py'
+      - 'src/plant_intelligence/uncertainty/maize_b13a_2023_prestaged_runner.py'
       - 'tests/test_case_study_b13a_2023_source_audit.py'
       - '.github/workflows/case-study-b13a-2023-source-audit.yml'
 
@@ -27,11 +27,18 @@ jobs:
           python-version: '3.11'
           cache: pip
 
-      - name: Install environment
+      - name: Install environment and CyVerse GoCommands
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install pytest
+          GOCMD_VER=$(curl -L -s https://raw.githubusercontent.com/cyverse/gocommands/main/VERSION.txt)
+          test -n "$GOCMD_VER"
+          curl -L -s \
+            "https://github.com/cyverse/gocommands/releases/download/${GOCMD_VER}/gocmd-${GOCMD_VER}-linux-amd64.tar.gz" \
+            | tar xz
+          chmod +x gocmd
+          ./gocmd version
 
       - name: Validate B13 and B13A guardrails
         run: |
@@ -75,10 +82,44 @@ jobs:
             exit 1
           fi
 
+      - name: Stage exactly four issuance-safe 2023 files through anonymous iRODS
+        env:
+          IRODS_HOST: data.cyverse.org
+          IRODS_PORT: '1247'
+          IRODS_ZONE_NAME: iplant
+          IRODS_USER_NAME: anonymous
+          IRODS_USER_PASSWORD: ''
+        run: |
+          set -euo pipefail
+          SAFE_DIR='data/raw/case_study_b13a_2023_safe'
+          ROOT='/iplant/home/shared/commons_repo/curated/GenomesToFields_G2F_data_2023'
+          mkdir -p "$SAFE_DIR"
+          ./gocmd env
+          ./gocmd get -f -k \
+            "$ROOT/z._2023_supplemental_info/g2f_2023_field_metadata.csv" \
+            "$SAFE_DIR/g2f_2023_field_metadata.csv"
+          ./gocmd get -f -k \
+            "$ROOT/z._2023_supplemental_info/g2f_2023_agronomic_information.csv" \
+            "$SAFE_DIR/g2f_2023_agronomic_information.csv"
+          ./gocmd get -f -k \
+            "$ROOT/b._2023_weather_data/g2f_2023_weather_cleaned.csv" \
+            "$SAFE_DIR/g2f_2023_weather_cleaned.csv"
+          ./gocmd get -f -k \
+            "$ROOT/c._2023_soil_data/g2f_2023_soil_data.csv" \
+            "$SAFE_DIR/g2f_2023_soil_data.csv"
+          test -s "$SAFE_DIR/g2f_2023_field_metadata.csv"
+          test -s "$SAFE_DIR/g2f_2023_agronomic_information.csv"
+          test -s "$SAFE_DIR/g2f_2023_weather_cleaned.csv"
+          test -s "$SAFE_DIR/g2f_2023_soil_data.csv"
+          if find "$SAFE_DIR" -type f -name 'g2f_2023_phenotypic_data.csv' -print -quit | grep -q .; then
+            echo 'Forbidden phenotype file entered pre-staged safe directory.' >&2
+            exit 1
+          fi
+
       - name: Run B13A blind source and compatibility audit
         run: |
           set -o pipefail
-          python -u -m plant_intelligence.uncertainty.maize_b13a_2023_resilient_runner \
+          python -u -m plant_intelligence.uncertainty.maize_b13a_2023_prestaged_runner \
             --output-root . \
             2>&1 | tee reports/results/case_study_b13a_2023_execution.log
 
