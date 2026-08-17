@@ -1,0 +1,13 @@
+{
+  "allowed_source_only": true,
+  "frozen_environment_count": 27,
+  "outcome_files_accessed": false,
+  "recovery_decision": "B13S_2023_NO_ADMISSIBLE_PLANTING_DATE_RECOVERY",
+  "source_dataset": "GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025",
+  "source_doi": "10.25739/78mn-4394",
+  "source_irods_path": "/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Training_data/2_Training_Meta_Data_2014_2023.csv",
+  "source_relative_path": "Training_data/2_Training_Meta_Data_2014_2023.csv",
+  "source_sha256": "3b9575a1e43d1c29a404806593c95d2c1dbd11e2c486ad7fcbd9a0b531d90c2a",
+  "source_size_bytes": 100054,
+  "target_year": 2023
+}

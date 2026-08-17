@@ -1,0 +1,185 @@
+name: Case Study B13-S - 2023 Planting Date Recovery
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b13s-2023-planting-date-recovery-final
+    paths:
+      - 'src/plant_intelligence/uncertainty/maize_b13s_2023_planting_date_recovery.py'
+      - 'tests/test_case_study_b13s_2023_planting_date_recovery.py'
+      - 'docs/case_study_b13s_2023_planting_date_recovery.md'
+      - '.github/workflows/case-study-b13s-2023-planting-date-recovery.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  blind-planting-date-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install environment and CyVerse GoCommands
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+          GOCMD_VER=$(curl -L -s https://raw.githubusercontent.com/cyverse/gocommands/main/VERSION.txt)
+          test -n "$GOCMD_VER"
+          curl -L -s \
+            "https://github.com/cyverse/gocommands/releases/download/${GOCMD_VER}/gocmd-${GOCMD_VER}-linux-amd64.tar.gz" \
+            | tar xz
+          chmod +x gocmd
+          test -x ./gocmd
+
+      - name: Validate B13-S guardrails
+        run: |
+          pytest -q tests/test_case_study_b13s_2023_planting_date_recovery.py
+
+      - name: Verify merged B13A negative gate before recovery
+        run: |
+          python - <<'PY'
+          import pandas as pd
+
+          decision = pd.read_csv('reports/results/case_study_b13a_2023_lock_decision.csv')
+          assert len(decision) == 1
+          row = decision.iloc[0]
+          assert row['decision'] == 'B13A_2023_T1_CONTEXT_INSUFFICIENT'
+          assert row['reason'] == 'NO_EXPLICIT_PLANTING_DATE_IN_ALLOWLISTED_2023_PREOUTCOME_SOURCES'
+          assert int(row['n_safe_metadata_environments']) == 27
+          assert int(row['n_t1_metadata_feasible_environments']) == 0
+          assert int(row['n_frozen_supported_genotypes']) == 43
+          assert str(row['historical_t1_encoder_exactly_reproduced']).lower() == 'true'
+          assert str(row['phenotype_file_accessed']).lower() == 'false'
+          assert str(row['t2_branch_reopened']).lower() == 'false'
+          print('B13A negative compatibility gate verified')
+          PY
+
+      - name: Stage exactly one authoritative outcome-free metadata object
+        env:
+          IRODS_HOST: data.cyverse.org
+          IRODS_PORT: '1247'
+          IRODS_ZONE_NAME: iplant
+          IRODS_USER_NAME: anonymous
+          IRODS_USER_PASSWORD: ''
+        run: |
+          set -euo pipefail
+          SAFE_DIR='data/raw/case_study_b13s_2023_safe'
+          ROOT='/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Training_data'
+          FILE='2_Training_Meta_Data_2014_2023.csv'
+          mkdir -p "$SAFE_DIR"
+          ./gocmd env
+          ./gocmd get -f -k "$ROOT/$FILE" "$SAFE_DIR/$FILE"
+          test -s "$SAFE_DIR/$FILE"
+          test "$(find "$SAFE_DIR" -maxdepth 1 -type f | wc -l)" -eq 1
+          if find "$SAFE_DIR" -type f \( \
+              -iname '*trait*' -o \
+              -iname '*phenotyp*' -o \
+              -iname '*observed*' -o \
+              -iname '*answer*' \
+            \) -print -quit | grep -q .; then
+            echo 'Forbidden outcome-bearing file entered B13-S staging directory.' >&2
+            exit 1
+          fi
+
+      - name: Publish authoritative metadata schema before recovery
+        run: |
+          python - <<'PY'
+          import re
+          import pandas as pd
+
+          path = 'data/raw/case_study_b13s_2023_safe/2_Training_Meta_Data_2014_2023.csv'
+          frame = pd.read_csv(path, nrows=5, low_memory=False)
+          rows = []
+          for i, column in enumerate(frame.columns):
+              normalized = re.sub(r'[^a-z0-9]+', '', str(column).lower())
+              rows.append({
+                  'column_index': i,
+                  'column_name': str(column),
+                  'normalized_column_name': normalized,
+                  'explicit_planting_or_sowing_semantics': (
+                      'planting' in normalized or 'sowing' in normalized or 'dateplanted' in normalized
+                  ),
+              })
+          schema = pd.DataFrame(rows)
+          schema.to_csv('reports/results/case_study_b13s_2023_metadata_schema.csv', index=False)
+          assert not schema['explicit_planting_or_sowing_semantics'].any()
+          print(schema.to_string(index=False))
+          PY
+
+      - name: Run B13-S planting-date recovery audit
+        run: |
+          set -o pipefail
+          python -u -m plant_intelligence.uncertainty.maize_b13s_2023_planting_date_recovery \
+            --output-root . \
+            --metadata data/raw/case_study_b13s_2023_safe/2_Training_Meta_Data_2014_2023.csv \
+            2>&1 | tee reports/results/case_study_b13s_2023_execution.log
+
+      - name: Verify completed blind recovery state
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+
+          decision = pd.read_csv('reports/results/case_study_b13s_2023_lock_decision.csv')
+          recovery = pd.read_csv('reports/results/case_study_b13s_2023_planting_date_recovery.csv')
+          schema = pd.read_csv('reports/results/case_study_b13s_2023_metadata_schema.csv')
+          with open('reports/results/case_study_b13s_2023_source_seal.json', encoding='utf-8') as handle:
+              seal = json.load(handle)
+
+          assert len(decision) == 1
+          row = decision.iloc[0]
+          allowed = {
+              'B13S_2023_EXACT_PLANTING_DATES_RECOVERED',
+              'B13S_2023_PARTIAL_PLANTING_DATE_RECOVERY',
+              'B13S_2023_NO_ADMISSIBLE_PLANTING_DATE_RECOVERY',
+              'B13S_2023_SOURCE_MAPPING_AMBIGUOUS',
+          }
+          assert row['decision'] in allowed
+          assert len(recovery) == 27
+          assert not schema['explicit_planting_or_sowing_semantics'].astype(bool).any()
+          assert str(row['outcome_files_accessed']).lower() == 'false'
+          assert str(row['point_predictor_changed']).lower() == 'false'
+          assert str(row['t1_clock_changed']).lower() == 'false'
+          assert str(row['t2_branch_reopened']).lower() == 'false'
+          assert str(row['post_result_tuning_permitted']).lower() == 'false'
+          assert seal['allowed_source_only'] is True
+          assert seal['outcome_files_accessed'] is False
+          assert int(seal['frozen_environment_count']) == 27
+          print(decision.to_string(index=False))
+          PY
+
+          SAFE_DIR='data/raw/case_study_b13s_2023_safe'
+          if find "$SAFE_DIR" -type f \( \
+              -iname '*trait*' -o \
+              -iname '*phenotyp*' -o \
+              -iname '*observed*' -o \
+              -iname '*answer*' \
+            \) -print -quit | grep -q .; then
+            echo 'Forbidden outcome-bearing file detected after B13-S.' >&2
+            exit 1
+          fi
+
+      - name: Publish compact B13-S evidence
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git pull --rebase origin agent/b13s-2023-planting-date-recovery-final
+          git add \
+            reports/results/case_study_b13s_2023_metadata_schema.csv \
+            reports/results/case_study_b13s_2023_planting_date_recovery.csv \
+            reports/results/case_study_b13s_2023_source_rows.csv \
+            reports/results/case_study_b13s_2023_lock_decision.csv \
+            reports/results/case_study_b13s_2023_source_seal.json \
+            reports/results/case_study_b13s_2023_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B13-S 2023 planting-date recovery audit [skip ci]'
+            git push
+          fi
