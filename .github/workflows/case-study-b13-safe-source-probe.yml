@@ -14,13 +14,15 @@ permissions:
 jobs:
   safe-source-probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Probe only outcome-free source metadata
+      - name: Install safe probe dependencies
+        run: python -m pip install pandas requests pypdf
+      - name: Audit only outcome-free 2023 source documentation
         run: |
           python - <<'PY'
           from io import BytesIO
@@ -28,67 +30,136 @@ jobs:
           import xml.etree.ElementTree as ET
           import pandas as pd
           import requests
+          from pypdf import PdfReader
 
           auth = ('anonymous', '')
           headers = {'User-Agent': 'plant-intelligence-lab/0.1 B13-safe-probe'}
-
-          # 2024 competition EC file: outcome-free environmental covariates only.
-          ec_url = 'https://data.cyverse.org/dav/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Training_data/6_Training_EC_Data_2014_2023.csv'
-          r = requests.get(ec_url, auth=auth, headers=headers, timeout=(30, 180), allow_redirects=True)
-          print('EC_STATUS', r.status_code, r.headers.get('content-type'), len(r.content), r.url)
-          if r.ok and r.content and b'<html' not in r.content[:1000].lower():
-              try:
-                  df = pd.read_csv(BytesIO(r.content), nrows=0, low_memory=False)
-                  print('SAFE_EC_COLUMNS=' + repr(list(map(str, df.columns))))
-              except Exception as exc:
-                  print('EC_PARSE_ERROR', type(exc).__name__, str(exc))
-
-          # 2023 release README is outcome-free documentation.
-          root = 'https://data.cyverse.org/dav/iplant/home/shared/commons_repo/curated/GenomesToFields_G2F_data_2023'
-          readme = requests.get(root + '/readme.txt', auth=auth, headers=headers, timeout=(30, 180), allow_redirects=True)
-          print('README_STATUS', readme.status_code, readme.headers.get('content-type'), len(readme.content), readme.url)
-          if readme.ok and readme.content and b'<html' not in readme.content[:1000].lower():
-              text = readme.text
-              print('SAFE_2023_README_BEGIN')
-              print(text[:20000])
-              print('SAFE_2023_README_END')
-
-          # List only the supplemental folder; never list or request a._2023_phenotypic_data.
-          supplemental = root + '/z._2023_supplemental_info'
-          prop = requests.request(
-              'PROPFIND', supplemental,
-              auth=auth,
-              headers={**headers, 'Depth': '2'},
-              timeout=(30, 180),
-              allow_redirects=False,
+          canonical_root = (
+              'https://data.cyverse.org/dav/iplant/projects/commons_repo/curated/'
+              'GenomesToFields_G2F_data_2023'
           )
-          print('SUPPLEMENTAL_PROPFIND_STATUS', prop.status_code, prop.headers.get('content-type'), len(prop.content))
-          hrefs = []
-          if prop.status_code == 207:
-              tree = ET.fromstring(prop.content)
+          forbidden = 'a._2023_phenotypic_data'
+
+          def safe_get(url, **kwargs):
+              if forbidden in url.lower():
+                  raise RuntimeError('Safety violation: target phenotypic path requested')
+              response = requests.get(
+                  url,
+                  auth=auth if '/dav/' in url and '/dav-anon/' not in url else None,
+                  headers={**headers, **kwargs.pop('headers', {})},
+                  timeout=(30, 180),
+                  allow_redirects=True,
+                  **kwargs,
+              )
+              if forbidden in str(response.url).lower():
+                  raise RuntimeError('Safety violation: redirect entered target phenotypic path')
+              return response
+
+          def propfind_one(url):
+              if forbidden in url.lower():
+                  raise RuntimeError('Safety violation: target phenotypic path listed directly')
+              response = requests.request(
+                  'PROPFIND',
+                  url.rstrip('/') + '/',
+                  auth=auth,
+                  headers={**headers, 'Depth': '1'},
+                  timeout=(30, 180),
+                  allow_redirects=False,
+              )
+              print('PROPFIND', url, response.status_code, response.headers.get('content-type'), len(response.content))
+              if response.status_code != 207:
+                  return []
+              tree = ET.fromstring(response.content)
+              hrefs = []
               for node in tree.iter():
                   if node.tag.endswith('href') and node.text:
-                      hrefs.append(node.text)
-              print('SAFE_SUPPLEMENTAL_HREFS=' + repr(hrefs))
+                      href = str(node.text)
+                      if forbidden in href.lower():
+                          raise RuntimeError('Safety violation: phenotypic path leaked into scoped listing')
+                      hrefs.append(href)
+              return hrefs
 
-          # Read only headers of CSV/TXT files discovered inside supplemental info.
-          for href in hrefs:
+          # 1. Root README: documentation only, no phenotypes.
+          readme_candidates = [
+              canonical_root + '/readme.txt',
+              canonical_root + '/README.txt',
+              canonical_root + '/README.md',
+          ]
+          for url in readme_candidates:
+              r = safe_get(url)
+              print('README_STATUS', r.status_code, r.headers.get('content-type'), len(r.content), r.url)
+              if r.ok and r.content and b'<html' not in r.content[:1500].lower():
+                  text = r.text
+                  print('SAFE_2023_README_BEGIN')
+                  print(text[:30000])
+                  print('SAFE_2023_README_END')
+                  break
+
+          # 2. Weather folder listing only. This folder is explicitly separate
+          #    from phenotypic data in the 2023 release.
+          weather_root = canonical_root + '/b._2023_weather_data'
+          weather_hrefs = propfind_one(weather_root)
+          print('SAFE_WEATHER_HREFS=' + repr(weather_hrefs[:120]))
+          for href in weather_hrefs[:80]:
               low = href.lower()
-              if '/a._2023_phenotypic_data' in low:
-                  raise RuntimeError('Safety violation: phenotypic path appeared in supplemental probe')
-              if not low.endswith(('.csv', '.txt', '.tsv')):
+              if not low.endswith(('.csv', '.tsv', '.txt')):
                   continue
               url = 'https://data.cyverse.org' + href if href.startswith('/') else href
-              rr = requests.get(url.replace('/dav-anon/', '/dav/'), auth=auth, headers=headers, timeout=(30, 180), allow_redirects=True)
-              print('SAFE_FILE', PurePosixPath(href).name, rr.status_code, rr.headers.get('content-type'), len(rr.content))
-              if not rr.ok or not rr.content or b'<html' in rr.content[:1000].lower():
+              url = url.replace('/dav-anon/', '/dav/')
+              rr = safe_get(url, headers={'Range': 'bytes=0-131071'})
+              print('SAFE_WEATHER_FILE', PurePosixPath(href).name, rr.status_code, rr.headers.get('content-type'), len(rr.content))
+              if not rr.ok or not rr.content or b'<html' in rr.content[:1500].lower():
                   continue
-              if low.endswith('.csv'):
+              if low.endswith(('.csv', '.tsv')):
+                  sep = '\t' if low.endswith('.tsv') else ','
                   try:
-                      frame = pd.read_csv(BytesIO(rr.content), nrows=0, low_memory=False)
-                      print('SAFE_COLUMNS', PurePosixPath(href).name, repr(list(map(str, frame.columns))))
+                      frame = pd.read_csv(BytesIO(rr.content), nrows=3, sep=sep, low_memory=False)
+                      print('SAFE_WEATHER_COLUMNS', PurePosixPath(href).name, repr(list(map(str, frame.columns))))
+                      print('SAFE_WEATHER_HEAD', PurePosixPath(href).name, frame.head(3).to_dict(orient='records'))
                   except Exception as exc:
-                      print('SAFE_CSV_PARSE_ERROR', PurePosixPath(href).name, type(exc).__name__, str(exc))
+                      print('SAFE_WEATHER_PARSE_ERROR', PurePosixPath(href).name, type(exc).__name__, str(exc))
               else:
-                  print('SAFE_TEXT_HEAD', PurePosixPath(href).name, repr(rr.text[:3000]))
+                  print('SAFE_WEATHER_TEXT_HEAD', PurePosixPath(href).name, repr(rr.text[:5000]))
+
+          # 3. Supplemental PDF is documentation in the outcome-free
+          #    supplemental folder. Extract text locally and report only
+          #    planting/date-relevant lines.
+          pdf_url = canonical_root + '/z._2023_supplemental_info/g2f_2023_supplemental_information.pdf'
+          pdf = safe_get(pdf_url)
+          print('SUPPLEMENTAL_PDF_STATUS', pdf.status_code, pdf.headers.get('content-type'), len(pdf.content), pdf.url)
+          if pdf.ok and pdf.content.startswith(b'%PDF'):
+              reader = PdfReader(BytesIO(pdf.content))
+              text = '\n'.join((page.extract_text() or '') for page in reader.pages)
+              lines = [line.strip() for line in text.splitlines() if line.strip()]
+              relevant = [
+                  line for line in lines
+                  if any(token in line.lower() for token in ('plant', 'sow', 'date', 'emerg', 'season'))
+              ]
+              print('SAFE_SUPPLEMENTAL_PDF_RELEVANT_BEGIN')
+              for line in relevant[:500]:
+                  print(line)
+              print('SAFE_SUPPLEMENTAL_PDF_RELEVANT_END')
+
+          # 4. Supplemental CSV headers already discovered by B13A; re-check
+          #    only for exact date-like fields, still without phenotype access.
+          supplemental_root = canonical_root + '/z._2023_supplemental_info'
+          supplemental_hrefs = propfind_one(supplemental_root)
+          for href in supplemental_hrefs:
+              low = href.lower()
+              if not low.endswith(('.csv', '.tsv', '.txt')):
+                  continue
+              url = 'https://data.cyverse.org' + href if href.startswith('/') else href
+              url = url.replace('/dav-anon/', '/dav/')
+              rr = safe_get(url)
+              if not rr.ok or not rr.content or b'<html' in rr.content[:1500].lower():
+                  continue
+              sep = '\t' if low.endswith('.tsv') else ','
+              try:
+                  frame = pd.read_csv(BytesIO(rr.content), nrows=2, sep=sep, low_memory=False)
+                  date_cols = [c for c in frame.columns if any(t in str(c).lower() for t in ('date', 'plant', 'sow', 'emerg'))]
+                  print('SAFE_SUPPLEMENTAL_DATE_COLUMNS', PurePosixPath(href).name, repr(date_cols))
+                  if date_cols:
+                      print('SAFE_SUPPLEMENTAL_DATE_HEAD', PurePosixPath(href).name, frame[date_cols].head(2).to_dict(orient='records'))
+              except Exception as exc:
+                  print('SAFE_SUPPLEMENTAL_PARSE_ERROR', PurePosixPath(href).name, type(exc).__name__, str(exc))
           PY
