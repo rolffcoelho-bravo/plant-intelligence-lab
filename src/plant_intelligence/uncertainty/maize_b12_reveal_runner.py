@@ -2,7 +2,9 @@
 
 This module is intentionally separate from every Stage-A runner. It verifies the
 committed prediction SHA-256 before resolving or downloading the answer file.
-No model, interval, or support parameter is modified after reveal.
+No model, interval, support parameter, or admission criterion is modified after
+reveal. The answer-key audit records only identifier overlap and missingness,
+never observed yield values.
 """
 
 from __future__ import annotations
@@ -11,7 +13,6 @@ import argparse
 import io
 import json
 from pathlib import Path
-from typing import Iterable
 from urllib.parse import urlsplit, urlunsplit
 
 import pandas as pd
@@ -66,10 +67,9 @@ def _registry_roots(payload: dict[str, object]) -> list[str]:
         irods = source._irods_path_from_string(value)
         if irods:
             lower = irods.lower()
-            for folder in ("/testing_data", "/testing_data/"):
-                if folder in lower:
-                    index = lower.find(folder)
-                    add(irods[:index])
+            if "/testing_data" in lower:
+                index = lower.find("/testing_data")
+                add(irods[:index])
             add(irods)
         clean = source._clean_http_url(value)
         if clean:
@@ -163,6 +163,77 @@ def acquire_answer_after_seal(
     )
 
 
+def _canonical_key(genotype: object, environment: object) -> str:
+    return f"{str(genotype).strip()}\x1f{str(environment).strip()}"
+
+
+def write_answer_key_audit(
+    prediction_path: Path,
+    answer_path: Path,
+    audit_path: Path,
+    missing_path: Path,
+) -> pd.DataFrame:
+    """Audit identifier overlap without writing any observed yield value."""
+    predictions = pd.read_csv(prediction_path, low_memory=False)
+    answer = pd.read_csv(answer_path, low_memory=False)
+    g_col, e_col, y_col = b12._answer_columns(answer)
+
+    pred = predictions[["genotype", "environment"]].copy()
+    pred["genotype"] = pred["genotype"].astype(str).str.strip()
+    pred["environment"] = pred["environment"].astype(str).str.strip()
+    pred["key"] = [
+        _canonical_key(g, e)
+        for g, e in zip(pred["genotype"], pred["environment"])
+    ]
+
+    ans = answer[[g_col, e_col, y_col]].copy()
+    ans.columns = ["genotype", "environment", "observed"]
+    ans = ans.dropna(subset=["genotype", "environment"])
+    ans["genotype"] = ans["genotype"].astype(str).str.strip()
+    ans["environment"] = ans["environment"].astype(str).str.strip()
+    ans["key"] = [
+        _canonical_key(g, e)
+        for g, e in zip(ans["genotype"], ans["environment"])
+    ]
+    ans["has_observed_value"] = pd.to_numeric(ans["observed"], errors="coerce").notna()
+
+    answer_keys = set(ans["key"])
+    observed_keys = set(ans.loc[ans["has_observed_value"], "key"])
+    pred_keys = set(pred["key"])
+
+    key_present = pred["key"].isin(answer_keys)
+    observed_present = pred["key"].isin(observed_keys)
+    missing = pred.loc[~observed_present, ["genotype", "environment", "key"]].copy()
+    missing["answer_key_present"] = missing["key"].isin(answer_keys)
+    missing["missing_reason"] = missing["answer_key_present"].map(
+        {True: "OFFICIAL_KEY_PRESENT_BUT_YIELD_MISSING", False: "OFFICIAL_ANSWER_KEY_ABSENT"}
+    )
+    missing = missing.drop(columns=["key"])
+    missing.to_csv(missing_path, index=False)
+
+    audit = pd.DataFrame(
+        [
+            {
+                "n_sealed_predictions": int(len(pred)),
+                "n_sealed_unique_keys": int(len(pred_keys)),
+                "n_answer_rows": int(len(ans)),
+                "n_answer_unique_keys": int(ans["key"].nunique()),
+                "n_answer_unique_keys_with_observed_yield": int(len(observed_keys)),
+                "n_sealed_keys_present_in_answer": int(key_present.sum()),
+                "n_sealed_keys_with_observed_yield": int(observed_present.sum()),
+                "n_sealed_keys_missing_observed_yield": int((~observed_present).sum()),
+                "n_missing_because_answer_key_absent": int((~key_present).sum()),
+                "n_missing_because_yield_is_na": int((key_present & ~observed_present).sum()),
+                "sealed_observed_key_fraction": float(observed_present.mean()),
+                "selection_rule_if_evaluated": "SEALED_KEY_AND_OFFICIAL_NONMISSING_OUTCOME_ONLY",
+                "selection_uses_outcome_value": False,
+            }
+        ]
+    )
+    audit.to_csv(audit_path, index=False)
+    return audit
+
+
 def run(root: Path) -> dict[str, Path]:
     results = root / "reports" / "results"
     prediction_path = results / "case_study_b12_2022_sealed_predictions.csv"
@@ -178,6 +249,15 @@ def run(root: Path) -> dict[str, Path]:
     )
     if provenance["prediction_sha256_verified_before_answer_access"] != seal["prediction_sha256"]:
         raise b12.SealViolation("B12B reveal provenance does not match prediction seal.")
+
+    key_audit_path = results / "case_study_b12_2022_answer_key_audit.csv"
+    missing_keys_path = results / "case_study_b12_2022_missing_answer_keys.csv"
+    write_answer_key_audit(
+        prediction_path,
+        answer_path,
+        key_audit_path,
+        missing_keys_path,
+    )
 
     summary, coverage, reliability = b12.evaluate_reveal(
         prediction_path,
@@ -199,6 +279,8 @@ def run(root: Path) -> dict[str, Path]:
         "coverage": coverage_path,
         "reliability": reliability_path,
         "provenance": provenance_path,
+        "key_audit": key_audit_path,
+        "missing_keys": missing_keys_path,
     }
 
 
