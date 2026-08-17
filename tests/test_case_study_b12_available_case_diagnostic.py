@@ -10,6 +10,7 @@ from plant_intelligence.uncertainty.maize_b12_available_case_diagnostic import (
 )
 from plant_intelligence.uncertainty.maize_external_temporal_validation import (
     FORBIDDEN_ANSWER_BASENAME,
+    SUPPORTED_GENOTYPE,
     sha256_file,
     write_prediction_seal,
 )
@@ -23,6 +24,7 @@ def _sealed_predictions() -> pd.DataFrame:
             "environment": ["E1", "E1", "E2", "E2"],
             "predicted": [10.0, 11.0, 12.0, 13.0],
             "reliability_state": [RETAIN, RETAIN, RETAIN, RETAIN],
+            "genotype_support_state": [SUPPORTED_GENOTYPE] * 4,
             "lower_80": [8.0, 9.0, 10.0, 11.0],
             "upper_80": [12.0, 13.0, 14.0, 15.0],
             "lower_90": [7.0, 8.0, 9.0, 10.0],
@@ -96,10 +98,20 @@ def test_available_case_membership_is_invariant_to_numeric_yield_values(tmp_path
     cohort_b = result_b[-1]
 
     keys_a = set(
-        map(tuple, cohort_a.loc[cohort_a["official_answer_key_present"], ["genotype", "environment"]].to_numpy())
+        map(
+            tuple,
+            cohort_a.loc[
+                cohort_a["official_answer_key_present"], ["genotype", "environment"]
+            ].to_numpy(),
+        )
     )
     keys_b = set(
-        map(tuple, cohort_b.loc[cohort_b["official_answer_key_present"], ["genotype", "environment"]].to_numpy())
+        map(
+            tuple,
+            cohort_b.loc[
+                cohort_b["official_answer_key_present"], ["genotype", "environment"]
+            ].to_numpy(),
+        )
     )
     assert keys_a == keys_b == {("H1", "E1"), ("H2", "E1"), ("H3", "E2")}
     assert result_a[0].loc[0, "selection_rule"] == SELECTION_RULE
