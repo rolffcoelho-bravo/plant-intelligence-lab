@@ -18,6 +18,45 @@ from plant_intelligence.data.maize_prospective_environment import resolve_column
 from plant_intelligence.uncertainty import maize_b13_2023_source_audit as b13a
 
 
+def read_official_safe_table(path: Path) -> pd.DataFrame:
+    """Parse an allow-listed G2F table without assuming one CSV dialect/encoding.
+
+    This is a transport/schema normalization only. It never changes values,
+    filters rows, or accesses any phenotype path.
+    """
+
+    attempts: list[str] = []
+    for encoding in ("utf-8-sig", "utf-16", "latin-1"):
+        specs: tuple[tuple[object, str], ...] = (
+            (",", "comma"),
+            ("\t", "tab"),
+            (";", "semicolon"),
+            ("|", "pipe"),
+            (None, "auto"),
+        )
+        for sep, label in specs:
+            try:
+                kwargs: dict[str, object] = {"encoding": encoding}
+                if sep is None:
+                    kwargs.update({"sep": None, "engine": "python"})
+                else:
+                    kwargs.update({"sep": sep, "engine": "python"})
+                frame = pd.read_csv(path, **kwargs)
+                if len(frame.columns) >= 2:
+                    return frame
+                attempts.append(f"{encoding}/{label}: one-column parse")
+            except Exception as exc:
+                attempts.append(f"{encoding}/{label}: {type(exc).__name__}: {exc}")
+
+    body = path.read_bytes()
+    head = body[:160].hex()
+    raise ValueError(
+        f"B13A cannot parse allow-listed safe table {path.name}; "
+        f"size={len(body)} bytes; first160_hex={head}; attempts="
+        + " | ".join(attempts[-15:])
+    )
+
+
 def _required(frame: pd.DataFrame, candidates: tuple[str, ...], label: str) -> str:
     hit = resolve_column(frame, candidates)
     if hit is None:
@@ -171,7 +210,7 @@ def run(root: Path):
     def adapter(metadata: pd.DataFrame) -> pd.DataFrame:
         if not agr_path.exists():
             raise ValueError("B13A safe agronomic file is unavailable after allow-listed acquisition.")
-        agronomic = pd.read_csv(agr_path, low_memory=False)
+        agronomic = read_official_safe_table(agr_path)
         return build_environment_audit_2023(metadata, agronomic)
 
     b13a.build_environment_audit = adapter
