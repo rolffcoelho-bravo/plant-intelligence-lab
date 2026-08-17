@@ -1,0 +1,193 @@
+name: Case Study B14A - 2024 Source Compatibility
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b14a-2024-source-compatibility
+    paths:
+      - 'src/plant_intelligence/uncertainty/maize_b14a_2024_source_compatibility.py'
+      - 'tests/test_case_study_b14a_2024_source_compatibility.py'
+      - 'docs/case_study_b14a_2024_source_compatibility.md'
+      - '.github/workflows/case-study-b14a-2024-source-compatibility.yml'
+      - 'reports/results/.b14a_protocol_locked'
+
+permissions:
+  contents: write
+
+jobs:
+  blind-source-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install environment and CyVerse GoCommands
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+          GOCMD_VER=$(curl -L -s https://raw.githubusercontent.com/cyverse/gocommands/main/VERSION.txt)
+          test -n "$GOCMD_VER"
+          curl -L -s \
+            "https://github.com/cyverse/gocommands/releases/download/${GOCMD_VER}/gocmd-${GOCMD_VER}-linux-amd64.tar.gz" \
+            | tar xz
+          chmod +x gocmd
+          test -x ./gocmd
+
+      - name: Validate B14A guardrails
+        run: |
+          pytest -q tests/test_case_study_b14a_2024_source_compatibility.py
+
+      - name: Verify immutable pre-source gates
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import pandas as pd
+
+          lock = Path('reports/results/.b14a_protocol_locked').read_text(encoding='utf-8')
+          assert 'B14A_2024_PREOUTCOME_SOURCE_COMPATIBILITY_PROTOCOL_LOCKED' in lock
+          assert 'OBSERVED_VALUES_ACCESS=FORBIDDEN' in lock
+          assert 'PREDICTIONS=FORBIDDEN' in lock
+          assert 'T1_CLOCK=T1_30DAP_FROZEN' in lock
+          assert 'GENOMIC_SUPPORT=EXACT_FROZEN_B5_VECTOR_ONLY' in lock
+          assert 'T2=CLOSED' in lock
+
+          b13s = pd.read_csv('reports/results/case_study_b13s_2023_lock_decision.csv')
+          assert len(b13s) == 1
+          row = b13s.iloc[0]
+          assert row['decision'] == 'B13S_2023_NO_ADMISSIBLE_PLANTING_DATE_RECOVERY'
+          assert str(row['outcome_files_accessed']).lower() == 'false'
+          assert str(row['point_predictor_changed']).lower() == 'false'
+          assert str(row['t1_clock_changed']).lower() == 'false'
+          assert str(row['t2_branch_reopened']).lower() == 'false'
+
+          with open('reports/results/case_study_b12_2022_prediction_seal.json', encoding='utf-8') as handle:
+              seal = json.load(handle)
+          assert seal['prediction_sha256'] == 'fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220'
+          assert seal['observed_outcomes_accessed'] is False
+          assert seal['t2_branch_reopened'] is False
+          print('B14A immutable gates verified')
+          PY
+
+      - name: Stage exactly two authoritative pre-outcome 2024 testing objects
+        env:
+          IRODS_HOST: data.cyverse.org
+          IRODS_PORT: '1247'
+          IRODS_ZONE_NAME: iplant
+          IRODS_USER_NAME: anonymous
+          IRODS_USER_PASSWORD: ''
+        run: |
+          set -euo pipefail
+          SAFE_DIR='data/raw/case_study_b14a_2024_safe'
+          ROOT='/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Testing_data'
+          rm -rf "$SAFE_DIR"
+          mkdir -p "$SAFE_DIR"
+          ./gocmd env
+          ./gocmd get -f -k "$ROOT/1_Submission_Template_2024.csv" "$SAFE_DIR/1_Submission_Template_2024.csv"
+          ./gocmd get -f -k "$ROOT/2_Testing_Meta_Data_2024.csv" "$SAFE_DIR/2_Testing_Meta_Data_2024.csv"
+          test -s "$SAFE_DIR/1_Submission_Template_2024.csv"
+          test -s "$SAFE_DIR/2_Testing_Meta_Data_2024.csv"
+          test "$(find "$SAFE_DIR" -maxdepth 1 -type f | wc -l)" -eq 2
+          if find "$SAFE_DIR" -type f \( \
+              -iname '*observed*' -o \
+              -iname '*answer*' -o \
+              -iname '*trait*' -o \
+              -iname '*phenotyp*' \
+            \) -print -quit | grep -q .; then
+            echo 'Forbidden outcome-bearing file entered B14A staging directory.' >&2
+            exit 1
+          fi
+
+      - name: Verify submission template is used for keys only
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          from plant_intelligence.uncertainty.maize_b14a_2024_source_compatibility import submission_cells
+          frame = pd.read_csv('data/raw/case_study_b14a_2024_safe/1_Submission_Template_2024.csv', low_memory=False)
+          cells = submission_cells(frame)
+          assert list(cells.columns) == ['genotype', 'environment']
+          assert len(cells) == 10057
+          assert cells['genotype'].nunique() == 1063
+          assert cells['environment'].nunique() == 23
+          print('B14A submission template used only for genotype-environment keys')
+          PY
+
+      - name: Run B14A 2024 compatibility audit
+        run: |
+          set -o pipefail
+          python -u -m plant_intelligence.uncertainty.maize_b14a_2024_source_compatibility \
+            --output-root . \
+            2>&1 | tee reports/results/case_study_b14a_2024_execution.log
+
+      - name: Verify completed blind audit state
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+
+          decision = pd.read_csv('reports/results/case_study_b14a_2024_lock_decision.csv')
+          assert len(decision) == 1
+          row = decision.iloc[0]
+          allowed = {
+              'B14A_2024_READY_FOR_PREOUTCOME_SEAL',
+              'B14A_2024_T1_CONTEXT_INSUFFICIENT',
+              'B14A_2024_NO_FROZEN_GENOMIC_OVERLAP',
+              'B14A_2024_NO_JOINTLY_SUPPORTED_CELLS',
+              'B14A_HISTORICAL_ENCODER_MISMATCH',
+          }
+          assert row['decision'] in allowed
+          for key in (
+              'observed_values_accessed',
+              'prediction_generated',
+              'point_predictor_changed',
+              'b5_genotype_representation_changed',
+              'new_2425_snp_representation_imported',
+              't1_clock_changed',
+              't2_branch_reopened',
+              'post_result_tuning_permitted',
+          ):
+              assert str(row[key]).lower() == 'false', (key, row[key])
+          if row['decision'] == 'B14A_2024_READY_FOR_PREOUTCOME_SEAL':
+              assert int(row['n_candidate_cells']) > 0
+              assert int(row['n_candidate_environments']) > 0
+              assert str(row['candidate_universe_sha256']).strip()
+              assert str(row['historical_t1_encoder_exactly_reproduced']).lower() == 'true'
+              assert str(row['combined_t1_matrix_constructed']).lower() == 'true'
+
+          with open('reports/results/case_study_b14a_2024_source_seal.json', encoding='utf-8') as handle:
+              seal = json.load(handle)
+          assert seal['observed_values_accessed'] is False
+          assert seal['prediction_generated'] is False
+          assert seal['b5_genotype_representation_changed'] is False
+          assert seal['t1_clock_changed'] is False
+          assert seal['t2_branch_reopened'] is False
+          print(decision.to_string(index=False))
+          PY
+
+      - name: Publish compact B14A evidence
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git pull --rebase origin agent/b14a-2024-source-compatibility
+          git add \
+            reports/results/case_study_b14a_2024_source_manifest.csv \
+            reports/results/case_study_b14a_2024_source_schema.csv \
+            reports/results/case_study_b14a_2024_environment_audit.csv \
+            reports/results/case_study_b14a_2024_t1_reconstruction_audit.csv \
+            reports/results/case_study_b14a_2024_genotype_audit.csv \
+            reports/results/case_study_b14a_2024_submission_support_audit.csv \
+            reports/results/case_study_b14a_2024_candidate_universe.csv \
+            reports/results/case_study_b14a_2024_lock_decision.csv \
+            reports/results/case_study_b14a_2024_source_seal.json \
+            reports/results/case_study_b14a_2024_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B14A 2024 source compatibility audit [skip ci]'
+            git push
+          fi

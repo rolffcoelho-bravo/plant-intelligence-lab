@@ -1,0 +1,20 @@
+{
+  "allowed_files": {
+    "metadata": "2_Testing_Meta_Data_2024.csv",
+    "submission": "1_Submission_Template_2024.csv"
+  },
+  "b5_genotype_representation_changed": false,
+  "forbidden_observed_file": "7_Testing_Observed_Values.csv",
+  "observed_values_accessed": false,
+  "prediction_generated": false,
+  "source_dataset": "GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025",
+  "source_doi": "10.25739/78mn-4394",
+  "source_sha256": {
+    "metadata": "10bdecd20bc15bfe7354a6b1ee39eb0b9d206f0dfe4d220386c17dea86fffdab",
+    "submission": "80969670ef0f61c16d3dcaa1c410b1f1c628a2d0ca3ad21d444236e7ce8c4178"
+  },
+  "stage": "B14A_2024_PREOUTCOME_SOURCE_COMPATIBILITY_AUDIT",
+  "t1_clock_changed": false,
+  "t2_branch_reopened": false,
+  "target_year": 2024
+}
