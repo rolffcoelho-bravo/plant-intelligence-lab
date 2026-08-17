@@ -1,0 +1,94 @@
+name: Case Study B13 - Safe 2023 Source Probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b13-sequential-drift-calibration
+    paths:
+      - '.github/workflows/case-study-b13-safe-source-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  safe-source-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Probe only outcome-free source metadata
+        run: |
+          python - <<'PY'
+          from io import BytesIO
+          from pathlib import PurePosixPath
+          import xml.etree.ElementTree as ET
+          import pandas as pd
+          import requests
+
+          auth = ('anonymous', '')
+          headers = {'User-Agent': 'plant-intelligence-lab/0.1 B13-safe-probe'}
+
+          # 2024 competition EC file: outcome-free environmental covariates only.
+          ec_url = 'https://data.cyverse.org/dav/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Training_data/6_Training_EC_Data_2014_2023.csv'
+          r = requests.get(ec_url, auth=auth, headers=headers, timeout=(30, 180), allow_redirects=True)
+          print('EC_STATUS', r.status_code, r.headers.get('content-type'), len(r.content), r.url)
+          if r.ok and r.content and b'<html' not in r.content[:1000].lower():
+              try:
+                  df = pd.read_csv(BytesIO(r.content), nrows=0, low_memory=False)
+                  print('SAFE_EC_COLUMNS=' + repr(list(map(str, df.columns))))
+              except Exception as exc:
+                  print('EC_PARSE_ERROR', type(exc).__name__, str(exc))
+
+          # 2023 release README is outcome-free documentation.
+          root = 'https://data.cyverse.org/dav/iplant/home/shared/commons_repo/curated/GenomesToFields_G2F_data_2023'
+          readme = requests.get(root + '/readme.txt', auth=auth, headers=headers, timeout=(30, 180), allow_redirects=True)
+          print('README_STATUS', readme.status_code, readme.headers.get('content-type'), len(readme.content), readme.url)
+          if readme.ok and readme.content and b'<html' not in readme.content[:1000].lower():
+              text = readme.text
+              print('SAFE_2023_README_BEGIN')
+              print(text[:20000])
+              print('SAFE_2023_README_END')
+
+          # List only the supplemental folder; never list or request a._2023_phenotypic_data.
+          supplemental = root + '/z._2023_supplemental_info'
+          prop = requests.request(
+              'PROPFIND', supplemental,
+              auth=auth,
+              headers={**headers, 'Depth': '2'},
+              timeout=(30, 180),
+              allow_redirects=False,
+          )
+          print('SUPPLEMENTAL_PROPFIND_STATUS', prop.status_code, prop.headers.get('content-type'), len(prop.content))
+          hrefs = []
+          if prop.status_code == 207:
+              tree = ET.fromstring(prop.content)
+              for node in tree.iter():
+                  if node.tag.endswith('href') and node.text:
+                      hrefs.append(node.text)
+              print('SAFE_SUPPLEMENTAL_HREFS=' + repr(hrefs))
+
+          # Read only headers of CSV/TXT files discovered inside supplemental info.
+          for href in hrefs:
+              low = href.lower()
+              if '/a._2023_phenotypic_data' in low:
+                  raise RuntimeError('Safety violation: phenotypic path appeared in supplemental probe')
+              if not low.endswith(('.csv', '.txt', '.tsv')):
+                  continue
+              url = 'https://data.cyverse.org' + href if href.startswith('/') else href
+              rr = requests.get(url.replace('/dav-anon/', '/dav/'), auth=auth, headers=headers, timeout=(30, 180), allow_redirects=True)
+              print('SAFE_FILE', PurePosixPath(href).name, rr.status_code, rr.headers.get('content-type'), len(rr.content))
+              if not rr.ok or not rr.content or b'<html' in rr.content[:1000].lower():
+                  continue
+              if low.endswith('.csv'):
+                  try:
+                      frame = pd.read_csv(BytesIO(rr.content), nrows=0, low_memory=False)
+                      print('SAFE_COLUMNS', PurePosixPath(href).name, repr(list(map(str, frame.columns))))
+                  except Exception as exc:
+                      print('SAFE_CSV_PARSE_ERROR', PurePosixPath(href).name, type(exc).__name__, str(exc))
+              else:
+                  print('SAFE_TEXT_HEAD', PurePosixPath(href).name, repr(rr.text[:3000]))
+          PY
