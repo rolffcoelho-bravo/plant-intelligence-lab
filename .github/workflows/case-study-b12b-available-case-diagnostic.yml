@@ -64,6 +64,62 @@ jobs:
           print(f'Immutable B12A seal verified: {digest}')
           PY
 
+      - name: Acquire schema-validated official answer payload
+        run: |
+          python - <<'PY'
+          from io import BytesIO
+          from pathlib import Path
+          import hashlib
+          import pandas as pd
+          import requests
+
+          from plant_intelligence.uncertainty.maize_external_temporal_validation import (
+              ANSWER_REMOTE_PATHS,
+              CYVERSE_BASES,
+              FORBIDDEN_ANSWER_BASENAME,
+              USER_AGENT,
+              _answer_columns,
+          )
+
+          destination = Path('data/raw/case_study_b12_2022_reveal') / FORBIDDEN_ANSWER_BASENAME
+          destination.parent.mkdir(parents=True, exist_ok=True)
+          failures = []
+          selected = None
+          for relative in ANSWER_REMOTE_PATHS:
+              for base in CYVERSE_BASES:
+                  url = f"{base.rstrip('/')}/{relative.lstrip('/')}"
+                  try:
+                      response = requests.get(
+                          url,
+                          headers={'User-Agent': USER_AGENT},
+                          timeout=(30, 180),
+                      )
+                      response.raise_for_status()
+                      body = response.content
+                      if not body:
+                          raise RuntimeError('empty response')
+                      frame = pd.read_csv(BytesIO(body), low_memory=False)
+                      _answer_columns(frame)
+                      if len(frame) == 0:
+                          raise RuntimeError('parsed answer contains zero rows')
+                      destination.write_bytes(body)
+                      selected = (
+                          url,
+                          hashlib.sha256(body).hexdigest(),
+                          len(body),
+                          len(frame),
+                      )
+                      break
+                  except Exception as exc:
+                      failures.append(f'{url}: {type(exc).__name__}: {exc}')
+              if selected is not None:
+                  break
+          if selected is None:
+              raise RuntimeError('No schema-valid official answer payload found: ' + ' | '.join(failures))
+          url, digest, size, rows = selected
+          print(f'Validated official answer: rows={rows} bytes={size} sha256={digest} source={url}')
+          PY
+
       - name: Run explicitly post-reveal available-case diagnostic
         id: diagnostic
         shell: bash
@@ -71,7 +127,7 @@ jobs:
           set +e
           python -u -m plant_intelligence.uncertainty.maize_b12_available_case_diagnostic \
             --output-root . \
-            --download-answer \
+            --answer-file data/raw/case_study_b12_2022_reveal/Test_Set_Observed_Values_ANSWER.csv \
             > reports/results/case_study_b12_2022_available_case_execution.log 2>&1
           status=$?
           cat reports/results/case_study_b12_2022_available_case_execution.log
