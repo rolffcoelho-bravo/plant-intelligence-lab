@@ -1,32 +1,12 @@
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_available_case_diagnostic.py", line 331, in <module>
-    main()
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_available_case_diagnostic.py", line 309, in main
-    outputs = evaluate_available_case_diagnostic(
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_available_case_diagnostic.py", line 115, in evaluate_available_case_diagnostic
-    observed = _load_official_answer(answer_path)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_available_case_diagnostic.py", line 50, in _load_official_answer
-    answer = pd.read_csv(answer_path, low_memory=False)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 873, in read_csv
-    return _read(filepath_or_buffer, kwds)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 306, in _read
-    return parser.read(nrows)
-           ^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1947, in read
-    ) = self._engine.read(  # type: ignore[attr-defined]
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/c_parser_wrapper.py", line 219, in read
-    data = self._reader.read(nrows)
-           ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "pandas/_libs/parsers.pyx", line 814, in pandas._libs.parsers.TextReader.read
-  File "pandas/_libs/parsers.pyx", line 906, in pandas._libs.parsers.TextReader._read_rows
-  File "pandas/_libs/parsers.pyx", line 885, in pandas._libs.parsers.TextReader._check_tokenize_status
-  File "pandas/_libs/parsers.pyx", line 2084, in pandas._libs.parsers.raise_parser_error
-pandas.errors.ParserError: Error tokenizing data. C error: Expected 1 fields in line 6, saw 2
+ target_year                                                prediction_sha256                                                    answer_sha256  n_sealed_predictions  n_officially_observable  n_missing_official_answer_keys  officially_observable_fraction  primary_confirmatory_evaluable                                primary_status  sealed_artifact_replaced_or_resealed  post_reveal_protocol_amendment  available_case_diagnostic_confirmatory                            selection_rule  selection_uses_outcome_value  predictive_model_refit_after_reveal  interval_retuned_after_reveal  support_threshold_retuned_after_reveal  t2_branch_reopened  post_result_tuning_permitted
+        2022 fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220 96db1b27279e7738938d93154468622a90ae04bf52fb3e87c563a5d0898ff429                   420                      387                              33                        0.921429                           False B12_PRIMARY_INCOMPLETE_OFFICIAL_OUTCOME_MATCH                                 False                            True                                   False SEALED_KEY_PRESENT_IN_OFFICIAL_ANSWER_KEY                         False                                False                          False                                   False               False                         False
 
+Available-case diagnostic
+ target_year                            diagnostic  confirmatory  post_reveal_protocol_amendment                                                prediction_sha256                                                    answer_sha256  n_sealed_predictions  n_evaluated_available_cases  n_excluded_missing_official_keys  n_environments  n_genotypes     rmse      mae       r2  correlation  coverage_90  coverage_90_env_ci_low  coverage_90_env_ci_high  diagnostic_90_criterion_met  primary_confirmatory_evaluable                            selection_rule  selection_uses_outcome_value  sealed_artifact_replaced_or_resealed  predictive_model_refit_after_reveal  interval_retuned_after_reveal  support_threshold_retuned_after_reveal  t2_branch_reopened  post_result_tuning_permitted                                           decision
+        2022 POST_REVEAL_AVAILABLE_CASE_DIAGNOSTIC         False                            True fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220 96db1b27279e7738938d93154468622a90ae04bf52fb3e87c563a5d0898ff429                   420                          387                                33              14           43 2.803675 2.280046 0.088989     0.358763     0.852713                0.774027                 0.925378                        False                           False SEALED_KEY_PRESENT_IN_OFFICIAL_ANSWER_KEY                         False                                 False                                False                          False                                   False               False                         False B12_AVAILABLE_CASE_DIAGNOSTIC_90_CRITERION_NOT_MET
+
+Coverage
+                           diagnostic  confirmatory  nominal   n  n_environments  empirical_coverage  environment_balanced_coverage  environment_cluster_ci95_low  environment_cluster_ci95_high  mean_interval_width  absolute_coverage_gap                            selection_rule  selection_uses_outcome_value  post_reveal_protocol_amendment
+POST_REVEAL_AVAILABLE_CASE_DIAGNOSTIC         False     0.80 387              14            0.759690                       0.771894                      0.627899                       0.877108             6.914472               0.040310 SEALED_KEY_PRESENT_IN_OFFICIAL_ANSWER_KEY                         False                            True
+POST_REVEAL_AVAILABLE_CASE_DIAGNOSTIC         False     0.90 387              14            0.852713                       0.848719                      0.774027                       0.925378             8.703415               0.047287 SEALED_KEY_PRESENT_IN_OFFICIAL_ANSWER_KEY                         False                            True
+POST_REVEAL_AVAILABLE_CASE_DIAGNOSTIC         False     0.95 387              14            0.937984                       0.932088                      0.905479                       0.966266            10.230283               0.012016 SEALED_KEY_PRESENT_IN_OFFICIAL_ANSWER_KEY                         False                            True
