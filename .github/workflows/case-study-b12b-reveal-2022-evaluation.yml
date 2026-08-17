@@ -75,14 +75,17 @@ jobs:
       - name: Publish fixed B12B reveal diagnostic
         if: failure()
         run: |
-          if test -s reports/results/case_study_b12b_execution.log; then
-            git config user.name plant-intelligence-lab-bot
-            git config user.email actions@users.noreply.github.com
-            git add reports/results/case_study_b12b_execution.log
-            if ! git diff --cached --quiet; then
-              git commit -m 'Record fixed B12B reveal failure [skip ci]'
-              git push
-            fi
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          for f in \
+            reports/results/case_study_b12b_execution.log \
+            reports/results/case_study_b12_2022_answer_key_audit.csv \
+            reports/results/case_study_b12_2022_missing_answer_keys.csv; do
+            if test -s "$f"; then git add "$f"; fi
+          done
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record B12B fixed-evaluation diagnostics [skip ci]'
+            git push
           fi
 
       - name: Verify B12B external evidence
@@ -91,28 +94,18 @@ jobs:
           test -s reports/results/case_study_b12_2022_external_coverage.csv
           test -s reports/results/case_study_b12_2022_external_reliability.csv
           test -s reports/results/case_study_b12_2022_reveal_provenance.json
+          test -s reports/results/case_study_b12_2022_answer_key_audit.csv
           python - <<'PY'
           import json
           import pandas as pd
 
-          summary = pd.read_csv(
-              'reports/results/case_study_b12_2022_external_validation_summary.csv'
-          )
-          coverage = pd.read_csv(
-              'reports/results/case_study_b12_2022_external_coverage.csv'
-          )
-          with open(
-              'reports/results/case_study_b12_2022_reveal_provenance.json',
-              encoding='utf-8',
-          ) as handle:
+          summary = pd.read_csv('reports/results/case_study_b12_2022_external_validation_summary.csv')
+          coverage = pd.read_csv('reports/results/case_study_b12_2022_external_coverage.csv')
+          with open('reports/results/case_study_b12_2022_reveal_provenance.json', encoding='utf-8') as handle:
               provenance = json.load(handle)
 
-          assert provenance['prediction_sha256_verified_before_answer_access'] == (
-              'fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220'
-          )
-          assert summary['prediction_sha256'].eq(
-              provenance['prediction_sha256_verified_before_answer_access']
-          ).all()
+          assert provenance['prediction_sha256_verified_before_answer_access'] == 'fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220'
+          assert summary['prediction_sha256'].eq(provenance['prediction_sha256_verified_before_answer_access']).all()
           assert summary['target_year'].astype(int).eq(2022).all()
           assert summary['predictive_model_refit_after_reveal'].astype(bool).eq(False).all()
           assert summary['interval_retuned_after_reveal'].astype(bool).eq(False).all()
@@ -140,7 +133,9 @@ jobs:
             reports/results/case_study_b12_2022_external_validation_summary.csv \
             reports/results/case_study_b12_2022_external_coverage.csv \
             reports/results/case_study_b12_2022_external_reliability.csv \
-            reports/results/case_study_b12_2022_reveal_provenance.json
+            reports/results/case_study_b12_2022_reveal_provenance.json \
+            reports/results/case_study_b12_2022_answer_key_audit.csv \
+            reports/results/case_study_b12_2022_missing_answer_keys.csv
           if ! git diff --cached --quiet; then
             git commit -m 'Publish Case Study B12B 2022 external validation [skip ci]'
             git push
