@@ -30,8 +30,9 @@ def prestaged_safe_file(
     body = destination.read_bytes()
     if not body:
         raise RuntimeError(f"B13A pre-staged safe input is empty: {destination}")
-    if not b13a._schema_valid_csv(body):
-        raise RuntimeError(f"B13A pre-staged input is not a schema-valid CSV: {destination}")
+    # Validate the official object as a delimited table without assuming that all
+    # G2F 2023 safe CSVs use the same delimiter or character encoding.
+    schema.read_official_safe_table(destination)
     source = f"irods://data.cyverse.org:1247{IRODS_ROOT}/{relative_path.lstrip('/')}"
     return source, hashlib.sha256(body).hexdigest(), len(body)
 
