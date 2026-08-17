@@ -65,15 +65,41 @@ jobs:
           PY
 
       - name: Run explicitly post-reveal available-case diagnostic
+        id: diagnostic
+        shell: bash
         run: |
+          set +e
           python -u -m plant_intelligence.uncertainty.maize_b12_available_case_diagnostic \
             --output-root . \
-            --download-answer
+            --download-answer \
+            > reports/results/case_study_b12_2022_available_case_execution.log 2>&1
+          status=$?
+          cat reports/results/case_study_b12_2022_available_case_execution.log
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Persist diagnostic traceback when execution fails
+        if: steps.diagnostic.outputs.exit_code != '0'
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add reports/results/case_study_b12_2022_available_case_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Capture B12B available-case diagnostic failure [skip ci]'
+            git push
+          fi
+          exit 1
 
       - name: Verify B12 primary status and diagnostic labels
+        if: steps.diagnostic.outputs.exit_code == '0'
         run: |
           python - <<'PY'
           import pandas as pd
+
+          def as_bool(series):
+              values = series.astype(str).str.strip().str.lower().map({'true': True, 'false': False})
+              assert values.notna().all(), f'Unparseable boolean values: {series.tolist()}'
+              return values
 
           primary = pd.read_csv('reports/results/case_study_b12_2022_primary_status.csv')
           summary = pd.read_csv('reports/results/case_study_b12_2022_available_case_summary.csv')
@@ -86,33 +112,33 @@ jobs:
           assert primary['n_sealed_predictions'].astype(int).eq(420).all()
           assert primary['n_officially_observable'].astype(int).eq(387).all()
           assert primary['n_missing_official_answer_keys'].astype(int).eq(33).all()
-          assert primary['primary_confirmatory_evaluable'].astype(bool).eq(False).all()
-          assert primary['sealed_artifact_replaced_or_resealed'].astype(bool).eq(False).all()
-          assert primary['post_reveal_protocol_amendment'].astype(bool).eq(True).all()
-          assert primary['available_case_diagnostic_confirmatory'].astype(bool).eq(False).all()
-          assert primary['selection_uses_outcome_value'].astype(bool).eq(False).all()
-          assert primary['t2_branch_reopened'].astype(bool).eq(False).all()
-          assert primary['post_result_tuning_permitted'].astype(bool).eq(False).all()
+          assert as_bool(primary['primary_confirmatory_evaluable']).eq(False).all()
+          assert as_bool(primary['sealed_artifact_replaced_or_resealed']).eq(False).all()
+          assert as_bool(primary['post_reveal_protocol_amendment']).eq(True).all()
+          assert as_bool(primary['available_case_diagnostic_confirmatory']).eq(False).all()
+          assert as_bool(primary['selection_uses_outcome_value']).eq(False).all()
+          assert as_bool(primary['t2_branch_reopened']).eq(False).all()
+          assert as_bool(primary['post_result_tuning_permitted']).eq(False).all()
 
           assert summary['diagnostic'].eq('POST_REVEAL_AVAILABLE_CASE_DIAGNOSTIC').all()
-          assert summary['confirmatory'].astype(bool).eq(False).all()
+          assert as_bool(summary['confirmatory']).eq(False).all()
           assert summary['n_sealed_predictions'].astype(int).eq(420).all()
           assert summary['n_evaluated_available_cases'].astype(int).eq(387).all()
           assert summary['n_excluded_missing_official_keys'].astype(int).eq(33).all()
-          assert summary['selection_uses_outcome_value'].astype(bool).eq(False).all()
-          assert summary['t2_branch_reopened'].astype(bool).eq(False).all()
-          assert summary['post_result_tuning_permitted'].astype(bool).eq(False).all()
+          assert as_bool(summary['selection_uses_outcome_value']).eq(False).all()
+          assert as_bool(summary['t2_branch_reopened']).eq(False).all()
+          assert as_bool(summary['post_result_tuning_permitted']).eq(False).all()
           assert summary['decision'].isin({
               'B12_AVAILABLE_CASE_DIAGNOSTIC_90_CRITERION_MET',
               'B12_AVAILABLE_CASE_DIAGNOSTIC_90_CRITERION_NOT_MET',
           }).all()
 
           assert set(round(v, 2) for v in coverage['nominal']) == {0.80, 0.90, 0.95}
-          assert coverage['confirmatory'].astype(bool).eq(False).all()
-          assert coverage['selection_uses_outcome_value'].astype(bool).eq(False).all()
+          assert as_bool(coverage['confirmatory']).eq(False).all()
+          assert as_bool(coverage['selection_uses_outcome_value']).eq(False).all()
           assert len(cohort) == 420
-          assert cohort['official_answer_key_present'].astype(bool).sum() == 387
-          assert cohort['selection_uses_outcome_value'].astype(bool).eq(False).all()
+          assert as_bool(cohort['official_answer_key_present']).sum() == 387
+          assert as_bool(cohort['selection_uses_outcome_value']).eq(False).all()
 
           print('\nB12 primary status')
           print(primary.to_string(index=False))
@@ -123,6 +149,7 @@ jobs:
           PY
 
       - name: Publish compact post-reveal diagnostic evidence
+        if: steps.diagnostic.outputs.exit_code == '0'
         run: |
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
@@ -132,7 +159,8 @@ jobs:
             reports/results/case_study_b12_2022_available_case_coverage.csv \
             reports/results/case_study_b12_2022_available_case_reliability.csv \
             reports/results/case_study_b12_2022_available_case_by_environment.csv \
-            reports/results/case_study_b12_2022_available_case_cohort_audit.csv
+            reports/results/case_study_b12_2022_available_case_cohort_audit.csv \
+            reports/results/case_study_b12_2022_available_case_execution.log
           if ! git diff --cached --quiet; then
             git commit -m 'Publish B12B post-reveal available-case diagnostic [skip ci]'
             git push
