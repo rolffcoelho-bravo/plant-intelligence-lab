@@ -29,134 +29,23 @@
 Traceback (most recent call last):
   File "<frozen runpy>", line 198, in _run_module_as_main
   File "<frozen runpy>", line 88, in _run_code
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_cyverse_source.py", line 285, in <module>
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 111, in <module>
     main()
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_cyverse_source.py", line 278, in main
-    paths = run_stage_a(args.output_root.resolve())
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 104, in main
+    paths = run(args.output_root.resolve())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 97, in run
+    return source.run_stage_a(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_cyverse_source.py", line 251, in run_stage_a
     return b12.run_stage_a(root)
            ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_external_temporal_validation.py", line 697, in run_stage_a
-    safe = acquire_stage_a_inputs(root)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_external_temporal_validation.py", line 162, in acquire_stage_a_inputs
-    url, digest, size = _download_first_available((relative,), path)
-                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_cyverse_source.py", line 242, in download_current_safe_file
-    raise SourceResolutionError(
-SourceResolutionError: Unable to resolve current CyVerse CSV 2_Testing_Meta_Data_2022.csv. Candidate diagnostics:
-[
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/COMPETITION_DATA_README.docx/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "final_url": "https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/COMPETITION_DATA_README.docx/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "status": 404,
-    "content_type": "text/html; charset=iso-8859-1",
-    "size": 379,
-    "html_like": true
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/COMPETITION_DATA_README.docx/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "error": "HTTPError: 404 Client Error: Not Found for url: https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/COMPETITION_DATA_README.docx/Testing_data/2_Testing_Meta_Data_2022.csv"
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/COMPETITION_DATA_README.docx/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "final_url": "https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/COMPETITION_DATA_README.docx/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "status": 404,
-    "content_type": "text/html; charset=iso-8859-1",
-    "size": 379,
-    "html_like": true
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/COMPETITION_DATA_README.docx/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "error": "HTTPError: 404 Client Error: Not Found for url: https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/COMPETITION_DATA_README.docx/Testing_Data/2_Testing_Meta_Data_2022.csv"
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/readme.txt/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "final_url": "https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/readme.txt/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "status": 404,
-    "content_type": "text/html; charset=iso-8859-1",
-    "size": 361,
-    "html_like": true
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/readme.txt/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "error": "HTTPError: 404 Client Error: Not Found for url: https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/readme.txt/Testing_data/2_Testing_Meta_Data_2022.csv"
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/readme.txt/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "final_url": "https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/readme.txt/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "status": 404,
-    "content_type": "text/html; charset=iso-8859-1",
-    "size": 361,
-    "html_like": true
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/readme.txt/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "error": "HTTPError: 404 Client Error: Not Found for url: https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/readme.txt/Testing_Data/2_Testing_Meta_Data_2022.csv"
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "final_url": "https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "status": 200,
-    "content_type": "application/octet-stream",
-    "size": 11957,
-    "html_like": false
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "final_url": "https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "status": 404,
-    "content_type": "text/html; charset=iso-8859-1",
-    "size": 364,
-    "html_like": true
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "error": "HTTPError: 404 Client Error: Not Found for url: https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/Testing_data/2_Testing_Meta_Data_2022.csv"
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "final_url": "https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "status": 404,
-    "content_type": "text/html; charset=iso-8859-1",
-    "size": 364,
-    "html_like": true
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "error": "HTTPError: 404 Client Error: Not Found for url: https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/Testing_Data/2_Testing_Meta_Data_2022.csv"
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "final_url": "https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "status": 404,
-    "content_type": "text/html; charset=iso-8859-1",
-    "size": 350,
-    "html_like": true
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "error": "HTTPError: 404 Client Error: Not Found for url: https://data.cyverse.org/dav-anon/iplant/projects/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_Data/2_Testing_Meta_Data_2022.csv"
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "final_url": "https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_data/2_Testing_Meta_Data_2022.csv",
-    "status": 200,
-    "content_type": "text/csv;charset=utf-8",
-    "size": 11957,
-    "html_like": false
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "final_url": "https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "status": 404,
-    "content_type": "text/html; charset=iso-8859-1",
-    "size": 344,
-    "html_like": true
-  },
-  {
-    "url": "https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_Data/2_Testing_Meta_Data_2022.csv",
-    "error": "HTTPError: 404 Client Error: Not Found for url: https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Testing_Data/2_Testing_Meta_Data_2022.csv"
-  }
-]
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_external_temporal_validation.py", line 700, in run_stage_a
+    test_manifest_all = competition_environment_manifest(metadata, submission)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_b12_registry_runner.py", line 88, in normalized_manifest
+    return ORIGINAL_MANIFEST(frame, submission)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/plant-intelligence-lab/plant-intelligence-lab/src/plant_intelligence/uncertainty/maize_external_temporal_validation.py", line 267, in competition_environment_manifest
+    raise ValueError(f"B12 missing planting/coordinates for {environment}")
+ValueError: B12 missing planting/coordinates for IAH1_2022
