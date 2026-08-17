@@ -65,9 +65,25 @@ jobs:
           fi
 
       - name: Execute B12A sealed 2022 prediction
-        run: >-
-          python -u -m plant_intelligence.uncertainty.maize_external_temporal_validation
-          --output-root . --stage seal
+        run: |
+          mkdir -p reports/results
+          set -o pipefail
+          python -u -m plant_intelligence.uncertainty.maize_external_temporal_validation \
+            --output-root . --stage seal \
+            2>&1 | tee reports/results/case_study_b12a_execution.log
+
+      - name: Publish blind B12A failure diagnostic
+        if: failure()
+        run: |
+          if test -s reports/results/case_study_b12a_execution.log; then
+            git config user.name plant-intelligence-lab-bot
+            git config user.email actions@users.noreply.github.com
+            git add reports/results/case_study_b12a_execution.log
+            if ! git diff --cached --quiet; then
+              git commit -m 'Record B12A blind execution failure [skip ci]'
+              git push
+            fi
+          fi
 
       - name: Verify B12A seal and blind-state evidence
         run: |
@@ -121,6 +137,7 @@ jobs:
         run: |
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
+          git rm -f reports/results/case_study_b12a_execution.log 2>/dev/null || true
           git add \
             reports/results/case_study_b12_2022_sealed_predictions.csv \
             reports/results/case_study_b12_2022_prediction_seal.json \
