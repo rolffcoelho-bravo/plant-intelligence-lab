@@ -7,6 +7,7 @@ on:
       - agent/b13a-2023-source-audit
     paths:
       - 'src/plant_intelligence/uncertainty/maize_b13_2023_source_audit.py'
+      - 'src/plant_intelligence/uncertainty/maize_b13a_2023_source_audit_runner.py'
       - 'tests/test_case_study_b13a_2023_source_audit.py'
       - '.github/workflows/case-study-b13a-2023-source-audit.yml'
 
@@ -75,7 +76,7 @@ jobs:
 
       - name: Run B13A blind source and compatibility audit
         run: |
-          python -u -m plant_intelligence.uncertainty.maize_b13_2023_source_audit \
+          python -u -m plant_intelligence.uncertainty.maize_b13a_2023_source_audit_runner \
             --output-root . \
             2>&1 | tee reports/results/case_study_b13a_2023_execution.log
 
@@ -83,6 +84,9 @@ jobs:
         run: |
           python - <<'PY'
           import pandas as pd
+
+          def as_bool(value):
+              return str(value).strip().lower() == 'true'
 
           decision = pd.read_csv('reports/results/case_study_b13a_2023_lock_decision.csv')
           source = pd.read_csv('reports/results/case_study_b13a_2023_source_manifest.csv')
@@ -96,13 +100,13 @@ jobs:
           assert int(row['n_frozen_supported_genotypes']) == 43
           assert int(row['n_t1_metadata_feasible_environments']) > 0
           assert int(row['n_candidate_cells']) == len(universe)
-          assert bool(row['historical_t1_encoder_exactly_reproduced'])
-          assert not bool(row['phenotype_directory_accessed'])
-          assert not bool(row['phenotype_file_accessed'])
-          assert not bool(row['candidate_universe_uses_2023_observed_keys'])
-          assert not bool(row['point_predictor_changed'])
-          assert not bool(row['t2_branch_reopened'])
-          assert not bool(row['post_result_tuning_permitted'])
+          assert as_bool(row['historical_t1_encoder_exactly_reproduced'])
+          assert not as_bool(row['phenotype_directory_accessed'])
+          assert not as_bool(row['phenotype_file_accessed'])
+          assert not as_bool(row['candidate_universe_uses_2023_observed_keys'])
+          assert not as_bool(row['point_predictor_changed'])
+          assert not as_bool(row['t2_branch_reopened'])
+          assert not as_bool(row['post_result_tuning_permitted'])
           assert len(source) == 4
           assert not source['outcome_file'].astype(bool).any()
           assert len(geno) == 43
@@ -120,6 +124,7 @@ jobs:
         run: |
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
+          git pull --rebase origin agent/b13a-2023-source-audit
           git add \
             reports/results/case_study_b13a_2023_source_manifest.csv \
             reports/results/case_study_b13a_2023_environment_audit.csv \
