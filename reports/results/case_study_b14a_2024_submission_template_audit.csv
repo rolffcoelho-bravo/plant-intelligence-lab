@@ -1,0 +1,2 @@
+target_year,submission_basename,n_rows,prediction_value_column,n_nonempty_prediction_values,submission_values_blank,observed_values_file_accessed,decision,reason
+2024,1_Submission_Template_2024.csv,10057,Yield_Mg_ha,0,True,False,B14A_SUBMISSION_TEMPLATE_BLANK,
