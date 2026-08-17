@@ -348,6 +348,17 @@ def download_competition_file(
             if b12_source._is_html_response(response):
                 continue
             if not _schema_ok(basename, response.content):
+                try:
+                    header = pd.read_csv(
+                        io.BytesIO(response.content),
+                        nrows=0,
+                        low_memory=False,
+                    )
+                    attempts[-1]["parsed_columns"] = list(map(str, header.columns))
+                except Exception as header_exc:
+                    attempts[-1]["header_error"] = (
+                        f"{type(header_exc).__name__}: {header_exc}"
+                    )
                 continue
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(response.content)
