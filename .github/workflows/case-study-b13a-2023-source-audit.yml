@@ -8,6 +8,7 @@ on:
     paths:
       - 'src/plant_intelligence/uncertainty/maize_b13_2023_source_audit.py'
       - 'src/plant_intelligence/uncertainty/maize_b13a_2023_source_audit_runner.py'
+      - 'src/plant_intelligence/uncertainty/maize_b13a_2023_resilient_runner.py'
       - 'tests/test_case_study_b13a_2023_source_audit.py'
       - '.github/workflows/case-study-b13a-2023-source-audit.yml'
 
@@ -76,7 +77,8 @@ jobs:
 
       - name: Run B13A blind source and compatibility audit
         run: |
-          python -u -m plant_intelligence.uncertainty.maize_b13a_2023_source_audit_runner \
+          set -o pipefail
+          python -u -m plant_intelligence.uncertainty.maize_b13a_2023_resilient_runner \
             --output-root . \
             2>&1 | tee reports/results/case_study_b13a_2023_execution.log
 
