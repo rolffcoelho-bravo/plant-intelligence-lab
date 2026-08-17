@@ -66,6 +66,20 @@ jobs:
             exit 1
           fi
 
+      - name: Probe outcome-free 2014-2023 EC header
+        run: |
+          python - <<'PY'
+          from io import BytesIO
+          import pandas as pd
+          import requests
+
+          url = 'https://data.cyverse.org/dav-anon/iplant/commons/cyverse_curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Training_data/6_Training_EC_Data_2014_2023.csv'
+          response = requests.get(url, timeout=(30, 180))
+          response.raise_for_status()
+          frame = pd.read_csv(BytesIO(response.content), nrows=0, low_memory=False)
+          print('SAFE_EC_COLUMNS=' + repr(list(map(str, frame.columns))))
+          PY
+
       - name: Materialize frozen B5 public data
         run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
 
