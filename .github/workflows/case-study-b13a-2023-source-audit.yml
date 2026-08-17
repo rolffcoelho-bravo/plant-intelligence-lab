@@ -1,0 +1,198 @@
+name: Case Study B13A - 2023 Source Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b13a-2023-source-audit
+    paths:
+      - 'src/plant_intelligence/uncertainty/maize_b13_2023_source_audit.py'
+      - 'src/plant_intelligence/uncertainty/maize_b13a_2023_source_audit_runner.py'
+      - 'src/plant_intelligence/uncertainty/maize_b13a_2023_final_audit.py'
+      - 'tests/test_case_study_b13a_2023_source_audit.py'
+      - '.github/workflows/case-study-b13a-2023-source-audit.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  blind-source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install environment and CyVerse GoCommands
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+          GOCMD_VER=$(curl -L -s https://raw.githubusercontent.com/cyverse/gocommands/main/VERSION.txt)
+          test -n "$GOCMD_VER"
+          curl -L -s \
+            "https://github.com/cyverse/gocommands/releases/download/${GOCMD_VER}/gocmd-${GOCMD_VER}-linux-amd64.tar.gz" \
+            | tar xz
+          chmod +x gocmd
+          test -x ./gocmd
+
+      - name: Validate B13 and B13A guardrails
+        run: |
+          pytest -q \
+            tests/test_case_study_b13_forward_drift_calibration.py \
+            tests/test_case_study_b13a_2023_source_audit.py
+
+      - name: Verify immutable B13 pre-outcome lock and B12 prediction seal
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import pandas as pd
+
+          lock = pd.read_csv('reports/results/case_study_b13_preoutcome_lock.csv')
+          assert len(lock) == 1
+          row = lock.iloc[0]
+          assert int(row['target_year']) == 2023
+          assert row['control_rule'] == 'FROZEN_B11_90'
+          assert row['adaptive_rule'] == 'ONE_SIDED_CLUSTER_DRIFT_GUARD_90'
+          assert abs(float(row['adaptive_quantile_level']) - 0.9512813317177465) <= 1e-15
+          assert row['primary_estimand'] == 'OFFICIALLY_OBSERVABLE_SEALED_KEYS'
+          assert row['stage_state'] == 'B13_PREOUTCOME_CALIBRATION_RULE_LOCKED'
+
+          prediction = 'reports/results/case_study_b12_2022_sealed_predictions.csv'
+          with open(prediction, 'rb') as handle:
+              digest = hashlib.sha256(handle.read()).hexdigest()
+          with open('reports/results/case_study_b12_2022_prediction_seal.json', encoding='utf-8') as handle:
+              seal = json.load(handle)
+          expected = 'fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220'
+          assert digest == expected == seal['prediction_sha256']
+          assert seal['observed_outcomes_accessed'] is False
+          assert seal['t2_branch_reopened'] is False
+          print(f'B13 lock and B12 genotype source verified: {digest}')
+          PY
+
+      - name: Enforce blind 2023 boundary before audit
+        run: |
+          if find data -type f -name 'g2f_2023_phenotypic_data.csv' -print -quit 2>/dev/null | grep -q .; then
+            echo 'Forbidden 2023 phenotype file exists before B13A.' >&2
+            exit 1
+          fi
+
+      - name: Stage exactly four issuance-safe 2023 files through anonymous iRODS
+        env:
+          IRODS_HOST: data.cyverse.org
+          IRODS_PORT: '1247'
+          IRODS_ZONE_NAME: iplant
+          IRODS_USER_NAME: anonymous
+          IRODS_USER_PASSWORD: ''
+        run: |
+          set -euo pipefail
+          SAFE_DIR='data/raw/case_study_b13a_2023_safe'
+          ROOT='/iplant/home/shared/commons_repo/curated/GenomesToFields_G2F_data_2023'
+          mkdir -p "$SAFE_DIR"
+          ./gocmd env
+          ./gocmd get -f -k \
+            "$ROOT/z._2023_supplemental_info/g2f_2023_field_metadata.csv" \
+            "$SAFE_DIR/g2f_2023_field_metadata.csv"
+          ./gocmd get -f -k \
+            "$ROOT/z._2023_supplemental_info/g2f_2023_agronomic_information.csv" \
+            "$SAFE_DIR/g2f_2023_agronomic_information.csv"
+          ./gocmd get -f -k \
+            "$ROOT/b._2023_weather_data/g2f_2023_weather_cleaned.csv" \
+            "$SAFE_DIR/g2f_2023_weather_cleaned.csv"
+          ./gocmd get -f -k \
+            "$ROOT/c._2023_soil_data/g2f_2023_soil_data.csv" \
+            "$SAFE_DIR/g2f_2023_soil_data.csv"
+          test -s "$SAFE_DIR/g2f_2023_field_metadata.csv"
+          test -s "$SAFE_DIR/g2f_2023_agronomic_information.csv"
+          test -s "$SAFE_DIR/g2f_2023_weather_cleaned.csv"
+          test -s "$SAFE_DIR/g2f_2023_soil_data.csv"
+          if find "$SAFE_DIR" -type f -name 'g2f_2023_phenotypic_data.csv' -print -quit | grep -q .; then
+            echo 'Forbidden phenotype file entered pre-staged safe directory.' >&2
+            exit 1
+          fi
+
+      - name: Run canonical B13A blind source audit
+        run: |
+          set -o pipefail
+          python -u -m plant_intelligence.uncertainty.maize_b13a_2023_final_audit \
+            --output-root . \
+            2>&1 | tee reports/results/case_study_b13a_2023_execution.log
+
+      - name: Verify completed blind audit state
+        run: |
+          python - <<'PY'
+          import pandas as pd
+
+          def as_bool(value):
+              return str(value).strip().lower() == 'true'
+
+          decision = pd.read_csv('reports/results/case_study_b13a_2023_lock_decision.csv')
+          source = pd.read_csv('reports/results/case_study_b13a_2023_source_manifest.csv')
+          env = pd.read_csv('reports/results/case_study_b13a_2023_environment_audit.csv')
+          geno = pd.read_csv('reports/results/case_study_b13a_2023_genotype_audit.csv')
+          universe = pd.read_csv('reports/results/case_study_b13a_2023_candidate_universe.csv')
+
+          assert len(decision) == 1
+          row = decision.iloc[0]
+          assert row['decision'] in {
+              'B13A_2023_SOURCE_COMPATIBLE_READY_FOR_SEAL',
+              'B13A_2023_T1_CONTEXT_INSUFFICIENT',
+          }
+          assert int(row['n_frozen_supported_genotypes']) == 43
+          assert int(row['n_candidate_cells']) == len(universe)
+          assert as_bool(row['historical_t1_encoder_exactly_reproduced'])
+          assert not as_bool(row['phenotype_directory_accessed'])
+          assert not as_bool(row['phenotype_file_accessed'])
+          assert not as_bool(row['candidate_universe_uses_2023_observed_keys'])
+          assert not as_bool(row['point_predictor_changed'])
+          assert not as_bool(row['t2_branch_reopened'])
+          assert not as_bool(row['post_result_tuning_permitted'])
+          assert not as_bool(row['application_date_used_as_planting_proxy'])
+          assert not as_bool(row['weather_station_placement_used_as_planting_proxy'])
+          assert len(source) == 4
+          assert not source['outcome_file'].astype(bool).any()
+          assert len(geno) == 43
+          assert not env['phenotype_used'].astype(bool).any()
+
+          if row['decision'] == 'B13A_2023_T1_CONTEXT_INSUFFICIENT':
+              assert int(row['n_t1_metadata_feasible_environments']) == 0
+              assert int(row['n_candidate_cells']) == 0
+              assert len(universe) == 0
+              assert env['planting_date_source'].eq('NOT_AVAILABLE').all()
+              assert not env['t1_metadata_feasible'].astype(bool).any()
+              assert env['t1_metadata_failure_reason'].eq(
+                  'PLANTING_DATE_NOT_AVAILABLE_IN_ALLOWLISTED_2023_FIELD_METADATA'
+              ).all()
+          else:
+              assert int(row['n_t1_metadata_feasible_environments']) > 0
+              assert len(universe) > 0
+
+          print(decision.to_string(index=False))
+          PY
+
+          if find data/raw/case_study_b13a_2023_safe -type f -name 'g2f_2023_phenotypic_data.csv' -print -quit | grep -q .; then
+            echo 'Forbidden phenotype file entered B13A safe directory.' >&2
+            exit 1
+          fi
+
+      - name: Publish compact B13A audit evidence
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git pull --rebase origin agent/b13a-2023-source-audit
+          git add \
+            reports/results/case_study_b13a_2023_source_manifest.csv \
+            reports/results/case_study_b13a_2023_environment_audit.csv \
+            reports/results/case_study_b13a_2023_genotype_audit.csv \
+            reports/results/case_study_b13a_2023_candidate_universe.csv \
+            reports/results/case_study_b13a_2023_lock_decision.csv \
+            reports/results/case_study_b13a_2023_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B13A 2023 blind source audit [skip ci]'
+            git push
+          fi
