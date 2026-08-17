@@ -36,6 +36,7 @@ import argparse
 import hashlib
 import io
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Iterable
 from urllib.parse import urlsplit, urlunsplit
@@ -89,6 +90,7 @@ CYVERSE_DATASET = "GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2
 TRAINING_FOLDER = "Training_data"
 METADATA_BASENAME = "2_Training_Meta_Data_2014_2023.csv"
 TARGET_TRAIT_BASENAME = "1_Training_Trait_Data_2014_2023.csv"
+SUPPLEMENTAL_ROOT = "https://data.cyverse.org/dav/iplant/home/shared/commons_repo/curated/GenomesToFields_G2F_data_2023/z._2023_supplemental_info"
 USER_AGENT = "plant-intelligence-lab/0.1 B13 sequential-drift-calibration"
 POWER_URL = "https://power.larc.nasa.gov/api/temporal/daily/point"
 
@@ -261,18 +263,11 @@ def _schema_ok(basename: str, body: bytes) -> bool:
 
     env_ok = has(("Env", "Environment", "environment"), (("env",),))
     if basename == METADATA_BASENAME:
-        plant_ok = has(
-            (
-                "Date_Planted",
-                "Planting_Date",
-                "PlantingDate",
-                "date_plant",
-                "date_planted",
-                "planting_date",
-                "Sowing_Date",
-            ),
-            (("plant", "date"), ("sow", "date")),
-        )
+        # The harmonized 2014-2023 competition metadata supplies exact
+        # environment IDs and coordinates but does not contain planting dates.
+        # B13 obtains planting dates separately from the outcome-free 2023
+        # supplemental/agronomic release; no trait file is needed in Stage A.
+        year_ok = has(("Year", "year"), (("year",),))
         lat_ok = has(
             ("Weather_Station_Latitude", "Latitude", "Lat"),
             (("lat",),),
@@ -281,7 +276,7 @@ def _schema_ok(basename: str, body: bytes) -> bool:
             ("Weather_Station_Longitude", "Longitude", "Lon", "Long"),
             (("lon",), ("long",)),
         )
-        return env_ok and plant_ok and lat_ok and lon_ok
+        return env_ok and year_ok and lat_ok and lon_ok
 
     if basename == TARGET_TRAIT_BASENAME:
         genotype_ok = has(
@@ -412,23 +407,165 @@ def _target_year_mask(frame: pd.DataFrame, env_col: str) -> pd.Series:
     return frame[env_col].astype(str).str.contains(str(TARGET_YEAR), regex=False)
 
 
-def target_environment_manifest(metadata: pd.DataFrame) -> pd.DataFrame:
-    env_col = _find_column(
-        metadata, ("Env", "Environment", "environment"), "metadata environment", (("env",),)
+def discover_2023_planting_dates(
+    timeout: int = 180,
+) -> tuple[pd.DataFrame, dict[str, object]]:
+    """Resolve exact 2023 planting dates from outcome-free supplemental data.
+
+    The resolver is hard-scoped to ``z._2023_supplemental_info`` in the public
+    2023 field-season release.  It never traverses or requests the sibling
+    phenotypic directory.
+    """
+    if "a._2023_phenotypic_data" in SUPPLEMENTAL_ROOT.lower():
+        raise B13ProtocolViolation("B13 supplemental root points at phenotypic data.")
+
+    prop = requests.request(
+        "PROPFIND",
+        SUPPLEMENTAL_ROOT,
+        auth=("anonymous", ""),
+        headers={"User-Agent": USER_AGENT, "Depth": "3"},
+        timeout=(30, timeout),
+        allow_redirects=False,
     )
-    plant_col = _find_column(
+    if prop.status_code != 207:
+        raise RuntimeError(
+            "B13 could not list the outcome-free 2023 supplemental directory: "
+            f"HTTP {prop.status_code}, content_type={prop.headers.get('content-type', '')!r}"
+        )
+
+    tree = ET.fromstring(prop.content)
+    hrefs: list[str] = []
+    for node in tree.iter():
+        if node.tag.endswith("href") and node.text:
+            href = str(node.text)
+            low = href.lower()
+            if "a._2023_phenotypic_data" in low:
+                raise B13ProtocolViolation(
+                    "B13 supplemental listing unexpectedly crossed into phenotypic data."
+                )
+            if href not in hrefs:
+                hrefs.append(href)
+
+    probes: list[dict[str, object]] = []
+    for href in hrefs:
+        low = href.lower()
+        if not low.endswith((".csv", ".txt", ".tsv")):
+            continue
+        url = href if href.startswith("http") else "https://data.cyverse.org" + href
+        url = url.replace("/dav-anon/", "/dav/")
+        try:
+            response = requests.get(
+                url,
+                auth=("anonymous", ""),
+                headers={"User-Agent": USER_AGENT, "Accept": "text/csv,text/plain,*/*;q=0.2"},
+                timeout=(30, timeout),
+                allow_redirects=True,
+            )
+            response.raise_for_status()
+            if not response.content or b"<html" in response.content[:2000].lower():
+                probes.append(
+                    {
+                        "url": url,
+                        "status": int(response.status_code),
+                        "content_type": response.headers.get("content-type", ""),
+                        "html_like": True,
+                    }
+                )
+                continue
+
+            sep = "\t" if low.endswith(".tsv") else ","
+            header = pd.read_csv(
+                io.BytesIO(response.content),
+                nrows=0,
+                sep=sep,
+                low_memory=False,
+            )
+            columns = list(map(str, header.columns))
+            probes.append({"url": url, "columns": columns})
+
+            env_col = _optional_column(
+                header,
+                ("Env", "Environment", "environment"),
+                (("env",),),
+            )
+            plant_col = _optional_column(
+                header,
+                (
+                    "Date_Planted",
+                    "Planting_Date",
+                    "PlantingDate",
+                    "date_plant",
+                    "date_planted",
+                    "planting_date",
+                    "Sowing_Date",
+                    "Planting date",
+                ),
+                (("plant", "date"), ("sow", "date")),
+            )
+            if env_col is None or plant_col is None:
+                continue
+
+            frame = pd.read_csv(
+                io.BytesIO(response.content),
+                sep=sep,
+                low_memory=False,
+            )
+            target = frame.loc[_target_year_mask(frame, env_col)].copy()
+            if target.empty:
+                continue
+            target["environment"] = target[env_col].astype(str).str.strip()
+            target["planting_date"] = pd.to_datetime(
+                target[plant_col], errors="coerce"
+            )
+            target = target.dropna(subset=["environment", "planting_date"])
+            if target.empty:
+                continue
+
+            rows: list[dict[str, object]] = []
+            for environment, part in target.groupby("environment", sort=True):
+                values = part["planting_date"].dropna().sort_values()
+                if values.empty:
+                    continue
+                date = values.iloc[len(values) // 2]
+                rows.append(
+                    {
+                        "environment": str(environment),
+                        "planting_date": pd.Timestamp(date).date().isoformat(),
+                        "n_supplemental_records": int(len(part)),
+                    }
+                )
+            planting = pd.DataFrame(rows)
+            if planting.empty:
+                continue
+            return planting, {
+                "source_url": str(response.url),
+                "sha256": _sha256_bytes(response.content),
+                "size_bytes": int(len(response.content)),
+                "source_doi": FIELD_SEASON_DOI,
+                "source_scope": "z._2023_supplemental_info",
+                "phenotypic_data_accessed": False,
+            }
+        except Exception as exc:
+            probes.append(
+                {"url": url, "error": f"{type(exc).__name__}: {exc}"}
+            )
+
+    raise RuntimeError(
+        "B13 found no exact environment-level planting-date file inside the "
+        "outcome-free 2023 supplemental directory. Safe probe diagnostics: "
+        + json.dumps(probes[-60:], indent=2)
+    )
+
+
+def target_environment_manifest(
+    metadata: pd.DataFrame,
+    planting_dates: pd.DataFrame,
+) -> pd.DataFrame:
+    env_col = _find_column(
         metadata,
-        (
-            "Date_Planted",
-            "Planting_Date",
-            "PlantingDate",
-            "date_plant",
-            "date_planted",
-            "planting_date",
-            "Sowing_Date",
-        ),
-        "metadata planting date",
-        (("plant", "date"), ("sow", "date")),
+        ("Env", "Environment", "environment"),
+        "metadata environment",
+        (("env",),),
     )
     lat_col = _find_column(
         metadata,
@@ -457,12 +594,22 @@ def target_environment_manifest(metadata: pd.DataFrame) -> pd.DataFrame:
     if target.empty:
         raise ValueError("B13 metadata contains no 2023 environment records.")
 
+    dates = planting_dates.copy()
+    if not {"environment", "planting_date"}.issubset(dates.columns):
+        raise ValueError("B13 supplemental planting-date table has the wrong schema.")
+    dates["environment"] = dates["environment"].astype(str).str.strip()
+    if dates["environment"].duplicated().any():
+        raise ValueError("B13 supplemental planting-date table is not unique by environment.")
+    date_map = dates.set_index("environment")["planting_date"].astype(str).to_dict()
+
     rows: list[dict[str, object]] = []
     for environment, part in target.groupby(env_col, sort=True):
-        planting = pd.to_datetime(part[plant_col], errors="coerce").dropna().sort_values()
+        environment = str(environment).strip()
+        planting_raw = date_map.get(environment)
+        planting = pd.to_datetime(planting_raw, errors="coerce")
         lat = pd.to_numeric(part[lat_col], errors="coerce").dropna()
         lon = pd.to_numeric(part[lon_col], errors="coerce").dropna()
-        if planting.empty or lat.empty or lon.empty:
+        if pd.isna(planting) or lat.empty or lon.empty:
             continue
 
         population = np.nan
@@ -479,13 +626,14 @@ def target_environment_manifest(metadata: pd.DataFrame) -> pd.DataFrame:
 
         rows.append(
             {
-                "environment": str(environment),
+                "environment": environment,
                 "year": TARGET_YEAR,
                 "city": city,
-                "planting_date": planting.iloc[len(planting) // 2].date().isoformat(),
+                "planting_date": pd.Timestamp(planting).date().isoformat(),
                 "latitude": float(lat.median()),
                 "longitude": float(lon.median()),
                 "coordinate_source": "G2F_2024_competition_training_metadata_2014_2023",
+                "planting_date_source": "G2F_2023_outcome_free_supplemental_info",
                 "historical_year_city_match": "",
                 "plant_population_proxy": population,
                 "n_metadata_records": int(len(part)),
@@ -494,11 +642,13 @@ def target_environment_manifest(metadata: pd.DataFrame) -> pd.DataFrame:
 
     manifest = pd.DataFrame(rows)
     if manifest.empty:
-        raise ValueError("B13 has no 2023 environment with usable planting/coordinates.")
+        raise ValueError(
+            "B13 has no exact 2023 environment with both safe coordinates and "
+            "an outcome-free supplemental planting date."
+        )
     if manifest["environment"].duplicated().any():
         raise ValueError("B13 2023 environment manifest contains duplicate IDs.")
     return manifest.sort_values("environment").reset_index(drop=True)
-
 
 def _power_through_t1(
     latitude: float,
@@ -975,7 +1125,8 @@ def run_stage_a(root: Path) -> dict[str, Path]:
     metadata_path, metadata_provenance = acquire_target_metadata(root)
     assert_target_blind([raw])
     metadata = pd.read_csv(metadata_path, low_memory=False)
-    target_manifest_all = target_environment_manifest(metadata)
+    planting_dates, planting_provenance = discover_2023_planting_dates()
+    target_manifest_all = target_environment_manifest(metadata, planting_dates)
     target_states, environment_audit = build_2023_t1_states(target_manifest_all)
     supported_envs = set(target_states["environment"].astype(str))
     target_manifest = target_manifest_all[
@@ -1028,6 +1179,9 @@ def run_stage_a(root: Path) -> dict[str, Path]:
                 "field_season_doi": FIELD_SEASON_DOI,
                 "target_year": TARGET_YEAR,
                 "metadata_sha256": metadata_provenance["sha256"],
+                "planting_date_source_sha256": planting_provenance["sha256"],
+                "planting_date_source_url": planting_provenance["source_url"],
+                "planting_date_source_phenotypic_data_accessed": False,
                 "n_target_metadata_environments": int(
                     target_manifest_all["environment"].nunique()
                 ),
@@ -1077,6 +1231,8 @@ def run_stage_a(root: Path) -> dict[str, Path]:
             "roster_policy": ROSTER_POLICY,
             "environment_support_rule": "B11_FROZEN_TRAINING_NN_ENVELOPE",
             "metadata_sha256": metadata_provenance["sha256"],
+            "planting_date_source_sha256": planting_provenance["sha256"],
+            "planting_date_source_url": planting_provenance["source_url"],
             "historical_2022_answer_sha256": recent_provenance["answer_sha256"],
         },
     )
