@@ -2,6 +2,11 @@ name: Case Study B12B - Reveal 2022 External Evaluation
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - agent/b12-sealed-2022-validation
+    paths:
+      - '.github/b12b-reveal-trigger'
 
 permissions:
   contents: write
@@ -47,27 +52,31 @@ jobs:
               seal = json.load(handle)
 
           assert digest == seal['prediction_sha256']
+          assert digest == 'fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220'
           assert seal['observed_outcomes_accessed'] is False
           assert seal['t2_branch_reopened'] is False
           assert seal['post_result_tuning_permitted'] is False
           assert decision['decision'].eq('SEALED_2022_PREDICTIONS_READY_FOR_REVEAL').all()
+          assert decision['prediction_sha256'].eq(digest).all()
           assert decision['observed_outcomes_accessed'].astype(bool).eq(False).all()
           assert decision['t2_branch_reopened'].astype(bool).eq(False).all()
           assert decision['post_result_tuning_permitted'].astype(bool).eq(False).all()
-          print(f"Verified sealed prediction SHA-256: {digest}")
+          print(f"Verified sealed prediction SHA-256 before reveal: {digest}")
           PY
 
       - name: Reveal official 2022 outcomes and evaluate sealed predictions
         run: >-
-          python -u -m plant_intelligence.uncertainty.maize_external_temporal_validation
-          --output-root . --stage reveal --download-answer
+          python -u -m plant_intelligence.uncertainty.maize_b12_reveal_runner
+          --output-root .
 
       - name: Verify B12B external evidence
         run: |
           test -s reports/results/case_study_b12_2022_external_validation_summary.csv
           test -s reports/results/case_study_b12_2022_external_coverage.csv
           test -s reports/results/case_study_b12_2022_external_reliability.csv
+          test -s reports/results/case_study_b12_2022_reveal_provenance.json
           python - <<'PY'
+          import json
           import pandas as pd
 
           summary = pd.read_csv(
@@ -76,7 +85,18 @@ jobs:
           coverage = pd.read_csv(
               'reports/results/case_study_b12_2022_external_coverage.csv'
           )
+          with open(
+              'reports/results/case_study_b12_2022_reveal_provenance.json',
+              encoding='utf-8',
+          ) as handle:
+              provenance = json.load(handle)
 
+          assert provenance['prediction_sha256_verified_before_answer_access'] == (
+              'fb8347da2a5ba9fff0d106fa9b7a13037818c8e0e0d1387527dbf090c3085220'
+          )
+          assert summary['prediction_sha256'].eq(
+              provenance['prediction_sha256_verified_before_answer_access']
+          ).all()
           assert summary['target_year'].astype(int).eq(2022).all()
           assert summary['predictive_model_refit_after_reveal'].astype(bool).eq(False).all()
           assert summary['interval_retuned_after_reveal'].astype(bool).eq(False).all()
@@ -102,7 +122,8 @@ jobs:
           git add \
             reports/results/case_study_b12_2022_external_validation_summary.csv \
             reports/results/case_study_b12_2022_external_coverage.csv \
-            reports/results/case_study_b12_2022_external_reliability.csv
+            reports/results/case_study_b12_2022_external_reliability.csv \
+            reports/results/case_study_b12_2022_reveal_provenance.json
           if ! git diff --cached --quiet; then
             git commit -m 'Publish Case Study B12B 2022 external validation [skip ci]'
             git push
