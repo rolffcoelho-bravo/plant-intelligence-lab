@@ -1,0 +1,147 @@
+name: Case Study B13A - Sealed 2023 Drift Calibration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b13-sequential-drift-calibration
+    paths:
+      - 'src/plant_intelligence/uncertainty/maize_b13_sequential_drift_calibration.py'
+      - 'tests/test_case_study_b13_sequential_drift_calibration.py'
+      - 'docs/case_study_b13_sequential_drift_calibration.md'
+      - '.github/workflows/case-study-b13a-sealed-2023-drift-calibration.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sealed-drift-calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Validate B13 chronology and seal guardrails
+        run: |
+          pytest -q \
+            tests/test_case_study_b13_sequential_drift_calibration.py \
+            tests/test_case_study_b12_external_temporal_validation.py \
+            tests/test_case_study_b12_available_case_diagnostic.py
+
+      - name: Verify frozen B11 and B12 decisions
+        run: |
+          python - <<'PY'
+          import pandas as pd
+
+          b11 = pd.read_csv('reports/results/case_study_b11_branch_decision.csv')
+          b12 = pd.read_csv('reports/results/case_study_b12_2022_primary_status.csv')
+          assert b11['branch_decision'].eq(
+              'ADMIT_FORWARD_INTERVALS_KEEP_SUPPORT_ABSTENTION_DIAGNOSTIC'
+          ).all()
+          assert b11['t2_branch_reopened'].astype(str).str.lower().eq('false').all()
+          assert b12['primary_status'].eq(
+              'B12_PRIMARY_INCOMPLETE_OFFICIAL_OUTCOME_MATCH'
+          ).all()
+          assert b12['n_sealed_predictions'].astype(int).eq(420).all()
+          assert b12['n_officially_observable'].astype(int).eq(387).all()
+          assert b12['t2_branch_reopened'].astype(str).str.lower().eq('false').all()
+          assert b12['post_result_tuning_permitted'].astype(str).str.lower().eq('false').all()
+          PY
+
+      - name: Enforce blind 2023 target boundary before data materialization
+        run: |
+          if find data/raw -type f -name '1_Training_Trait_Data_2014_2023.csv' -print -quit 2>/dev/null | grep -q .; then
+            echo 'Forbidden 2023 target trait file is present before B13A.' >&2
+            exit 1
+          fi
+
+      - name: Materialize frozen B5 public data
+        run: python -u -m plant_intelligence.data.maize_environment_transfer --output-root .
+
+      - name: Execute B13A sealed 2023 dual-interval prediction
+        run: |
+          mkdir -p reports/results
+          set -o pipefail
+          python -u -m plant_intelligence.uncertainty.maize_b13_sequential_drift_calibration \
+            --stage seal \
+            --output-root . \
+            2>&1 | tee reports/results/case_study_b13a_execution.log
+
+      - name: Verify B13A prediction and policy seal
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          prediction = Path('reports/results/case_study_b13_2023_sealed_predictions.csv')
+          seal_path = Path('reports/results/case_study_b13_2023_prediction_seal.json')
+          policy_path = Path('reports/results/case_study_b13_2023_drift_policy.csv')
+          decision = pd.read_csv('reports/results/case_study_b13a_seal_decision.csv')
+          audit = pd.read_csv('reports/results/case_study_b13_2023_input_audit.csv')
+          policy = pd.read_csv(policy_path)
+
+          digest = hashlib.sha256(prediction.read_bytes()).hexdigest()
+          policy_digest = hashlib.sha256(policy_path.read_bytes()).hexdigest()
+          seal = json.loads(seal_path.read_text(encoding='utf-8'))
+
+          assert digest == seal['prediction_sha256']
+          assert policy_digest == seal['drift_policy_sha256']
+          assert int(seal['target_year']) == 2023
+          assert seal['target_outcomes_accessed'] is False
+          assert seal['historical_2022_outcomes_used_for_uncertainty_update'] is True
+          assert seal['predictive_model_refit_for_b13'] is False
+          assert seal['predictive_hyperparameters_changed'] is False
+          assert seal['support_threshold_retuned'] is False
+          assert seal['t2_branch_reopened'] is False
+          assert seal['post_target_tuning_permitted'] is False
+          assert seal['evaluation_policy_predeclared'] == 'PREDECLARED_2023_FINITE_YIELD_KEY_INTERSECTION'
+          assert seal['evaluation_selection_uses_outcome_magnitude'] is False
+          assert decision['decision'].eq('SEALED_2023_DUAL_INTERVALS_READY_FOR_REVEAL').all()
+          assert decision['prediction_sha256'].eq(digest).all()
+          assert decision['drift_policy_sha256'].eq(policy_digest).all()
+          assert audit['target_outcomes_accessed'].astype(str).str.lower().eq('false').all()
+          assert audit['roster_uses_target_outcomes'].astype(str).str.lower().eq('false').all()
+          assert audit['weather_after_30dap_requested'].astype(str).str.lower().eq('false').all()
+          assert (policy['adaptive_half_width'].astype(float) + 1e-12 >= policy['baseline_half_width'].astype(float)).all()
+          assert policy['target_outcomes_accessed'].astype(str).str.lower().eq('false').all()
+          print(decision.to_string(index=False))
+          print('\nFrozen drift policy')
+          print(policy.to_string(index=False))
+          PY
+
+      - name: Enforce blind 2023 target boundary after seal
+        run: |
+          if find data/raw/case_study_b13_2023_sealed -type f -name '1_Training_Trait_Data_2014_2023.csv' -print -quit 2>/dev/null | grep -q .; then
+            echo 'Forbidden 2023 target trait entered the sealed B13A directory.' >&2
+            exit 1
+          fi
+
+      - name: Publish compact B13A sealed evidence
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git rm -f reports/results/case_study_b13a_execution.log 2>/dev/null || true
+          git add \
+            reports/results/case_study_b13_2023_sealed_predictions.csv \
+            reports/results/case_study_b13_2023_prediction_seal.json \
+            reports/results/case_study_b13_2023_drift_policy.csv \
+            reports/results/case_study_b13_2023_input_audit.csv \
+            reports/results/case_study_b13_2023_environment_input_audit.csv \
+            reports/results/case_study_b13a_seal_decision.csv
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B13A sealed 2023 drift-calibration artifacts [skip ci]'
+            git push
+          fi
