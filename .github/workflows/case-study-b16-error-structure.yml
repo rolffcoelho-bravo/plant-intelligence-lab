@@ -1,0 +1,104 @@
+name: Case Study B16 - Error Structure Diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b16-error-structure-diagnostic
+    paths:
+      - 'src/plant_intelligence/diagnostics/**'
+      - 'tests/test_case_study_b16_error_structure.py'
+      - 'docs/case_study_b16_error_structure_diagnostic.md'
+      - 'reports/results/case_study_b16_error_structure_lock.json'
+      - '.github/workflows/case-study-b16-error-structure.yml'
+  pull_request:
+    paths:
+      - 'src/plant_intelligence/diagnostics/**'
+      - 'tests/test_case_study_b16_error_structure.py'
+      - 'docs/case_study_b16_error_structure_diagnostic.md'
+      - 'reports/results/case_study_b16_error_structure_lock.json'
+      - '.github/workflows/case-study-b16-error-structure.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  error-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install package and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Run B16 tests
+        run: pytest -q tests/test_case_study_b16_error_structure.py
+      - name: Verify frozen inputs and no-new-outcome lock
+        run: |
+          test -s reports/results/case_study_b14c_2024_primary_cohort.csv
+          test -s reports/results/case_study_b12_2022_available_case_by_environment.csv
+          test -s reports/results/case_study_b16_error_structure_lock.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock = json.loads(Path('reports/results/case_study_b16_error_structure_lock.json').read_text())
+          assert lock['status'] == 'LOCKED_BEFORE_DECOMPOSITION_EXECUTION'
+          assert lock['new_outcome_season_access_permitted'] is False
+          assert lock['new_external_outcome_acquisition_permitted'] is False
+          assert lock['new_prediction_generation_permitted'] is False
+          assert lock['point_predictor_refit_permitted'] is False
+          assert lock['environment_intercept_correction_promotion_permitted'] is False
+          assert lock['posthoc_dominance_threshold_permitted'] is False
+          assert lock['method_novelty_claim_permitted'] is False
+          PY
+      - name: Execute outcome-closed B16 diagnostic
+        run: python -u -m plant_intelligence.diagnostics.maize_b16_error_structure --output-root .
+      - name: Verify decomposition evidence
+        run: |
+          python - <<'PY'
+          import numpy as np
+          import pandas as pd
+          s = pd.read_csv('reports/results/case_study_b16_2024_error_structure_summary.csv').iloc[0]
+          e = pd.read_csv('reports/results/case_study_b16_2024_environment_error_structure.csv')
+          h = pd.read_csv('reports/results/case_study_b16_2022_reference_summary.csv').iloc[0]
+          d = pd.read_csv('reports/results/case_study_b16_decision.csv').iloc[0]
+          assert int(s['n_cells']) == 779
+          assert int(s['n_environments']) == 19
+          assert len(e) == 19
+          assert abs(float(s['sse_identity_residual'])) < 1e-8
+          assert np.isclose(float(s['environment_bias_sse_fraction']) + float(s['within_environment_sse_fraction']), 1.0, atol=1e-12)
+          assert float(s['oracle_environment_intercept_corrected_rmse']) <= float(s['raw_rmse']) + 1e-12
+          assert int(h['n_environments']) == 14
+          assert str(h['confirmatory']).lower() == 'false'
+          assert d['decision'] == 'B16_DIAGNOSTIC_COMPLETE_NO_MODEL_CHANGE'
+          assert str(d['new_outcome_access']).lower() == 'false'
+          assert str(d['new_prediction_generation']).lower() == 'false'
+          assert str(d['point_predictor_changed']).lower() == 'false'
+          assert str(d['oracle_intercept_promoted']).lower() == 'false'
+          assert str(d['posthoc_dominance_threshold_used']).lower() == 'false'
+          assert str(d['method_novelty_claim']).lower() == 'false'
+          assert str(d['post_result_tuning_permitted']).lower() == 'false'
+          print(s.to_string())
+          print(h.to_string())
+          PY
+      - name: Publish B16 diagnostic evidence
+        if: github.event_name == 'push'
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add \
+            reports/results/case_study_b16_2024_environment_error_structure.csv \
+            reports/results/case_study_b16_2024_error_structure_summary.csv \
+            reports/results/case_study_b16_2022_reference_summary.csv \
+            reports/results/case_study_b16_decision.csv
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B16 error-structure diagnostic [skip ci]'
+            git push origin HEAD:${{ github.ref_name }}
+          fi

@@ -1,0 +1,2 @@
+source_stage,n_environments,median_within_environment_pearson,mean_within_environment_pearson,fraction_environments_negative_r2,median_environment_rmse,confirmatory,used_to_fit_or_tune_b16
+B12_2022_AVAILABLE_CASE_DIAGNOSTIC,14,0.2453756541614297,0.2357353131729619,0.8571428571428571,2.5685653480042534,False,False
