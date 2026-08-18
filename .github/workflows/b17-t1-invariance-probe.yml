@@ -24,6 +24,7 @@ jobs:
       - name: Print exact seal-only invariance diagnostics
         run: |
           python - <<'PY'
+          import numpy as np
           import pandas as pd
           from plant_intelligence.diagnostics.maize_b17_t1_architecture_contraction import (
               pairwise_invariance_audit,
@@ -31,10 +32,18 @@ jobs:
           )
           f = validate_sealed_predictions(pd.read_csv('reports/results/case_study_b14b_2024_sealed_predictions.csv', low_memory=False))
           a, s = pairwise_invariance_audit(f, tolerance=1e-8)
+          p64 = f['predicted'].to_numpy(float)
+          p32 = p64.astype(np.float32)
+          ulps = np.spacing(p32).astype(float)
           print('SUMMARY')
           print(s)
+          print('FLOAT32 REPRESENTATION')
+          print('max_abs_decimal_minus_float32', float(np.max(np.abs(p64 - p32.astype(float)))))
+          print('min_float32_ulp', float(np.min(ulps)))
+          print('median_float32_ulp', float(np.median(ulps)))
+          print('max_float32_ulp', float(np.max(ulps)))
+          print('max_pair_deviation_over_global_max_ulp', float(s.max_abs_pairwise_contrast_deviation / np.max(ulps)))
+          print('max_centered_deviation_over_global_max_ulp', float(s.max_abs_centered_prediction_deviation / np.max(ulps)))
           print('TOP MAX PAIRWISE DEVIATIONS')
           print(a.sort_values('max_abs_pairwise_contrast_deviation', ascending=False).head(20).to_string(index=False))
-          print('TOP OFFSET SD')
-          print(a.sort_values('environment_offset_sd_across_common_genotypes', ascending=False).head(20).to_string(index=False))
           PY
