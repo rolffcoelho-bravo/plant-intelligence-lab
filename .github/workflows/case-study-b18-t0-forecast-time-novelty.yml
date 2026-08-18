@@ -1,0 +1,115 @@
+name: Case Study B18-T0 - Forecast-Time GxE Novelty Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b18-forecast-time-gxe-novelty-gate
+    paths:
+      - 'src/plant_intelligence/diagnostics/maize_b18_t0_forecast_time_novelty_gate.py'
+      - 'tests/test_case_study_b18_t0_forecast_time_novelty_gate.py'
+      - 'docs/case_study_b18_t0_forecast_time_gxe_novelty_gate.md'
+      - 'reports/results/case_study_b18_t0_forecast_time_novelty_lock.json'
+      - '.github/workflows/case-study-b18-t0-forecast-time-novelty.yml'
+  pull_request:
+    paths:
+      - 'src/plant_intelligence/diagnostics/maize_b18_t0_forecast_time_novelty_gate.py'
+      - 'tests/test_case_study_b18_t0_forecast_time_novelty_gate.py'
+      - 'docs/case_study_b18_t0_forecast_time_gxe_novelty_gate.md'
+      - 'reports/results/case_study_b18_t0_forecast_time_novelty_lock.json'
+      - '.github/workflows/case-study-b18-t0-forecast-time-novelty.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  forecast-time-novelty-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install package and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Run B18-T0 tests
+        run: pytest -q tests/test_case_study_b18_t0_forecast_time_novelty_gate.py
+      - name: Verify parent closure and no-model lock
+        run: |
+          test -s reports/results/case_study_b_closure_decision.csv
+          test -s reports/results/case_study_b_b18_gate.csv
+          test -s reports/results/case_study_b18_t0_forecast_time_novelty_lock.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock = json.loads(Path('reports/results/case_study_b18_t0_forecast_time_novelty_lock.json').read_text())
+          assert lock['status'] == 'LOCKED_BEFORE_PRIOR_ART_EQUIVALENCE_SYNTHESIS'
+          assert lock['parent_case_study_b_decision'] == 'CASE_STUDY_B_CLOSED_EXTERNAL_VALIDATION_CONTRIBUTION_SUPPORTED_METHOD_NOVELTY_NOT_SUPPORTED_B18_SEPARATE_HYPOTHESIS_GATE_ONLY'
+          assert lock['predeclared_decision'] == 'B18_T0_BROAD_FORECAST_TIME_GXE_NOVELTY_REJECTED_INFORMATION_PARITY_BENCHMARK_HYPOTHESIS_SURVIVES_KILL_TEST_ONLY'
+          assert lock['next_stage_if_gate_valid'] == 'B18_T1_INFORMATION_PARITY_BENCHMARK_NOVELTY_TEST'
+          forbidden = [
+              'new_outcome_access_permitted',
+              'new_prediction_generation_permitted',
+              'model_fitting_permitted',
+              'hyperparameter_tuning_permitted',
+              'point_predictor_change_permitted',
+              'interaction_architecture_development_permitted',
+              'b5_genotype_representation_change_permitted',
+              't1_clock_change_permitted',
+              't2_reopening_permitted',
+              'interval_or_support_tuning_permitted',
+              'reseal_permitted',
+              'post_result_tuning_permitted',
+              'b14c_performance_may_select_hypothesis',
+              'b18_model_development_permitted_after_t0',
+          ]
+          assert all(lock[name] is False for name in forbidden)
+          PY
+      - name: Execute B18-T0 prior-art synthesis
+        run: python -u -m plant_intelligence.diagnostics.maize_b18_t0_forecast_time_novelty_gate --output-root .
+      - name: Verify B18-T0 decision
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          d = pd.read_csv('reports/results/case_study_b18_t0_decision.csv').iloc[0]
+          p = pd.read_csv('reports/results/case_study_b18_t0_prior_art_matrix.csv')
+          g = pd.read_csv('reports/results/case_study_b18_t0_next_gate.csv').set_index('gate')
+          assert d['decision'] == 'B18_T0_BROAD_FORECAST_TIME_GXE_NOVELTY_REJECTED_INFORMATION_PARITY_BENCHMARK_HYPOTHESIS_SURVIVES_KILL_TEST_ONLY'
+          assert str(d['broad_forecast_time_gxe_method_novelty_supported']).lower() == 'false'
+          assert str(d['information_parity_benchmark_hypothesis_novelty_established']).lower() == 'false'
+          assert str(d['information_parity_benchmark_hypothesis_may_enter_t1_kill_test']).lower() == 'true'
+          assert str(d['new_outcome_access']).lower() == 'false'
+          assert str(d['new_prediction_generation']).lower() == 'false'
+          assert str(d['model_fitting']).lower() == 'false'
+          assert str(d['hyperparameter_tuning']).lower() == 'false'
+          assert str(d['interaction_architecture_developed']).lower() == 'false'
+          assert str(d['b14c_performance_used_to_select_hypothesis']).lower() == 'false'
+          assert str(d['b18_model_development_permitted']).lower() == 'false'
+          assert d['next_stage'] == 'B18_T1_INFORMATION_PARITY_BENCHMARK_NOVELTY_TEST'
+          assert len(p) == 7
+          assert p['direct_collision'].astype(str).str.lower().eq('true').sum() >= 2
+          assert '10.1093/bioinformatics/btz197' in set(p['doi'])
+          assert str(g.loc['B18_BROAD_FORECAST_TIME_GXE_METHOD_NOVELTY', 'permitted']).lower() == 'false'
+          assert str(g.loc['B18_INFORMATION_PARITY_BENCHMARK_HYPOTHESIS', 'permitted']).lower() == 'true'
+          assert str(g.loc['B18_MODEL_FITTING_AFTER_T0', 'permitted']).lower() == 'false'
+          print(d.to_string())
+          PY
+      - name: Publish B18-T0 evidence
+        if: github.event_name == 'push'
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add \
+            reports/results/case_study_b18_t0_prior_art_matrix.csv \
+            reports/results/case_study_b18_t0_next_gate.csv \
+            reports/results/case_study_b18_t0_decision.csv
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B18-T0 novelty gate evidence [skip ci]'
+            git push origin HEAD:${{ github.ref_name }}
+          fi
