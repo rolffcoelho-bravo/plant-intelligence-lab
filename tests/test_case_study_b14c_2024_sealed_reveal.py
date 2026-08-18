@@ -147,6 +147,12 @@ def test_interval_evaluation_uses_locked_bounds_without_recalibration():
     assert (summary["mean_half_width"] > 0).all()
 
 
+def test_sealed_csv_adaptive_level_accepts_only_frozen_serialization_precision():
+    assert b14c.sealed_csv_adaptive_level_matches([0.951281331718, 0.951281331718])
+    assert not b14c.sealed_csv_adaptive_level_matches([0.9512813318])
+    assert not b14c.sealed_csv_adaptive_level_matches([0.952])
+
+
 def test_frozen_constants_match_b14b_seal_contract():
     assert b14c.EXPECTED_PREDICTION_SHA256 == "91c765ea994f557db1911865309bca94ebc2110b87a5fea483a03c879d1fb19d"
     assert b14c.EXPECTED_CANDIDATE_SHA256 == "32e4f308522ee849e498d2bf0614f3ec349574a27bb327fefeb80e0f4e05bf7f"
@@ -154,4 +160,5 @@ def test_frozen_constants_match_b14b_seal_contract():
     assert b14c.EXPECTED_N_GENOTYPES == 92
     assert b14c.EXPECTED_N_ENVIRONMENTS == 19
     assert np.isclose(b14c.EXPECTED_ADAPTIVE_LEVEL, 0.9512813317177465, rtol=0, atol=1e-15)
+    assert b14c.SEALED_CSV_ADAPTIVE_LEVEL_ATOL == 5e-13
     assert b14c.PRIMARY_ESTIMAND == "OFFICIALLY_OBSERVABLE_SEALED_KEYS"
