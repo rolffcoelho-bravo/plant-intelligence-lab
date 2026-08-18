@@ -1,0 +1,32 @@
+{
+  "stage": "B17_RESPONSE_AMPLITUDE_TRANSPORT_AUDIT",
+  "status": "LOCKED_BEFORE_RETROSPECTIVE_DECOMPOSITION_EXECUTION",
+  "parent_stage": "B16_DIAGNOSTIC_COMPLETE_NO_MODEL_CHANGE",
+  "primary_input": "reports/results/case_study_b14c_2024_primary_cohort.csv",
+  "b16_summary_input": "reports/results/case_study_b16_2024_error_structure_summary.csv",
+  "expected_primary_cells": 779,
+  "expected_primary_environments": 19,
+  "new_outcome_season_access_permitted": false,
+  "new_external_outcome_acquisition_permitted": false,
+  "new_prediction_generation_permitted": false,
+  "point_predictor_refit_permitted": false,
+  "response_amplitude_rescaling_promotion_permitted": false,
+  "interval_or_support_tuning_permitted": false,
+  "b5_genomic_change_permitted": false,
+  "t1_clock_change_permitted": false,
+  "t2_reopen_permitted": false,
+  "reseal_permitted": false,
+  "post_result_tuning_permitted": false,
+  "method_novelty_claim_permitted": false,
+  "broad_response_amplitude_novelty_status": "HOSTILE_TEST_ONLY",
+  "predeclared_broad_novelty_decision": "B17_BROAD_RESPONSE_AMPLITUDE_NOVELTY_REJECTED_OPEN_ARCHITECTURE_CONTRACTION_TEST",
+  "next_stage_if_lock_valid": "B17_T1_ARCHITECTURE_CONTRACTION_NOVELTY_TEST",
+  "prior_art_boundary": [
+    "10.1007/s00122-026-05280-z",
+    "10.1007/s00122-025-05103-7",
+    "10.1007/s00122-025-04865-4",
+    "10.1093/genetics/iyae171",
+    "10.1186/s12711-018-0426-6",
+    "10.1038/s41598-025-26193-9"
+  ]
+}
