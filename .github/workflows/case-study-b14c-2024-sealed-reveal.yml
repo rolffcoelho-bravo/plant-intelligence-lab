@@ -2,9 +2,7 @@ name: Case Study B14C - Seal-First 2024 Reveal
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - agent/b14c-2024-sealed-reveal
+  pull_request:
     paths:
       - 'src/plant_intelligence/uncertainty/maize_b14c_2024_sealed_reveal.py'
       - 'tests/test_case_study_b14c_2024_sealed_reveal.py'
@@ -18,6 +16,7 @@ permissions:
 
 jobs:
   sealed-2024-reveal:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/b14c-2024-sealed-reveal'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
