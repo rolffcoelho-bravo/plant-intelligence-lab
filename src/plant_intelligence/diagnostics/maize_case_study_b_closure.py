@@ -20,7 +20,6 @@ import numpy as np
 import pandas as pd
 
 LOCK_REL = Path("reports/results/case_study_b_closure_lock.json")
-
 B12_PRIMARY = Path("reports/results/case_study_b12_2022_primary_status.csv")
 B12_DIAGNOSTIC = Path("reports/results/case_study_b12_2022_available_case_summary.csv")
 B12_COVERAGE = Path("reports/results/case_study_b12_2022_available_case_coverage.csv")
@@ -120,7 +119,6 @@ def verify_evidence(root: Path) -> dict[str, object]:
     b17 = _one_csv(root, B17_DECISION)
     b17t1 = _one_csv(root, B17T1_DECISION)
 
-    # B12: preserve incomplete primary cohort and diagnostic-only available-case result.
     if str(b12p["primary_status"]) != "B12_PRIMARY_INCOMPLETE_OFFICIAL_OUTCOME_MATCH":
         raise AssertionError("B12 primary state changed.")
     if int(b12p["n_sealed_predictions"]) != 420 or int(b12p["n_officially_observable"]) != 387:
@@ -146,7 +144,6 @@ def verify_evidence(root: Path) -> dict[str, object]:
     if _bool(b12cov90["confirmatory"]) or _bool(b12cov90["selection_uses_outcome_value"]):
         raise AssertionError("B12 90% coverage row violates diagnostic/selection boundary.")
 
-    # B13: pre-outcome rule lock existed but 2023 could not be evaluated.
     if str(b13["stage_state"]) != "B13_PREOUTCOME_CALIBRATION_RULE_LOCKED":
         raise AssertionError("B13 protocol lock changed.")
     if not _close(b13["adaptive_quantile_level"], 0.9512813317177465):
@@ -158,7 +155,6 @@ def verify_evidence(root: Path) -> dict[str, object]:
     if int(b13s["n_admissible_planting_dates"]) != 0:
         raise AssertionError("B13-S unexpectedly recovered planting dates.")
 
-    # B14: source-compatible -> sealed -> reveal, with no outcome-value cohort selection.
     if str(b14a["decision"]) != "B14A_2024_READY_FOR_PREOUTCOME_SEAL":
         raise AssertionError("B14A gate changed.")
     if int(b14a["n_candidate_cells"]) != 798 or int(b14a["n_candidate_environments"]) != 19:
@@ -192,7 +188,6 @@ def verify_evidence(root: Path) -> dict[str, object]:
     if not _bool(b14cd["control_calibration_pass"]) or _bool(b14cd["adaptive_calibration_pass"]):
         raise AssertionError("B14C authoritative booleans changed.")
 
-    # B15: novelty closed after equivalence audit.
     if b15.get("status") != "CLOSED_AFTER_T1_PRIOR_ART_EQUIVALENCE":
         raise AssertionError("B15 closure state changed.")
     if b15.get("t1_decision") != "B15_T1_FEEDBACK_DECISION_NOVELTY_REJECTED_TERMINATE_B15":
@@ -200,7 +195,6 @@ def verify_evidence(root: Path) -> dict[str, object]:
     if b15.get("b15_closed") is not True or b15.get("b15_t2_permitted") is not False:
         raise AssertionError("B15 terminal routing changed.")
 
-    # B16/B17: diagnostic and negative novelty stages only.
     if str(b16d["decision"]) != "B16_DIAGNOSTIC_COMPLETE_NO_MODEL_CHANGE":
         raise AssertionError("B16 decision changed.")
     if _bool(b16d["method_novelty_claim"]) or _bool(b16d["point_predictor_changed"]):
@@ -291,7 +285,7 @@ def contribution_matrix(e: dict[str, object]) -> pd.DataFrame:
             "boundary": "Information-time discipline is a study design choice, not by itself a new GxE model.",
         },
         {
-            "candidate_contribution": "TEMPORAL_INTERVAL_CALIBRATION_NONMONOTONICITY",
+            "candidate_contribution": "PREVIOUS_SEASON_CALIBRATION_DIRECTION_NONTRANSPORT",
             "support_status": "SUPPORTED_B12_DIAGNOSTIC_PLUS_B14C_CONFIRMATORY",
             "generic_method_novelty": False,
             "publication_role": "PRIMARY_EMPIRICAL_RESULT",
@@ -299,7 +293,7 @@ def contribution_matrix(e: dict[str, object]) -> pd.DataFrame:
                 f"2022 diagnostic env-balanced 90% coverage={float(e['b12cov90']['environment_balanced_coverage']):.12f}; "
                 f"2024 C0={float(c0['environment_balanced_coverage']):.12f}; C1={float(c1['environment_balanced_coverage']):.12f}"
             ),
-            "boundary": "B12 is diagnostic because the 420-row confirmatory cohort was incomplete; do not present 2022 as a completed confirmatory failure.",
+            "boundary": "Supports rejection of this one-sided carry-forward feedback rule; does not identify a general temporal path or a universal nonmonotone law of calibration error.",
         },
         {
             "candidate_contribution": "ONE_SIDED_SEASON_FEEDBACK_GUARD",
@@ -329,7 +323,7 @@ def contribution_matrix(e: dict[str, object]) -> pd.DataFrame:
                 f"n={int(b14cp['n_officially_observable'])}, RMSE={float(b14cp['rmse']):.6f}, "
                 f"R2={float(b14cp['r2']):.6f}, Pearson={float(b14cp['correlation']):.6f}"
             ),
-            "boundary": "Performance does not establish superiority to current interaction-capable GxE methods because no prospective locked challenger was tested in B14C.",
+            "boundary": "Performance does not establish superiority to current interaction-capable GxE methods because no locked challenger was evaluated under the same B14C seal.",
         },
         {
             "candidate_contribution": "MIXED_EXTERNAL_FAILURE_MECHANISM",
@@ -386,7 +380,7 @@ def claim_ledger() -> pd.DataFrame:
         ("The 2022 420-cell confirmatory cohort failed calibration.", False, "PROHIBITED_B12_INFLATION"),
         ("The 2022 available-case cohort supplied negative diagnostic evidence for interval transport.", True, "ALLOWED_WITH_DIAGNOSTIC_LABEL"),
         ("The frozen B11 90% interval rule recovered admissible 2024 calibration while the carried-forward one-sided guard over-covered and was less efficient.", True, "PRIMARY_ALLOWED"),
-        ("Calibration error evolves monotonically from season to season.", False, "CONTRADICTED_BY_CASE_STUDY_B"),
+        ("Case Study B establishes a general nonmonotone law of seasonal calibration error.", False, "PROHIBITED_OVERGENERALIZATION"),
         ("The 2023 target season was unevaluable under the fixed T1 information interface without inventing a planting-date proxy.", True, "ALLOWED_SOURCE_INTERFACE_RESULT"),
         ("B16 establishes a new error-decomposition methodology.", False, "PROHIBITED_NOVELTY_INFLATION"),
         ("B16 shows that 2024 failure is mixed: environment offsets plus substantial within-environment error and under-dispersion.", True, "ALLOWED_DIAGNOSTIC_INTERPRETATION"),
@@ -450,7 +444,6 @@ def run(output_root: Path) -> dict[str, Path]:
     root = Path(output_root)
     verify_lock(root)
     evidence = verify_evidence(root)
-
     stages = stage_classification(evidence)
     contributions = contribution_matrix(evidence)
     claims = claim_ledger()
@@ -480,34 +473,32 @@ def run(output_root: Path) -> dict[str, Path]:
     literature.to_csv(literature_path, index=False)
     b18.to_csv(b18_path, index=False)
     pd.DataFrame(
-        [
-            {
-                "stage": "CASE_STUDY_B_CLOSURE_AND_SCIENTIFIC_CONTRIBUTION_AUDIT",
-                "decision": CLOSURE_DECISION,
-                "publication_frame": PUBLICATION_FRAME,
-                "completed_confirmatory_external_anchor": "B14C_2024",
-                "b12_primary_confirmatory_complete": False,
-                "b14c_primary_n": 779,
-                "b14c_rmse": float(evidence["b14cp"]["rmse"]),
-                "b14c_r2": float(evidence["b14cp"]["r2"]),
-                "b14c_correlation": float(evidence["b14cp"]["correlation"]),
-                "b14c_control_calibration_pass": True,
-                "b14c_adaptive_calibration_pass": False,
-                "method_novelty_supported": False,
-                "calendar_time_prospective_claim_permitted": False,
-                "seal_first_blinded_external_validation_claim_permitted": True,
-                "support_abstention_validated": False,
-                "new_outcome_access": False,
-                "new_prediction_generation": False,
-                "point_predictor_changed": False,
-                "interval_or_support_tuning": False,
-                "t2_reopened": False,
-                "post_result_tuning_permitted": False,
-                "b18_automatic_model_development_permitted": False,
-                "b18_separate_hypothesis_gate_permitted": True,
-                "case_study_b_closed": True,
-            }
-        ]
+        [{
+            "stage": "CASE_STUDY_B_CLOSURE_AND_SCIENTIFIC_CONTRIBUTION_AUDIT",
+            "decision": CLOSURE_DECISION,
+            "publication_frame": PUBLICATION_FRAME,
+            "completed_confirmatory_external_anchor": "B14C_2024",
+            "b12_primary_confirmatory_complete": False,
+            "b14c_primary_n": 779,
+            "b14c_rmse": float(evidence["b14cp"]["rmse"]),
+            "b14c_r2": float(evidence["b14cp"]["r2"]),
+            "b14c_correlation": float(evidence["b14cp"]["correlation"]),
+            "b14c_control_calibration_pass": True,
+            "b14c_adaptive_calibration_pass": False,
+            "method_novelty_supported": False,
+            "calendar_time_prospective_claim_permitted": False,
+            "seal_first_blinded_external_validation_claim_permitted": True,
+            "support_abstention_validated": False,
+            "new_outcome_access": False,
+            "new_prediction_generation": False,
+            "point_predictor_changed": False,
+            "interval_or_support_tuning": False,
+            "t2_reopened": False,
+            "post_result_tuning_permitted": False,
+            "b18_automatic_model_development_permitted": False,
+            "b18_separate_hypothesis_gate_permitted": True,
+            "case_study_b_closed": True,
+        }]
     ).to_csv(decision_path, index=False)
 
     return {

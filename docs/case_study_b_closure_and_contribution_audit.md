@@ -20,7 +20,7 @@ The central question is no longer whether another technical variation can be att
 
 ## 1. What Case Study B became
 
-Case Study B began as external temporal validation of the frozen `G+E_T1` architecture and eventually became a much stricter study of **deployment-time scientific discipline**:
+Case Study B began as external temporal validation of the frozen `G+E_T1` architecture and eventually became a stricter study of deployment-time scientific discipline:
 
 1. freeze the information state;
 2. establish whether the external source can reproduce that information state;
@@ -65,7 +65,7 @@ The inherited calibration criterion was not met.
 
 This remains **diagnostic evidence**, not a completed confirmatory result.
 
-### B13 — prospective-within-execution uncertainty-rule lock
+### B13 — pre-outcome uncertainty-rule lock
 
 Before any 2023 outcome access, B13 locked exactly two 90% interval competitors:
 
@@ -187,9 +187,9 @@ No label was renamed after reveal because that would have changed the predeclare
 
 ---
 
-## 3. The strongest empirical result
+## 3. The strongest empirical uncertainty result
 
-The uncertainty result is more interesting than a simple claim of undercoverage.
+The defensible result is **directional nontransport of the simple previous-season feedback action**, not a general law of temporal nonmonotonicity.
 
 B12 available-case diagnostic:
 
@@ -203,13 +203,15 @@ B14C one-sided guard:
 
 `environment-balanced coverage = 0.9521031534`
 
-The 2022 diagnostic signal did not transport monotonically. A simple rule that reacted to previous undercoverage by permanently widening the next season over-corrected in 2024 and lost interval-score efficiency.
+The 2022 diagnostic undercoverage signal did not justify the one-sided widening action carried into 2024: the guard over-covered and had a worse interval score than the unchanged control.
+
+Because 2023 was unevaluable, Case Study B does **not** identify a continuous season-to-season path and does not establish either a general monotone or a general nonmonotone law of calibration drift.
 
 The defensible scientific statement is:
 
-> Under this frozen deployment architecture and information boundary, realized seasonal calibration error was not sufficiently direction-stable for a one-sided previous-season correction to transport reliably.
+> Under this frozen deployment architecture and information boundary, the direction of the previous observed calibration error was not sufficiently transport-stable to justify the predeclared one-sided next-season correction.
 
-The stronger statement that calibration drift is always nonmonotone is not supported.
+Any broader temporal law would require additional sealed seasons.
 
 ---
 
@@ -367,9 +369,9 @@ Therefore simply truncating the weather history at an earlier DAP is not enough 
 
 #### A. Seal-first blinded external-validation discipline
 
-Case Study B contains a rare, unusually strict end-to-end chain:
+Case Study B contains an unusually strict end-to-end chain:
 
-source compatibility → immutable candidate universe → prediction seal → hash verification → reveal → no silent missing-key deletion → no post-result tuning.
+source compatibility → candidate universe → immutable prediction seal → hash verification → reveal → no silent missing-key deletion → no post-result tuning.
 
 This is a **research-design and reproducibility contribution**.
 
@@ -377,11 +379,11 @@ It should be presented as such, not as a new estimator.
 
 #### B. External 2024 point and interval evidence
 
-B14C is a genuine completed external evaluation of the frozen system under the repository's pre-reveal protocol.
+B14C is a completed external evaluation of the frozen system under the repository's pre-reveal protocol.
 
-The result is neither spectacular nor trivial. The point model generalizes nontrivially but modestly, while the frozen uncertainty rule performs much better than the naive seasonal feedback correction.
+The result is neither spectacular nor trivial. The point model generalizes nontrivially but modestly, while the frozen uncertainty rule performs better than the naive seasonal feedback correction.
 
-#### C. Failure analysis that remains faithful to the frozen experiment
+#### C. Failure analysis faithful to the frozen experiment
 
 B16/B17 explain why the external result is not reducible to a single calibration or environment-mean problem.
 
@@ -394,7 +396,7 @@ The scientific narrative becomes stronger because the analysis does not rewrite 
 - the exact provenance guards;
 - the negative novelty audits.
 
-These are unusually useful for transparency and methodological discipline, but they should support the paper rather than be oversold as standalone inventions.
+These support the paper but should not be oversold as standalone inventions.
 
 ### Not publication-grade as novelty claims
 
@@ -416,7 +418,7 @@ A defensible paper is not:
 
 The strongest identity is closer to:
 
-> **Seal-first external validation of early-information maize G×E prediction: calibration transport failure, source-interface constraints, and structural under-dispersion.**
+> **Seal-first external validation of early-information maize G×E prediction: calibration-feedback failure, source-interface constraints, and structural under-dispersion.**
 
 The paper would make four linked contributions:
 
@@ -484,7 +486,7 @@ It establishes that:
 
 - external validation can be made auditable and outcome-sealed even on public retrospective resources;
 - information-source compatibility is part of deployability, not clerical preprocessing;
-- calibration error from one season does not justify a directional next-season correction without stronger transport assumptions;
+- the direction of one observed calibration error does not by itself justify a directional next-season correction without stronger transport assumptions;
 - the frozen 2024 point predictor generalizes only modestly;
 - its external failure is mixed rather than attributable to a single offset or calibration defect;
 - the additive `G+E_T1` architecture cannot represent environment-specific genotype contrast modulation in exact arithmetic;
