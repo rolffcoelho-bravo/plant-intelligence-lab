@@ -28,24 +28,18 @@ jobs:
           python-version: '3.11'
           cache: pip
 
-      - name: Install environment and CyVerse GoCommands
+      - name: Install Python environment only
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install pytest
-          GOCMD_VER=$(curl -L -s https://raw.githubusercontent.com/cyverse/gocommands/main/VERSION.txt)
-          test -n "$GOCMD_VER"
-          curl -L -s \
-            "https://github.com/cyverse/gocommands/releases/download/${GOCMD_VER}/gocmd-${GOCMD_VER}-linux-amd64.tar.gz" \
-            | tar xz
-          chmod +x gocmd
-          test -x ./gocmd
 
       - name: Validate B14C pre-reveal guardrails
         run: |
           pytest -q tests/test_case_study_b14c_2024_sealed_reveal.py
 
-      - name: Verify protocol and immutable B14B seal before outcome acquisition
+      - name: Verify protocol and immutable B14B seal before any external outcome tooling
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -75,6 +69,20 @@ jobs:
           print(json.dumps(gate, indent=2, sort_keys=True))
           PY
 
+      - name: Install CyVerse GoCommands after scientific gate
+        run: |
+          set -euo pipefail
+          rm -f gocmd gocmd.tar.gz
+          GOCMD_VER=$(curl -fL --retry 3 --retry-delay 2 --connect-timeout 20 \
+            https://raw.githubusercontent.com/cyverse/gocommands/main/VERSION.txt)
+          test -n "$GOCMD_VER"
+          curl -fL --retry 3 --retry-delay 2 --connect-timeout 20 \
+            -o gocmd.tar.gz \
+            "https://github.com/cyverse/gocommands/releases/download/${GOCMD_VER}/gocmd-${GOCMD_VER}-linux-amd64.tar.gz"
+          tar xzf gocmd.tar.gz
+          chmod +x gocmd
+          test -x ./gocmd
+
       - name: Acquire exactly the locked official 2024 observed-values object
         env:
           IRODS_HOST: data.cyverse.org
@@ -89,7 +97,16 @@ jobs:
           rm -rf "$REVEAL_DIR"
           mkdir -p "$REVEAL_DIR"
           ./gocmd env
-          ./gocmd get -f -k "$ROOT/7_Testing_Observed_Values.csv" "$REVEAL_DIR/7_Testing_Observed_Values.csv"
+          acquired=false
+          for attempt in 1 2 3; do
+            rm -f "$REVEAL_DIR/7_Testing_Observed_Values.csv"
+            if ./gocmd get -f -k "$ROOT/7_Testing_Observed_Values.csv" "$REVEAL_DIR/7_Testing_Observed_Values.csv"; then
+              acquired=true
+              break
+            fi
+            sleep $((attempt * 2))
+          done
+          test "$acquired" = true
           test -s "$REVEAL_DIR/7_Testing_Observed_Values.csv"
           test "$(find "$REVEAL_DIR" -maxdepth 1 -type f | wc -l)" -eq 1
           test "$(basename "$(find "$REVEAL_DIR" -maxdepth 1 -type f)")" = '7_Testing_Observed_Values.csv'
