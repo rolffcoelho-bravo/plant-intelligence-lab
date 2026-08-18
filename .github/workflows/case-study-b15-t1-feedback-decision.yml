@@ -1,0 +1,49 @@
+name: Case Study B15-T1 - Feedback Decision Closure
+
+on:
+  pull_request:
+    paths:
+      - 'src/plant_intelligence/uncertainty/maize_b15_t1_feedback_decision.py'
+      - 'tests/test_case_study_b15_t1_feedback_decision.py'
+      - 'docs/case_study_b15_t1_feedback_decision_novelty_test.md'
+      - 'reports/results/case_study_b15_t1_feedback_decision_lock.json'
+      - 'reports/results/case_study_b15_theory_lock.json'
+      - '.github/workflows/case-study-b15-t1-feedback-decision.yml'
+
+jobs:
+  closure-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Run B15-T1 tests
+        run: pytest -q tests/test_case_study_b15_t1_feedback_decision.py
+      - name: Verify B15-T1 closure lock
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          results = Path('reports/results')
+          t1 = json.loads((results / 'case_study_b15_t1_feedback_decision_lock.json').read_text())
+          parent = json.loads((results / 'case_study_b15_theory_lock.json').read_text())
+          assert t1['status'] == 'TERMINATED_BY_PRIOR_ART_EQUIVALENCE'
+          assert t1['strict_separation_theorem_found'] is False
+          assert t1['research_state_decision'] == 'B15_T1_FEEDBACK_DECISION_NOVELTY_REJECTED_TERMINATE_B15'
+          assert t1['b15_closed'] is True
+          assert t1['b15_t2_permitted'] is False
+          assert t1['novelty_claim_permitted'] is False
+          assert parent['status'] == 'CLOSED_AFTER_T1_PRIOR_ART_EQUIVALENCE'
+          assert parent['t1_decision'] == 'B15_T1_FEEDBACK_DECISION_NOVELTY_REJECTED_TERMINATE_B15'
+          assert parent['b15_closed'] is True
+          assert parent['b15_t2_permitted'] is False
+          assert parent['next_theorem_order'] == []
+          print('B15-T1 closure verified.')
+          PY
