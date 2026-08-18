@@ -1,0 +1,60 @@
+name: Regenerate B10-T figure spacing
+
+on:
+  push:
+    branches:
+      - fix/b10t-figure-spacing
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/b10t-figure-spacing
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Regenerate only the B10-T presentation figure
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd
+
+          from plant_intelligence.models.maize_geometry_temporal_stability import plot_stability
+
+          root = Path('.')
+          ranked = pd.read_csv(root / 'reports/results/case_study_b10t_geometry_rank_table.csv')
+          stability = pd.read_csv(root / 'reports/results/case_study_b10t_rank_stability.csv')
+          plot_stability(
+              ranked,
+              stability,
+              root / 'reports/figures/case_study_b10t_temporal_stability.png',
+          )
+          PY
+
+      - name: Commit corrected figure if changed
+        shell: bash
+        run: |
+          git add reports/figures/case_study_b10t_temporal_stability.png
+          if git diff --cached --quiet; then
+            echo 'Figure already matches corrected source layout.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Regenerate B10-T figure with corrected spacing'
+          git push origin HEAD:fix/b10t-figure-spacing
