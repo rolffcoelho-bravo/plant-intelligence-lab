@@ -1,0 +1,166 @@
+name: Case Study B17-T1 - Architecture Contraction Novelty Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b17-t1-architecture-contraction-novelty
+    paths:
+      - 'src/plant_intelligence/diagnostics/maize_b17_t1_architecture_contraction.py'
+      - 'tests/test_case_study_b17_t1_architecture_contraction.py'
+      - 'docs/case_study_b17_t1_architecture_contraction_novelty.md'
+      - 'reports/results/case_study_b17_t1_architecture_contraction_lock.json'
+      - 'reports/results/case_study_b17_t1_numerical_amendment.json'
+      - '.github/workflows/case-study-b17-t1-architecture-contraction.yml'
+  pull_request:
+    paths:
+      - 'src/plant_intelligence/diagnostics/maize_b17_t1_architecture_contraction.py'
+      - 'tests/test_case_study_b17_t1_architecture_contraction.py'
+      - 'docs/case_study_b17_t1_architecture_contraction_novelty.md'
+      - 'reports/results/case_study_b17_t1_architecture_contraction_lock.json'
+      - 'reports/results/case_study_b17_t1_numerical_amendment.json'
+      - '.github/workflows/case-study-b17-t1-architecture-contraction.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  architecture-contraction-novelty:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install package and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Run B17-T1 tests
+        run: pytest -q tests/test_case_study_b17_t1_architecture_contraction.py
+      - name: Verify outcome-closed lock and numerical amendment
+        run: |
+          test -s reports/results/case_study_b14b_2024_sealed_predictions.csv
+          test -s reports/results/case_study_b17_decision.csv
+          test -s reports/results/case_study_b17_t1_architecture_contraction_lock.json
+          test -s reports/results/case_study_b17_t1_numerical_amendment.json
+          if grep -q 'case_study_b14c_2024_primary_cohort' src/plant_intelligence/diagnostics/maize_b17_t1_architecture_contraction.py; then
+            echo 'B17-T1 source illegally references B14C outcome cohort'
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock = json.loads(Path('reports/results/case_study_b17_t1_architecture_contraction_lock.json').read_text())
+          assert lock['status'] == 'LOCKED_BEFORE_OPERATOR_EQUIVALENCE_AUDIT'
+          assert lock['parent_decision'] == 'B17_BROAD_RESPONSE_AMPLITUDE_NOVELTY_REJECTED_OPEN_ARCHITECTURE_CONTRACTION_TEST'
+          assert lock['expected_prediction_rows'] == 798
+          assert lock['expected_environments'] == 19
+          assert lock['expected_genotypes'] == 92
+          assert lock['frozen_model'] == 'G+E_T1'
+          assert lock['frozen_horizon'] == 'T1_30DAP'
+          assert lock['frozen_g_rank'] == 20
+          assert lock['frozen_e_rank'] == 16
+          assert lock['frozen_gamma_multiplier'] == 2.0
+          assert lock['frozen_ridge_alpha'] == 10.0
+          forbidden = [
+              'new_outcome_access_permitted',
+              'b14c_outcome_input_permitted',
+              'new_prediction_generation_permitted',
+              'point_predictor_refit_permitted',
+              'point_predictor_rescaling_permitted',
+              'interval_or_support_tuning_permitted',
+              'b5_genomic_change_permitted',
+              't1_clock_change_permitted',
+              't2_reopen_permitted',
+              'reseal_permitted',
+              'post_result_tuning_permitted',
+              'new_method_claim_permitted',
+              'b17_t2_permitted',
+          ]
+          assert all(lock[name] is False for name in forbidden)
+          assert lock['predeclared_decision'] == 'B17_T1_ARCHITECTURE_CONTRACTION_NOVELTY_REJECTED_TERMINATE_B17'
+
+          amend = json.loads(Path('reports/results/case_study_b17_t1_numerical_amendment.json').read_text())
+          assert amend['status'] == 'POST_EXECUTION_NUMERICAL_AMENDMENT_NO_SCIENTIFIC_DECISION_CHANGE'
+          assert amend['parent_lock_remains_unchanged'] is True
+          assert amend['trigger_run_id'] == 32145134703
+          assert amend['original_csv_only_absolute_tolerance'] == 1e-8
+          assert amend['float32_ulp_budget_per_four_term_contrast_identity'] == 4.0
+          assert amend['replacement_policy_selected_from_observed_maximum'] is False
+          assert amend['new_outcome_access'] is False
+          assert amend['b14c_outcome_input_used'] is False
+          assert amend['new_prediction_generation'] is False
+          assert amend['point_predictor_changed'] is False
+          assert amend['point_predictor_rescaled'] is False
+          assert amend['hyperparameters_changed'] is False
+          assert amend['post_result_scientific_tuning'] is False
+          assert amend['novelty_decision_changed'] is False
+          assert amend['terminal_decision'] == 'B17_T1_ARCHITECTURE_CONTRACTION_NOVELTY_REJECTED_TERMINATE_B17'
+          PY
+      - name: Execute seal-only operator equivalence audit
+        run: python -u -m plant_intelligence.diagnostics.maize_b17_t1_architecture_contraction --output-root .
+      - name: Verify terminal evidence
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          s = pd.read_csv('reports/results/case_study_b17_t1_pairwise_invariance_summary.csv').iloc[0]
+          a = pd.read_csv('reports/results/case_study_b17_t1_pairwise_invariance_audit.csv')
+          e = pd.read_csv('reports/results/case_study_b17_t1_operator_equivalence.csv')
+          r = pd.read_csv('reports/results/case_study_b17_t1_ridge_spectral_reference.csv')
+          d = pd.read_csv('reports/results/case_study_b17_t1_decision.csv').iloc[0]
+          assert int(s['n_prediction_rows']) == 798
+          assert int(s['n_environments']) == 19
+          assert int(s['n_genotypes']) == 92
+          assert int(s['n_environment_pairs_with_two_or_more_common_genotypes']) == 171
+          assert int(s['min_common_genotypes']) == 15
+          assert int(s['max_common_genotypes']) == 53
+          assert int(s['total_environment_pair_common_genotype_pairs']) == 72059
+          # Preserve the first failed check explicitly.
+          assert float(s['max_abs_pairwise_contrast_deviation']) > 1e-8
+          assert str(s['all_environment_pair_contrasts_invariant_within_csv_only_precision']).lower() == 'false'
+          # Correct implementation-aware reproduction check: fixed 4-ULP budget.
+          assert float(s['float32_four_term_ulp_budget']) == 4.0
+          assert float(s['max_pairwise_deviation_in_local_float32_ulp']) <= 4.0
+          assert str(s['all_environment_pair_contrasts_consistent_with_float32_implementation']).lower() == 'true'
+          assert len(a) == 171
+          assert a['uses_target_outcomes'].astype(str).str.lower().eq('false').all()
+          assert a['consistent_with_float32_implementation'].astype(str).str.lower().eq('true').all()
+          assert len(e) == 5
+          assert e['method_novelty_survives'].astype(str).str.lower().eq('false').all()
+          assert r['standard_ridge_prior_art_object'].astype(str).str.lower().eq('true').all()
+          assert d['decision'] == 'B17_T1_ARCHITECTURE_CONTRACTION_NOVELTY_REJECTED_TERMINATE_B17'
+          assert str(d['b14c_outcome_input_used']).lower() == 'false'
+          assert str(d['new_outcome_access']).lower() == 'false'
+          assert str(d['new_prediction_generation']).lower() == 'false'
+          assert str(d['point_predictor_changed']).lower() == 'false'
+          assert str(d['point_predictor_rescaled']).lower() == 'false'
+          assert str(d['initial_csv_only_precision_check_passed']).lower() == 'false'
+          assert str(d['post_execution_numerical_amendment_recorded']).lower() == 'true'
+          assert str(d['sealed_predictions_consistent_with_float32_implementation']).lower() == 'true'
+          assert str(d['b17_t2_permitted']).lower() == 'false'
+          assert str(d['t2_reopened']).lower() == 'false'
+          assert str(d['post_result_tuning_permitted']).lower() == 'false'
+          assert d['research_branch_state'] == 'B17_CLOSED_NO_MODEL_MODIFICATION'
+          print(s.to_string())
+          print(d.to_string())
+          PY
+      - name: Publish B17-T1 terminal evidence
+        if: github.event_name == 'push'
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add \
+            reports/results/case_study_b17_t1_pairwise_invariance_audit.csv \
+            reports/results/case_study_b17_t1_pairwise_invariance_summary.csv \
+            reports/results/case_study_b17_t1_operator_equivalence.csv \
+            reports/results/case_study_b17_t1_ridge_spectral_reference.csv \
+            reports/results/case_study_b17_t1_decision.csv
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B17-T1 architecture-contraction closure [skip ci]'
+            git push origin HEAD:${{ github.ref_name }}
+          fi

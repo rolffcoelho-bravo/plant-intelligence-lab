@@ -1,0 +1,43 @@
+{
+  "stage": "B17_T1_ARCHITECTURE_CONTRACTION_NOVELTY_TEST",
+  "status": "LOCKED_BEFORE_OPERATOR_EQUIVALENCE_AUDIT",
+  "parent_decision": "B17_BROAD_RESPONSE_AMPLITUDE_NOVELTY_REJECTED_OPEN_ARCHITECTURE_CONTRACTION_TEST",
+  "primary_input": "reports/results/case_study_b14b_2024_sealed_predictions.csv",
+  "primary_input_is_preoutcome_sealed_prediction_artifact": true,
+  "expected_prediction_rows": 798,
+  "expected_environments": 19,
+  "expected_genotypes": 92,
+  "frozen_model": "G+E_T1",
+  "frozen_horizon": "T1_30DAP",
+  "frozen_g_rank": 20,
+  "frozen_e_rank": 16,
+  "frozen_gamma_multiplier": 2.0,
+  "frozen_ridge_alpha": 10.0,
+  "new_outcome_access_permitted": false,
+  "b14c_outcome_input_permitted": false,
+  "new_prediction_generation_permitted": false,
+  "point_predictor_refit_permitted": false,
+  "point_predictor_rescaling_permitted": false,
+  "interval_or_support_tuning_permitted": false,
+  "b5_genomic_change_permitted": false,
+  "t1_clock_change_permitted": false,
+  "t2_reopen_permitted": false,
+  "reseal_permitted": false,
+  "post_result_tuning_permitted": false,
+  "new_method_claim_permitted": false,
+  "predeclared_operator_classes": [
+    "ADDITIVE_NO_INTERACTION_CONTRAST_INVARIANCE",
+    "STANDARD_RIDGE_SPECTRAL_FILTERING",
+    "MODEL_BASED_CONTRAST_PEV_RELIABILITY_CD",
+    "KERNEL_RIDGE_LEVERAGE_AND_ERROR_BOUNDS",
+    "UNIDENTIFIED_TARGET_TRUTH_AMPLITUDE_WITHOUT_ASSUMPTIONS"
+  ],
+  "predeclared_decision": "B17_T1_ARCHITECTURE_CONTRACTION_NOVELTY_REJECTED_TERMINATE_B17",
+  "b17_t2_permitted": false,
+  "prior_art_boundary": [
+    "10.1534/genetics.119.302134",
+    "10.1534/genetics.112.141473",
+    "PMLR-v162-tomasini22a",
+    "arXiv:2607.28846"
+  ]
+}
