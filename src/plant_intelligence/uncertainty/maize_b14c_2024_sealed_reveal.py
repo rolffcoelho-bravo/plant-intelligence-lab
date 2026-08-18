@@ -28,6 +28,10 @@ EXPECTED_N_PREDICTIONS = 798
 EXPECTED_N_GENOTYPES = 92
 EXPECTED_N_ENVIRONMENTS = 19
 EXPECTED_ADAPTIVE_LEVEL = 0.9512813317177465
+# B14B wrote floating columns with 12 decimal places.  The JSON seal is the
+# exact semantic authority; this tolerance verifies the immutable CSV's
+# redundant level column at half a unit in its recorded serialization precision.
+SEALED_CSV_ADAPTIVE_LEVEL_ATOL = 5e-13
 CONTROL_LEVEL = 0.90
 TARGET_COVERAGE = 0.90
 MAX_COVERAGE_GAP = 0.03
@@ -59,6 +63,21 @@ def sha256_file(path: Path) -> str:
 
 def _false(value: object) -> bool:
     return str(value).strip().lower() == "false"
+
+
+def sealed_csv_adaptive_level_matches(values: object) -> bool:
+    """Check the redundant B14B CSV level at its frozen 12-decimal precision."""
+
+    array = np.asarray(values, dtype=float)
+    return bool(
+        np.all(np.isfinite(array))
+        and np.allclose(
+            array,
+            EXPECTED_ADAPTIVE_LEVEL,
+            rtol=0,
+            atol=SEALED_CSV_ADAPTIVE_LEVEL_ATOL,
+        )
+    )
 
 
 def verify_pre_reveal_lock(root: Path) -> dict[str, object]:
@@ -159,8 +178,8 @@ def verify_b14b_before_outcome(root: Path) -> pd.DataFrame:
         raise B14CIntegrityError("B14B control identity changed.")
     if not sealed["adaptive_rule"].astype(str).eq(ADAPTIVE).all():
         raise B14CIntegrityError("B14B adaptive identity changed.")
-    if not np.allclose(sealed["adaptive_quantile_level"].astype(float), EXPECTED_ADAPTIVE_LEVEL, rtol=0, atol=1e-15):
-        raise B14CIntegrityError("B14B adaptive level changed.")
+    if not sealed_csv_adaptive_level_matches(sealed["adaptive_quantile_level"].astype(float)):
+        raise B14CIntegrityError("B14B adaptive level changed beyond sealed CSV precision.")
     if not sealed["calibration_feedback_state"].astype(str).eq(NO_2023_FEEDBACK).all():
         raise B14CIntegrityError("B14B calibration feedback state changed.")
     return sealed
