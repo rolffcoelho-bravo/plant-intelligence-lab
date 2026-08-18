@@ -1,0 +1,188 @@
+name: Case Study B14B - Sealed 2024 Predictions
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b14b-2024-sealed-predictions
+    paths:
+      - 'src/plant_intelligence/uncertainty/maize_b14b_2024_sealed_prediction.py'
+      - 'tests/test_case_study_b14b_2024_sealed_prediction.py'
+      - 'docs/case_study_b14b_2024_sealed_prediction.md'
+      - '.github/workflows/case-study-b14b-2024-sealed-predictions.yml'
+      - 'reports/results/.b14b_protocol_locked'
+
+permissions:
+  contents: write
+
+jobs:
+  seal-2024-predictions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install environment and CyVerse GoCommands
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+          GOCMD_VER=$(curl -L -s https://raw.githubusercontent.com/cyverse/gocommands/main/VERSION.txt)
+          test -n "$GOCMD_VER"
+          curl -L -s \
+            "https://github.com/cyverse/gocommands/releases/download/${GOCMD_VER}/gocmd-${GOCMD_VER}-linux-amd64.tar.gz" \
+            | tar xz
+          chmod +x gocmd
+          test -x ./gocmd
+
+      - name: Validate B14B guardrails
+        run: pytest -q tests/test_case_study_b14b_2024_sealed_prediction.py
+
+      - name: Verify immutable B14B protocol lock
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          lock = Path('reports/results/.b14b_protocol_locked').read_text(encoding='utf-8')
+          required = (
+              'B14B_2024_SEALED_PREDICTION_PROTOCOL_LOCKED',
+              'CANDIDATE_UNIVERSE_SHA256=32e4f308522ee849e498d2bf0614f3ec349574a27bb327fefeb80e0f4e05bf7f',
+              'N_PREDICTIONS=798',
+              'ADAPTIVE_LEVEL=0.9512813317177465',
+              'CALIBRATION_FEEDBACK_STATE=NO_2023_FEEDBACK_AVAILABLE_CARRY_FORWARD_2022_DRIFT_STATE',
+              'OBSERVED_VALUES_ACCESS=FORBIDDEN',
+              'T2=CLOSED',
+              'REVEAL=FORBIDDEN_UNTIL_PREDICTION_SHA_COMMITTED',
+          )
+          for token in required:
+              assert token in lock, token
+          print('B14B protocol lock verified')
+          PY
+
+      - name: Stage exactly the two B14A-sealed pre-outcome sources
+        env:
+          IRODS_HOST: data.cyverse.org
+          IRODS_PORT: '1247'
+          IRODS_ZONE_NAME: iplant
+          IRODS_USER_NAME: anonymous
+          IRODS_USER_PASSWORD: ''
+        run: |
+          set -euo pipefail
+          SAFE_DIR='data/raw/case_study_b14a_2024_safe'
+          ROOT='/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Testing_data'
+          rm -rf "$SAFE_DIR"
+          mkdir -p "$SAFE_DIR"
+          ./gocmd get -f -k "$ROOT/1_Submission_Template_2024.csv" "$SAFE_DIR/1_Submission_Template_2024.csv"
+          ./gocmd get -f -k "$ROOT/2_Testing_Meta_Data_2024.csv" "$SAFE_DIR/2_Testing_Meta_Data_2024.csv"
+          test -s "$SAFE_DIR/1_Submission_Template_2024.csv"
+          test -s "$SAFE_DIR/2_Testing_Meta_Data_2024.csv"
+          test "$(find "$SAFE_DIR" -maxdepth 1 -type f | wc -l)" -eq 2
+          echo '80969670ef0f61c16d3dcaa1c410b1f1c628a2d0ca3ad21d444236e7ce8c4178  data/raw/case_study_b14a_2024_safe/1_Submission_Template_2024.csv' | sha256sum -c -
+          echo '10bdecd20bc15bfe7354a6b1ee39eb0b9d206f0dfe4d220386c17dea86fffdab  data/raw/case_study_b14a_2024_safe/2_Testing_Meta_Data_2024.csv' | sha256sum -c -
+          if find "$SAFE_DIR" -type f \( \
+              -iname '*observed*' -o \
+              -iname '*answer*' -o \
+              -iname '*trait*' -o \
+              -iname '*phenotyp*' \
+            \) -print -quit | grep -q .; then
+            echo 'Forbidden outcome-bearing file entered B14B staging directory.' >&2
+            exit 1
+          fi
+
+      - name: Issue and seal B14B 2024 predictions
+        run: |
+          set -o pipefail
+          python -u -m plant_intelligence.uncertainty.maize_b14b_2024_sealed_prediction \
+            --output-root . \
+            2>&1 | tee reports/results/case_study_b14b_2024_execution.log
+
+      - name: Verify immutable prediction seal before publication
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from pathlib import Path
+          from plant_intelligence.uncertainty import maize_b14b_2024_sealed_prediction as b14b
+
+          pred = Path('reports/results/case_study_b14b_2024_sealed_predictions.csv')
+          seal_path = Path('reports/results/case_study_b14b_2024_prediction_seal.json')
+          decision = pd.read_csv('reports/results/case_study_b14b_2024_seal_decision.csv')
+          seal = b14b.verify_seal(pred, seal_path)
+          assert len(decision) == 1
+          row = decision.iloc[0]
+          assert row['decision'] == 'B14B_2024_SEALED_PREDICTIONS_READY_FOR_REVEAL'
+          assert int(row['n_predictions']) == 798
+          assert int(row['n_genotypes']) == 92
+          assert int(row['n_environments']) == 19
+          assert row['candidate_universe_sha256'] == '32e4f308522ee849e498d2bf0614f3ec349574a27bb327fefeb80e0f4e05bf7f'
+          assert str(row['observed_values_accessed']).lower() == 'false'
+          assert str(row['point_predictor_changed']).lower() == 'false'
+          assert str(row['b5_genotype_representation_changed']).lower() == 'false'
+          assert str(row['t1_clock_changed']).lower() == 'false'
+          assert str(row['t2_branch_reopened']).lower() == 'false'
+          assert str(row['post_result_tuning_permitted']).lower() == 'false'
+          assert seal['prediction_sha256'] == row['prediction_sha256']
+          assert seal['calibration_feedback_state'] == 'NO_2023_FEEDBACK_AVAILABLE_CARRY_FORWARD_2022_DRIFT_STATE'
+          frame = pd.read_csv(pred)
+          assert len(frame) == 798
+          assert 'observed' not in frame.columns
+          assert 'Yield_Mg_ha' not in frame.columns
+          assert (frame['adaptive_half_width_90'] + 1e-12 >= frame['control_half_width_90']).all()
+          print('B14B sealed prediction artifact verified')
+          print(json.dumps(seal, indent=2, sort_keys=True))
+          PY
+
+          SAFE_DIR='data/raw/case_study_b14a_2024_safe'
+          if find "$SAFE_DIR" -type f \( \
+              -iname '*observed*' -o \
+              -iname '*answer*' -o \
+              -iname '*trait*' -o \
+              -iname '*phenotyp*' \
+            \) -print -quit | grep -q .; then
+            echo 'Forbidden outcome-bearing file detected after B14B.' >&2
+            exit 1
+          fi
+
+      - name: Publish sealed B14B evidence
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git pull --rebase origin agent/b14b-2024-sealed-predictions
+          git add \
+            reports/results/case_study_b14b_2024_sealed_predictions.csv \
+            reports/results/case_study_b14b_2024_prediction_seal.json \
+            reports/results/case_study_b14b_2024_seal_decision.csv \
+            reports/results/case_study_b14b_2024_t1_reconstruction_audit.csv \
+            reports/results/case_study_b14b_2024_source_manifest.csv \
+            reports/results/case_study_b14b_2024_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Seal B14B 2024 predictions before outcome access [skip ci]'
+            git push
+          fi
+
+      - name: Preserve failed B14B execution state
+        if: failure()
+        run: |
+          set +e
+          mkdir -p reports/results
+          {
+            echo 'B14B_WORKFLOW_FAILED_BEFORE_VALID_PREDICTION_SEAL'
+            echo 'OBSERVED_VALUES_ACCESSED=false'
+            echo 'PREDICTION_REVEAL_AUTHORIZED=false'
+            echo "EXECUTION_LOG_PRESENT=$(test -f reports/results/case_study_b14b_2024_execution.log && echo true || echo false)"
+            echo "PREDICTION_FILE_PRESENT=$(test -f reports/results/case_study_b14b_2024_sealed_predictions.csv && echo true || echo false)"
+            echo "SEAL_FILE_PRESENT=$(test -f reports/results/case_study_b14b_2024_prediction_seal.json && echo true || echo false)"
+          } > reports/results/case_study_b14b_2024_failure_state.txt
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git pull --rebase origin agent/b14b-2024-sealed-predictions
+          git add reports/results/case_study_b14b_2024_failure_state.txt
+          test -f reports/results/case_study_b14b_2024_execution.log && git add reports/results/case_study_b14b_2024_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Preserve failed B14B seal execution evidence [skip ci]'
+            git push
+          fi
