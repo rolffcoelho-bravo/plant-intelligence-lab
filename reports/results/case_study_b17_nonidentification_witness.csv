@@ -1,0 +1,3 @@
+world,same_preoutcome_information,same_prediction_vector,target_scale_relative_to_centered_prediction,predicted_to_observed_sd_ratio,forecast_time_target_amplitude_point_identified
+WORLD_A,True,True,0.5,2.0,False
+WORLD_B,True,True,2.0,0.5,False
