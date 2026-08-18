@@ -1,0 +1,178 @@
+name: Case Study B - Closure and Contribution Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/case-study-b-closure-audit
+    paths:
+      - 'src/plant_intelligence/diagnostics/maize_case_study_b_closure.py'
+      - 'tests/test_case_study_b_closure.py'
+      - 'docs/case_study_b_closure_and_contribution_audit.md'
+      - 'reports/results/case_study_b_closure_lock.json'
+      - '.github/workflows/case-study-b-closure-audit.yml'
+  pull_request:
+    paths:
+      - 'src/plant_intelligence/diagnostics/maize_case_study_b_closure.py'
+      - 'tests/test_case_study_b_closure.py'
+      - 'docs/case_study_b_closure_and_contribution_audit.md'
+      - 'reports/results/case_study_b_closure_lock.json'
+      - '.github/workflows/case-study-b-closure-audit.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  case-study-b-closure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install package and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Run closure tests
+        run: pytest -q tests/test_case_study_b_closure.py
+
+      - name: Verify closure lock and frozen evidence inventory
+        run: |
+          for f in \
+            reports/results/case_study_b12_2022_primary_status.csv \
+            reports/results/case_study_b12_2022_available_case_summary.csv \
+            reports/results/case_study_b12_2022_available_case_coverage.csv \
+            reports/results/case_study_b13_preoutcome_lock.csv \
+            reports/results/case_study_b13a_2023_lock_decision.csv \
+            reports/results/case_study_b13s_2023_lock_decision.csv \
+            reports/results/case_study_b14a_2024_lock_decision.csv \
+            reports/results/case_study_b14b_2024_seal_decision.csv \
+            reports/results/case_study_b14c_2024_primary_summary.csv \
+            reports/results/case_study_b14c_2024_interval_summary.csv \
+            reports/results/case_study_b14c_2024_decision.csv \
+            reports/results/case_study_b15_theory_lock.json \
+            reports/results/case_study_b16_2024_error_structure_summary.csv \
+            reports/results/case_study_b16_decision.csv \
+            reports/results/case_study_b17_decision.csv \
+            reports/results/case_study_b17_t1_decision.csv \
+            reports/results/case_study_b_closure_lock.json; do
+              test -s "$f"
+          done
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock = json.loads(Path('reports/results/case_study_b_closure_lock.json').read_text())
+          assert lock['status'] == 'LOCKED_BEFORE_SYNTHESIS'
+          assert lock['frozen_point_predictor'] == 'G+E_T1'
+          assert lock['frozen_horizon'] == 'T1_30DAP'
+          assert lock['frozen_g_rank'] == 20
+          assert lock['frozen_e_rank'] == 16
+          assert lock['frozen_gamma_multiplier'] == 2.0
+          assert lock['frozen_ridge_alpha'] == 10.0
+          forbidden = [
+              'new_outcome_access_permitted',
+              'new_prediction_generation_permitted',
+              'point_predictor_change_permitted',
+              'point_predictor_rescaling_permitted',
+              'interval_or_support_tuning_permitted',
+              'b5_genotype_representation_change_permitted',
+              't1_clock_change_permitted',
+              't2_reopening_permitted',
+              'reseal_permitted',
+              'post_result_tuning_permitted',
+              'b18_model_development_permitted_inside_closure',
+              'b18_automatic_opening_permitted',
+          ]
+          assert all(lock[name] is False for name in forbidden)
+          assert lock['b18_separate_hypothesis_gate_may_be_recommended'] is True
+          boundary = lock['publication_language_boundary']
+          assert boundary['calendar_time_prospective_claim_permitted'] is False
+          assert boundary['seal_first_blinded_external_validation_claim_permitted'] is True
+          assert boundary['generic_new_gxe_architecture_claim_permitted'] is False
+          assert boundary['new_conformal_transport_method_claim_permitted'] is False
+          assert boundary['new_response_amplitude_method_claim_permitted'] is False
+          assert boundary['b12_confirmatory_failure_claim_permitted'] is False
+          assert boundary['b14c_external_validation_claim_permitted'] is True
+          assert lock['predeclared_closure_decision'] == 'CASE_STUDY_B_CLOSED_EXTERNAL_VALIDATION_CONTRIBUTION_SUPPORTED_METHOD_NOVELTY_NOT_SUPPORTED_B18_SEPARATE_HYPOTHESIS_GATE_ONLY'
+          assert lock['predeclared_publication_frame'] == 'SEAL_FIRST_BLINDED_EXTERNAL_VALIDATION_AND_FAILURE_ANALYSIS_NOT_NEW_PREDICTIVE_METHOD'
+          PY
+
+      - name: Execute terminal closure synthesis
+        run: python -u -m plant_intelligence.diagnostics.maize_case_study_b_closure --output-root .
+
+      - name: Verify closure evidence and claim boundaries
+        run: |
+          python - <<'PY'
+          import numpy as np
+          import pandas as pd
+
+          d = pd.read_csv('reports/results/case_study_b_closure_decision.csv').iloc[0]
+          s = pd.read_csv('reports/results/case_study_b_closure_stage_classification.csv')
+          c = pd.read_csv('reports/results/case_study_b_contribution_matrix.csv')
+          q = pd.read_csv('reports/results/case_study_b_publication_claim_ledger.csv')
+          l = pd.read_csv('reports/results/case_study_b_literature_boundary.csv')
+          b18 = pd.read_csv('reports/results/case_study_b_b18_gate.csv').set_index('gate')
+
+          assert d['decision'] == 'CASE_STUDY_B_CLOSED_EXTERNAL_VALIDATION_CONTRIBUTION_SUPPORTED_METHOD_NOVELTY_NOT_SUPPORTED_B18_SEPARATE_HYPOTHESIS_GATE_ONLY'
+          assert d['publication_frame'] == 'SEAL_FIRST_BLINDED_EXTERNAL_VALIDATION_AND_FAILURE_ANALYSIS_NOT_NEW_PREDICTIVE_METHOD'
+          assert d['completed_confirmatory_external_anchor'] == 'B14C_2024'
+          assert str(d['b12_primary_confirmatory_complete']).lower() == 'false'
+          assert int(d['b14c_primary_n']) == 779
+          assert np.isclose(float(d['b14c_rmse']), 2.6197348508709113, atol=1e-12, rtol=0.0)
+          assert np.isclose(float(d['b14c_r2']), 0.14844019270495168, atol=1e-12, rtol=0.0)
+          assert np.isclose(float(d['b14c_correlation']), 0.390901094352944, atol=1e-12, rtol=0.0)
+          assert str(d['b14c_control_calibration_pass']).lower() == 'true'
+          assert str(d['b14c_adaptive_calibration_pass']).lower() == 'false'
+          assert str(d['method_novelty_supported']).lower() == 'false'
+          assert str(d['calendar_time_prospective_claim_permitted']).lower() == 'false'
+          assert str(d['seal_first_blinded_external_validation_claim_permitted']).lower() == 'true'
+          assert str(d['support_abstention_validated']).lower() == 'false'
+          assert str(d['new_outcome_access']).lower() == 'false'
+          assert str(d['new_prediction_generation']).lower() == 'false'
+          assert str(d['point_predictor_changed']).lower() == 'false'
+          assert str(d['interval_or_support_tuning']).lower() == 'false'
+          assert str(d['t2_reopened']).lower() == 'false'
+          assert str(d['post_result_tuning_permitted']).lower() == 'false'
+          assert str(d['b18_automatic_model_development_permitted']).lower() == 'false'
+          assert str(d['b18_separate_hypothesis_gate_permitted']).lower() == 'true'
+          assert str(d['case_study_b_closed']).lower() == 'true'
+
+          assert len(s) == 11
+          assert s['confirmatory_external_anchor'].astype(str).str.lower().eq('true').sum() == 1
+          assert s.loc[s['confirmatory_external_anchor'].astype(str).str.lower().eq('true'), 'stage'].iloc[0] == 'B14C'
+          assert c['generic_method_novelty'].astype(str).str.lower().eq('false').all()
+          prohibited = q[q['claim_class'].str.startswith('PROHIBITED')]
+          assert prohibited['permitted'].astype(str).str.lower().eq('false').all()
+          assert len(l) == 11
+          assert '10.1371/journal.pcbi.1013729' in set(l['doi'])
+          assert '10.1093/plphys/kiag344' in set(l['doi'])
+          assert str(b18.loc['B18_AUTOMATIC_MODEL_DEVELOPMENT', 'permitted']).lower() == 'false'
+          assert str(b18.loc['B18_SEPARATE_HYPOTHESIS_AND_NOVELTY_AUDIT', 'permitted']).lower() == 'true'
+          assert str(b18.loc['B18_FORBIDDEN_STARTING_QUESTION_ADD_GXE', 'permitted']).lower() == 'false'
+          assert str(b18.loc['B18_FORBIDDEN_STARTING_QUESTION_TUNE_2024_FAILURE', 'permitted']).lower() == 'false'
+          print(d.to_string())
+          PY
+
+      - name: Publish Case Study B closure evidence
+        if: github.event_name == 'push'
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add \
+            reports/results/case_study_b_closure_stage_classification.csv \
+            reports/results/case_study_b_contribution_matrix.csv \
+            reports/results/case_study_b_publication_claim_ledger.csv \
+            reports/results/case_study_b_literature_boundary.csv \
+            reports/results/case_study_b_b18_gate.csv \
+            reports/results/case_study_b_closure_decision.csv
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish Case Study B closure audit [skip ci]'
+            git push origin HEAD:${{ github.ref_name }}
+          fi
