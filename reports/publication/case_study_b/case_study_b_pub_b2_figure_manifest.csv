@@ -1,5 +1,0 @@
-figure,file,authoritative_source,publication_role,evidence_class
-Figure 1,case_study_b_pub_b2_figure_01_protocol_chronology.svg,PUB-B1 evidence hierarchy + stage decisions,Protocol chronology,PRIMARY_PROVENANCE
-Figure 2,case_study_b_pub_b2_figure_02_2024_external_point_prediction.svg,reports/results/case_study_b14c_2024_primary_cohort.csv,Observed versus immutable sealed prediction on 779 officially observable keys,CONFIRMATORY_EXTERNAL
-Figure 3,case_study_b_pub_b2_figure_03_2024_uncertainty_comparison.svg,reports/results/case_study_b14c_2024_interval_summary.csv,Frozen control versus predeclared one-sided drift guard,CONFIRMATORY_EXTERNAL
-Figure 4,case_study_b_pub_b2_figure_04_2024_failure_structure.svg,reports/results/case_study_b16_2024_error_structure_summary.csv,Postoutcome diagnostic decomposition and under-dispersion,DIAGNOSTIC_ONLY

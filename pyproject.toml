@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "plant-intelligence-lab"
 version = "0.1.0"
-description = "Genomic prediction, phenotype forecasting, uncertainty-aware modelling and AI-assisted experimental design for plant biotechnology."
+description = "Applied data science for genomics, phenotype forecasting, environmental transfer, uncertainty-aware validation, and biological decision support."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
