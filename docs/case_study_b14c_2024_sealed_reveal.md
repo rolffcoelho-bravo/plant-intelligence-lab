@@ -134,3 +134,7 @@ After outcome access, B14C forbids:
 - switching nominal coverage because another level looks better.
 
 A negative B14C result is retained as scientific evidence.
+
+## Operational reveal audit
+
+The first automated reveal attempt failed before the pre-reveal gate artifact was written and before the official outcome object was acquired. That failure therefore exposed no 2024 yield values and changed no scientific rule. The subsequent workflow hardening only reorders operational steps so that the immutable B14B seal is verified before external CyVerse tooling is installed and adds bounded network retries. This documentation-only commit is an explicit retry trigger; it changes no B14C estimand, model, interval, calibration, promotion, or missing-key rule.
