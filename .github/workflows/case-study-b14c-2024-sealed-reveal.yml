@@ -21,6 +21,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - uses: actions/setup-python@v5
         with:
@@ -93,6 +95,7 @@ jobs:
           set -euo pipefail
           REVEAL_DIR='data/raw/case_study_b14c_2024_reveal'
           ROOT='/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Testing_data'
+          EXPECTED_FIRST_REVEAL_SHA='8bd354c44bce50abd09a9839272112fdb34bdb96ec6e37ae644eda916aeeabcc'
           rm -rf "$REVEAL_DIR"
           mkdir -p "$REVEAL_DIR"
           ./gocmd env
@@ -109,7 +112,7 @@ jobs:
           test -s "$REVEAL_DIR/7_Testing_Observed_Values.csv"
           test "$(find "$REVEAL_DIR" -maxdepth 1 -type f | wc -l)" -eq 1
           test "$(basename "$(find "$REVEAL_DIR" -maxdepth 1 -type f)")" = '7_Testing_Observed_Values.csv'
-          sha256sum "$REVEAL_DIR/7_Testing_Observed_Values.csv"
+          echo "$EXPECTED_FIRST_REVEAL_SHA  $REVEAL_DIR/7_Testing_Observed_Values.csv" | sha256sum -c -
 
       - name: Run locked B14C external reveal
         run: |
@@ -119,11 +122,12 @@ jobs:
             --outcome-file data/raw/case_study_b14c_2024_reveal/7_Testing_Observed_Values.csv \
             2>&1 | tee reports/results/case_study_b14c_2024_execution.log
 
-      - name: Verify B14C result without retuning
+      - name: Verify B14C result without retuning and reproduce first reveal
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
+          import numpy as np
           import pandas as pd
           from plant_intelligence.uncertainty import maize_b14c_2024_sealed_reveal as b14c
 
@@ -133,6 +137,7 @@ jobs:
           intervals = pd.read_csv(results / 'case_study_b14c_2024_interval_summary.csv')
           audit = pd.read_csv(results / 'case_study_b14c_2024_key_audit.csv')
           source = json.loads((results / 'case_study_b14c_2024_outcome_source_seal.json').read_text(encoding='utf-8'))
+          first = json.loads((results / 'case_study_b14c_2024_first_reveal_record.json').read_text(encoding='utf-8'))
 
           assert len(decision) == 1
           allowed = {
@@ -142,13 +147,16 @@ jobs:
               b14c.DECISION_BOTH_FAIL,
           }
           assert decision.iloc[0]['decision'] in allowed
+          assert decision.iloc[0]['decision'] == first['decision_label']
           assert decision.iloc[0]['prediction_sha256'] == b14c.EXPECTED_PREDICTION_SHA256
+          assert decision.iloc[0]['outcome_sha256'] == first['outcome_sha256']
           assert str(decision.iloc[0]['selection_uses_outcome_value']).lower() == 'false'
           assert str(decision.iloc[0]['post_result_tuning_permitted']).lower() == 'false'
 
           assert len(summary) == 1
           assert int(summary.iloc[0]['n_sealed']) == 798
-          assert 0 < int(summary.iloc[0]['n_officially_observable']) <= 798
+          assert int(summary.iloc[0]['n_officially_observable']) == first['n_officially_observable'] == 779
+          assert int(summary.iloc[0]['n_sealed_keys_absent_from_official']) == first['n_sealed_keys_absent_from_official'] == 19
           assert str(summary.iloc[0]['selection_uses_outcome_value']).lower() == 'false'
           assert str(summary.iloc[0]['post_reveal_protocol_amendment']).lower() == 'false'
           assert str(summary.iloc[0]['point_predictor_changed']).lower() == 'false'
@@ -156,18 +164,35 @@ jobs:
           assert str(summary.iloc[0]['t1_clock_changed']).lower() == 'false'
           assert str(summary.iloc[0]['t2_branch_reopened']).lower() == 'false'
           assert str(summary.iloc[0]['post_result_tuning_permitted']).lower() == 'false'
+          for metric in ('rmse', 'mae', 'r2', 'correlation'):
+              assert np.isclose(float(summary.iloc[0][metric]), float(first['point_metrics'][metric]), rtol=0, atol=5e-6)
 
           assert len(audit) == 798
           assert not audit['selection_uses_outcome_value'].astype(bool).any()
           assert not audit['post_reveal_protocol_amendment'].astype(bool).any()
           assert set(intervals['rule']) == {b14c.CONTROL, b14c.ADAPTIVE}
+          indexed = intervals.set_index('rule')
+          assert bool(indexed.loc[b14c.CONTROL, 'calibration_pass']) is first['control']['calibration_pass']
+          assert bool(indexed.loc[b14c.ADAPTIVE, 'calibration_pass']) is first['adaptive']['calibration_pass']
+          for rule, key in ((b14c.CONTROL, 'control'), (b14c.ADAPTIVE, 'adaptive')):
+              for column, recorded_key in (
+                  ('empirical_coverage', 'empirical_coverage'),
+                  ('environment_balanced_coverage', 'environment_balanced_coverage'),
+                  ('cluster_ci_low', 'cluster_ci_low'),
+                  ('cluster_ci_high', 'cluster_ci_high'),
+                  ('mean_half_width', 'mean_half_width'),
+                  ('mean_interval_score', 'mean_interval_score'),
+              ):
+                  assert np.isclose(float(indexed.loc[rule, column]), float(first[key][recorded_key]), rtol=0, atol=5e-6)
+
+          assert source['sha256'] == first['outcome_sha256']
           assert source['prediction_sha256_verified_before_outcome_read'] == b14c.EXPECTED_PREDICTION_SHA256
           assert source['outcome_accessed'] is True
           assert source['cohort_selection_uses_outcome_value'] is False
           assert source['post_result_tuning_permitted'] is False
 
           outcome = Path('data/raw/case_study_b14c_2024_reveal/7_Testing_Observed_Values.csv')
-          assert b14c.sha256_file(outcome) == source['sha256']
+          assert b14c.sha256_file(outcome) == first['outcome_sha256']
           assert b14c.sha256_file(results / 'case_study_b14b_2024_sealed_predictions.csv') == b14c.EXPECTED_PREDICTION_SHA256
           print(decision.to_string(index=False))
           print(summary.to_string(index=False))
@@ -176,9 +201,10 @@ jobs:
 
       - name: Publish B14C reveal evidence without raw outcome redistribution
         run: |
+          set -euo pipefail
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
-          git pull --rebase origin agent/b14c-2024-sealed-reveal
+          git rm -f reports/results/case_study_b14c_2024_failure_state.txt || true
           git add \
             reports/results/case_study_b14c_pre_reveal_gate.json \
             reports/results/case_study_b14c_2024_outcome_source_seal.json \
@@ -192,7 +218,7 @@ jobs:
             reports/results/case_study_b14c_2024_execution.log
           if ! git diff --cached --quiet; then
             git commit -m 'Publish B14C 2024 sealed external reveal [skip ci]'
-            git push
+            git push origin HEAD:${{ github.head_ref || github.ref_name }}
           fi
 
       - name: Preserve failed B14C execution state
@@ -218,11 +244,10 @@ jobs:
           } > reports/results/case_study_b14c_2024_failure_state.txt
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
-          git pull --rebase origin agent/b14c-2024-sealed-reveal
           git add reports/results/case_study_b14c_2024_failure_state.txt
           test -f reports/results/case_study_b14c_pre_reveal_gate.json && git add reports/results/case_study_b14c_pre_reveal_gate.json
           test -f reports/results/case_study_b14c_2024_execution.log && git add reports/results/case_study_b14c_2024_execution.log
           if ! git diff --cached --quiet; then
             git commit -m 'Preserve failed B14C reveal evidence [skip ci]'
-            git push
+            git push origin HEAD:${{ github.head_ref || github.ref_name }}
           fi
