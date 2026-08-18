@@ -163,3 +163,26 @@ jobs:
             git commit -m 'Seal B14B 2024 predictions before outcome access [skip ci]'
             git push
           fi
+
+      - name: Preserve failed B14B execution state
+        if: failure()
+        run: |
+          set +e
+          mkdir -p reports/results
+          {
+            echo 'B14B_WORKFLOW_FAILED_BEFORE_VALID_PREDICTION_SEAL'
+            echo 'OBSERVED_VALUES_ACCESSED=false'
+            echo 'PREDICTION_REVEAL_AUTHORIZED=false'
+            echo "EXECUTION_LOG_PRESENT=$(test -f reports/results/case_study_b14b_2024_execution.log && echo true || echo false)"
+            echo "PREDICTION_FILE_PRESENT=$(test -f reports/results/case_study_b14b_2024_sealed_predictions.csv && echo true || echo false)"
+            echo "SEAL_FILE_PRESENT=$(test -f reports/results/case_study_b14b_2024_prediction_seal.json && echo true || echo false)"
+          } > reports/results/case_study_b14b_2024_failure_state.txt
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git pull --rebase origin agent/b14b-2024-sealed-predictions
+          git add reports/results/case_study_b14b_2024_failure_state.txt
+          test -f reports/results/case_study_b14b_2024_execution.log && git add reports/results/case_study_b14b_2024_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Preserve failed B14B seal execution evidence [skip ci]'
+            git push
+          fi
