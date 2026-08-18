@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this repository, please cite it using the metadata below."
-title: "Plant Intelligence Lab: Genomic Prediction, Phenotype Forecasting & AI-Assisted Biological Decision Systems"
+title: "Plant Intelligence Lab: Applied Data Science for Genomic Prediction, Phenotype Forecasting and Biological Decision Support"
 type: software
 version: "0.1.0"
 license: Apache-2.0
@@ -8,16 +8,17 @@ authors:
   - family-names: "Pereira"
     given-names: "Rodolfo"
 repository-code: "https://github.com/rolffcoelho-bravo/plant-intelligence-lab"
-abstract: "Python research software for computational plant biotechnology, combining genomic prediction, high-dimensional machine learning, early phenotype forecasting, conformal uncertainty quantification, selective prediction, retrospective experiment prioritization, and evidence-grounded scientific interaction using public plant data."
+abstract: "Python research software demonstrating end-to-end applied data science on public plant genomics and phenotyping data, including high-dimensional genomic prediction, environment-aware validation, phenotype forecasting, uncertainty calibration, external temporal evaluation, failure analysis, reproducible evidence, and evidence-grounded scientific interaction."
 keywords:
+  - applied data science
+  - genomics
   - genomic prediction
   - quantitative genetics
   - plant biotechnology
   - machine learning
   - phenotype forecasting
+  - genotype by environment
   - uncertainty quantification
-  - conformal prediction
-  - selective prediction
-  - experiment prioritization
+  - external validation
+  - reproducible research
   - biological decision support
-  - grounded scientific AI

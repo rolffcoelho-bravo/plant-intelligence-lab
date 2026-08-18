@@ -1,680 +1,222 @@
 # Plant Intelligence Lab
 
-## Genomic Prediction, Phenotype Forecasting & AI-Assisted Biological Decision Systems
+**Applied data science for genomics, phenotype forecasting, environmental transfer, and uncertainty-aware biological decision support.**
 
-> **Can we predict a plant phenotype from genomic information, environmental variables and early biological observations, while quantifying uncertainty?**
+Plant Intelligence Lab is a public research-software project showing how an end-to-end data-science workflow can be applied to biological problems. Genomics and plant phenotyping are the main application domain; the reusable value is the process: data provenance, high-dimensional representation, leakage-aware validation, temporal information control, uncertainty quantification, external evaluation, failure analysis, reproducibility, and evidence-grounded scientific interaction.
 
-Plant Intelligence Lab is an open computational biotechnology project built around a practical question: **what information is actually useful for forecasting biological outcomes and making better experimental decisions?**
+The repository contains two completed empirical case studies built from public research data:
 
-The repository combines quantitative genetics, high-dimensional machine learning, multi-environment genomic prediction, early phenotype forecasting, calibrated uncertainty, selective prediction, retrospective experiment prioritization, continuous-environment transfer, biological environmental representation, decision-horizon forecasting, prospective environmental-state reconstruction, Value-of-Waiting analysis, and a grounded scientific interface using real public plant data.
+- **Case Study A - Arabidopsis longitudinal forecasting:** genomic prediction, protocol-response analysis, early phenotype forecasting, uncertainty, selective prediction, and retrospective experiment prioritization.
+- **Case Study B - Genotype x environment prediction and environmental transfer:** a wheat GxE benchmark followed by a larger Genomes-to-Fields maize program with continuous environmental information, forward-time testing, uncertainty calibration, and sealed external evaluation.
 
-The empirical program has two complementary case studies:
+The project treats a prediction score as only one part of a scientific data-science system. It also asks whether the required information exists at decision time, whether train/test structure represents deployment, whether uncertainty transports, whether unsupported states are identifiable, and whether negative or incomplete results remain visible after evaluation.
 
-- **Case Study A — Arabidopsis longitudinal decision intelligence:** genomic prediction, protocol response, Day-15 → Day-21 phenotype forecasting, uncertainty, abstention, and retrospective experiment prioritization.
-- **Case Study B — Genotype × environment and environmental transfer:** wheat establishes predictive G×E value within represented environments and exposes the categorical-environment transfer limit; a larger Genomes-to-Fields maize extension tests transfer to physically characterized unseen environments, asks which environmental information is useful, maps when that information becomes predictive, and reconstructs forecast-time-safe environmental states.
+> **Status:** the empirical program is closed and preserved as a reproducible public research-software release. The frozen Case Study B evidence is not reopened by this release cleanup.
 
----
+## What this repository demonstrates
 
-# Case Study A — Arabidopsis longitudinal forecasting
+The common workflow is:
 
-The validated sequence is
+**problem definition -> public-data audit -> information boundary -> validation lock -> baseline and challenger models -> uncertainty -> stress testing -> external evaluation -> failure diagnosis -> reproducible evidence**
 
-$$
-G
-\rightarrow
-\text{genomic prediction}
-\rightarrow
-G\times P
-\rightarrow
-X_{15}\rightarrow\widehat{Y}_{21}
-\rightarrow
-PI
-\rightarrow
-\text{reliability}
-\rightarrow
-\text{experiment prioritization}.
-$$
+Across the case studies, the repository demonstrates:
 
-### Headline evidence
+- high-dimensional genomic data processing and prediction;
+- genotype-aware, environment-aware, double-cold-start, and forward-year validation;
+- continuous environmental representation from weather, soil, and management context;
+- explicit control of information available at prediction time;
+- uncertainty calibration and selective-prediction diagnostics;
+- immutable prediction seals for external evaluation;
+- transparent treatment of missing outcome keys and unevaluable deployment states;
+- postoutcome diagnostics kept separate from model updating;
+- machine-readable evidence, tests, and GitHub Actions;
+- a provider-independent scientific AI layer constrained by verified project evidence.
 
-| Component | Validated result |
+## Case Study A - Arabidopsis longitudinal forecasting
+
+Case Study A examines how genomic information and early phenotype information contribute to later phenotype prediction and experimental prioritization in *Arabidopsis thaliana*.
+
+| Result | Value |
 |---|---:|
 | Raw SNP markers processed | **10,709,949** |
 | SNP markers after QC | **1,257,793** |
-| Genomic accessions used in modelling | **152** |
-| Champion forecast | **$X_{15}\rightarrow Y_{21}$** |
-| Out-of-fold $R^2$ | **0.8631** |
+| Genomic accessions used | **152** |
+| Best supported forecast | **Day 15 to Day 21 phenotype** |
 | Out-of-fold RMSE | **0.7397** |
+| Out-of-fold R2 | **0.8631** |
 | Predictive correlation | **0.9306** |
-| 90% nominal interval empirical coverage | **91.23%** |
+| 90% interval empirical coverage | **91.23%** |
 | Predictions retained after abstention | **98.60%** |
-| Retained RMSE | **0.6766** |
-| Abstained-case RMSE | **2.6113** |
-| Budget-10 guided high-value hit rate | **100%** |
-| Budget-10 random benchmark | **10.15%** |
+| Retained-case RMSE | **0.6766** |
 
-The high-dimensional genomic-only benchmark does **not** produce strong out-of-fold prediction. Early phenotype $X_{15}$ dominates the Day-21 forecast, and adding genomic information to $X_{15}$ does not improve performance in this dataset. The result is retained rather than hidden: **complexity must earn measurable predictive or decision value.**
+The high-dimensional genomic-only benchmark is weak relative to the early-phenotype forecast, and adding genomic information to the Day-15 phenotype state does not improve the Day-21 prediction in this dataset. That negative result is retained: complexity must earn measurable predictive or decision value.
 
-The protocol analysis also shows response heterogeneity. Protocol B has a supported positive Day-15 average shift, while Day-21 mean advantage is uncertain and genotype-specific protocol response remains substantial.
+The experiment-prioritization component is retrospective. It is not presented as a prospective laboratory intervention or as realized laboratory savings.
 
-The forecasting layer adds cross-fold residual calibration and a selective-prediction state. The abstention result involves only four observations and is therefore reported as dataset-specific evidence rather than a universal rule.
+## Case Study B - Genotype x environment and environmental transfer
 
-The experiment-selection layer is a **retrospective post-Day-15 prioritization benchmark**, not a prospective laboratory trial and not a claim of laboratory cost reduction.
+Case Study B develops the environmental side of the workflow. It starts with a compact wheat benchmark using categorical environments and then moves to a larger maize setting where environments can be represented by measurable covariates.
 
-![Integrated biological decision engine](reports/figures/case_study_a_decision_engine.png)
+### Wheat benchmark
 
-**Technical decision report:** [`reports/Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf`](reports/Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf)
-
----
-
-# Case Study B — Genotype × Environment and environmental transfer
-
-Case Study B develops the environmental dimension of the architecture:
-
-$$
-\boxed{G+E+G\times E\rightarrow Y}.
-$$
-
-It is deliberately staged. The wheat benchmark first asks whether explicit G×E structure adds predictive value when environmental regimes are represented. The maize extension then addresses the harder question created by the wheat failure diagnostic: **can an unseen but physically characterized environment be predicted from measurable environmental similarity?**
-
-## B1–B4 — Wheat G×E benchmark
-
-The executable wheat data lock uses the canonical BGLR multi-environment wheat resource sourced from CIMMYT.
-
-| Component | Verified result |
+| Component | Value |
 |---|---:|
 | Wheat lines | **599** |
 | DArT markers | **1,279** |
 | Mega-environments | **4** |
-| Line × environment phenotype cells | **2,396** |
-| Marker-to-line ratio $p/n$ | **2.135** |
-| CV-G G+E+G×E RMSE | **0.8949** |
-| CV-G G+E+G×E $R^2$ | **0.1978** |
-| CV2 G+E+G×E RMSE | **0.8469** |
-| CV2 G+E+G×E $R^2$ | **0.2444** |
+| Line x environment phenotype cells | **2,396** |
+| CV-G G+E+GxE RMSE | **0.8949** |
+| CV2 G+E+GxE RMSE | **0.8469** |
 
-The validation design was locked before model fitting:
+Explicit GxE structure improves prediction when environment categories are represented in training. Complete environmental cold start is much weaker because a categorical identifier does not encode similarity to a genuinely new environment. That limitation motivates the maize extension.
 
-- **CV-G / CV1:** whole genotypes are held out across represented environments.
-- **CV2:** one environment response is masked while a genotype remains observed in other represented environments.
-- **CV-E:** one complete categorical mega-environment is withheld.
-- **CV-GE:** genotype and categorical environment are simultaneously unseen.
+### Maize environmental-transfer program
 
-The classical ablation is
-
-$$
-\text{Environment mean}
-\rightarrow G
-\rightarrow G+E
-\rightarrow G+E+G\times E.
-$$
-
-Under CV-G and CV2, explicit G×E structure materially improves the classical benchmark and paired genotype-cluster bootstrap intervals support the incremental gain.
-
-The strict categorical CV-GE stress test instead reaches approximately
-
-$$
-RMSE=1.0021,
-\qquad
-R^2=-0.0058,
-$$
-
-showing that a categorical environment identifier does not supply the information required to infer similarity to a new environment.
-
-B4 adds calibrated uncertainty for the supported CV-G/CV2 regimes. Pooled empirical coverage is close to nominal at 80%, 90%, and 95%. Interval width is not a useful error-ranking signal in this benchmark, while genomic-support distance has only a weak positive association with error. Therefore the repository does **not** manufacture an arbitrary abstention threshold. CV-E and CV-GE are explicitly classified as `UNSUPPORTED_ENVIRONMENT` when only categorical environment labels are available.
-
-![Case Study B GxE information ablation](reports/figures/case_study_b_gxe_ablation.png)
-
-## B5 — Continuous-environment transfer data lock
-
-To attack the categorical-environment limitation directly, Case Study B adds the curated Genomes-to-Fields maize resource from Figshare, with genotype, phenotype, and measured environmental covariates.
-
-| Component | Verified result |
+| Component | Value |
 |---|---:|
 | Phenotype records | **78,686** |
-| Genotyped / phenotyped hybrids | **4,372** |
+| Genotyped/phenotyped hybrids | **4,372** |
 | SNP markers | **98,026** |
 | Year-location environments | **136** |
-| Environmental covariates in the curated matrix | **202** |
-| Environment covariate missing fraction | **0.0** |
-| Phenotype ↔ environment overlap | **136 / 136** |
-| Phenotype ↔ genomic overlap | **4,372 / 4,372** |
-| Study years | **2014–2021** |
+| Environmental covariates | **202** |
+| Study years | **2014-2021** |
 
-The outer validation manifests were frozen before B6 modeling:
+The maize program tests continuous environmental transfer, representation robustness, biological information blocks, forecast-time information availability, chronological forward-year prediction, and forward residual calibration. The 30-days-after-planting state is retained as the supported reference. The adaptive 60-day branch is closed because the locked evidence does not establish a reliable advantage over that reference.
 
-$$
-E_{test}\cap E_{train}=\varnothing,
-\qquad
-\mathbf e_{test}\text{ observed},
-$$
+### External evaluation sequence
 
-for five environment cold-start folds, plus 25 crossed scenarios satisfying
+The external sequence is preserved season by season rather than collapsed into one success metric.
 
-$$
-G_{test}\cap G_{train}=\varnothing,
-\qquad
-E_{test}\cap E_{train}=\varnothing,
-\qquad
-\mathbf e_{test}\text{ observed}.
-$$
+| Season | Evaluation state | Evidence |
+|---|---|---|
+| **2022** | Incomplete primary cohort | **420** predictions sealed; **387** exact official keys observable; **33** absent. Observable-case results are diagnostic. |
+| **2023** | Information interface unevaluable | The frozen 30-day state could not be reconstructed from an admissible exact planting date, so no prediction cohort was issued. |
+| **2024** | Completed sealed external evaluation | **798** predictions sealed; **779** official keys evaluable across **92** hybrids and **19** environments. |
 
-## B6 — Does measurable environmental similarity transfer?
+For the completed 2024 cohort:
 
-B6 builds scalable train-partition relationship representations from all **98,026 SNP markers** and **202 environmental covariates**.
-
-The genomic side uses a deterministic CountSketch followed by train-partition PCA to define a low-rank approximation to a linear genomic kernel. The environmental side uses a train-standardized exact RBF environment kernel and a Nyström map. Their tensor-product feature map represents
-
-$$
-K_{G\times E}=K_G\odot K_E.
-$$
-
-Plot-level phenotype records are aggregated to **52,167 genotype-environment means** so replicate plots are not treated as independent deployment cases.
-
-### First unseen-environment benchmark
-
-| Model | CV-E RMSE | CV-GE RMSE |
-|---|---:|---:|
-| Mean | 2.8105 | 2.8109 |
-| G | 2.6876 | 2.6917 |
-| E | 2.6935 | 2.6939 |
-| **G+E** | **2.6495** | **2.6527** |
-| G+E+G×E | 2.6812 | 2.6825 |
-
-Continuous environment information enables a legitimate prediction problem for unseen environments, but the first `G+E` representation improves RMSE over genomics alone by only about 1.4%, with environment-cluster intervals crossing zero. The simple multiplicative G×E kernel also does not earn a pooled RMSE advantage.
-
-That distinction is central:
-
-$$
-\boxed{\text{environment representation enables transfer}}
-$$
-
-but
-
-$$
-\boxed{\text{the first representation does not establish a robust transfer gain}}.
-$$
-
-![Case Study B6 continuous-environment transfer](reports/figures/case_study_b6_environment_transfer.png)
-
-## B6-R — Transfer robustness and environmental novelty
-
-B6-R keeps every B5 outer fold fixed and applies a **nine-configuration nested robustness neighborhood** around the B6 representation. The inner search varies environmental RBF bandwidth, environmental rank, genomic rank, and ridge regularization; selection uses additive `G+E` only, and the selected representation is then reused unchanged for the interaction challenger and strict double-cold-start scenarios.
-
-Three outer folds select a **narrower environmental kernel**, while two select a **higher environmental rank**. None selects a different genomic rank or ridge penalty. This points to environmental geometry, rather than generic genomic complexity, as the main representation bottleneck.
-
-| Regime | Model | RMSE | MAE | $R^2$ | Correlation |
-|---|---|---:|---:|---:|---:|
-| Unseen environment | B6 fixed G+E | 2.6495 | 2.1232 | 0.0958 | 0.3497 |
-| Unseen environment | Selected G | 2.6876 | 2.1524 | 0.0696 | 0.2722 |
-| **Unseen environment** | **Selected G+E** | **2.5693** | 2.0507 | 0.1497 | 0.4002 |
-| Unseen environment | Selected G+E+G×E | 2.5666 | **2.0445** | **0.1514** | **0.4260** |
-| Double cold start | B6 fixed G+E | 2.6527 | 2.1261 | 0.0936 | 0.3474 |
-| Double cold start | Selected G | 2.6917 | 2.1558 | 0.0668 | 0.2681 |
-| **Double cold start** | **Selected G+E** | **2.5726** | 2.0537 | 0.1475 | 0.3979 |
-| Double cold start | Selected G+E+G×E | 2.5724 | **2.0499** | **0.1477** | **0.4229** |
-
-Nested representation selection improves additive `G+E` RMSE by about **3.0%** over the fixed B6 representation in both deployment regimes. Relative to selected genomics alone, the point-estimate improvement is about **4.4%**.
-
-The environment-cluster intervals for `Selected-G+E − Selected-G` still narrowly cross zero, so the project does **not** claim a universal 95%-robust transfer gain. The explicit product interaction contributes essentially no further RMSE reduction after representation tuning and is not promoted as a transfer champion.
-
-Environmental novelty is also measurable. Nearest-training-environment novelty has a weak positive association with environment-level RMSE, and the highest-novelty quartile is about **0.38 RMSE units harder** than the lowest-novelty quartile. This supports environmental support distance as a candidate reliability signal, but not yet as a hard abstention threshold.
-
-![Case Study B6-R environmental novelty versus transfer error](reports/figures/case_study_b6r_novelty_vs_error.png)
-
-## B7 — Which environmental information is actually useful?
-
-B7 freezes the B5 folds and the B6-R outer-fold representation choices. It then audits the environmental matrix and tests biologically structured information blocks without opening another hyperparameter search.
-
-Five `yield_*` environmental columns are treated conservatively as **target-proximal crop-model outputs** and excluded from every new B7 candidate. The frozen B6-R all-EC model remains only as a sensitivity reference. That leaves **197** environmental covariates for the leakage-conservative B7 candidates.
-
-The retained environmental information is separated into process blocks and phenological blocks:
-
-| Block | Retained covariates |
+| Metric | Value |
 |---|---:|
-| Thermal | **36** |
-| Water / soil | **125** |
-| Canopy / growth | **36** |
-| Vegetative | **66** |
-| Reproductive transition | **66** |
-| Grain fill / maturity | **65** |
+| RMSE | **2.6197** |
+| MAE | **2.1235** |
+| R2 | **0.1484** |
+| Pearson correlation | **0.3909** |
+| Frozen 90% interval environment-balanced coverage | **0.8998** |
+| Frozen 90% interval mean score | **10.5301** |
+| One-sided widening-rule environment-balanced coverage | **0.9521** |
+| One-sided widening-rule mean score | **11.1063** |
 
-### Biological representation results
+The frozen 90% uncertainty rule satisfies its predefined 2024 calibration criterion. The predeclared one-sided widening rule over-covers and has a worse interval score, so it is not promoted over the frozen control.
 
-| Environmental representation | CV-E RMSE | CV-GE RMSE |
-|---|---:|---:|
-| B6-R all-EC sensitivity reference | 2.5693 | 2.5726 |
-| All non-target-proximal | 2.5772 | 2.5805 |
-| Thermal | 2.6315 | 2.6351 |
-| Water / soil | 2.6183 | 2.6215 |
-| Canopy / growth | 2.6923 | 2.6963 |
-| Vegetative | **2.8437** | **2.8465** |
-| **Reproductive transition** | **2.5729** | **2.5765** |
-| Grain fill / maturity | 2.6510 | 2.6547 |
-| **Process multiple kernel** | **2.5610** | **2.5642** |
-| Stage multiple kernel | 2.6002 | 2.6037 |
+Postoutcome diagnosis shows mixed error structure: approximately **42.96%** of squared error is associated with environment-level mean bias and **57.04%** remains within environments after centering. The median predicted-to-observed within-environment standard-deviation ratio is **0.2883**, indicating substantial compression of genotype-response spread. These diagnostics explain the frozen system; they do not retrofit it.
 
-Three results matter most.
+## Grounded scientific AI
 
-First, excluding the five target-proximal crop-model outputs changes pooled RMSE by only about **+0.008** in either regime, and the paired environment-cluster intervals cross zero. The B6-R transfer result is therefore not materially dependent on those five variables in this sensitivity test.
+The repository includes a provider-independent grounded scientific interface downstream of the quantitative evidence. It retrieves verified project outputs, traces numerical claims to sources, and blocks unsupported extrapolation rather than allowing a language model to redefine the scientific record.
 
-Second, the **66-variable reproductive-transition representation nearly recovers the all-EC point performance**, while vegetative-only information is decisively weaker. Relative to the all-EC reference, vegetative-only RMSE is about **+0.274** worse in both regimes, with 95% environment-cluster intervals entirely above zero.
+The deterministic grounding benchmark contains **11 cases**. It evaluates the grounding software contract, not the general scientific accuracy of an arbitrary external language model.
 
-Third, an equal-weight process-specific multiple kernel gives the best pooled point estimate, but its advantage is tiny: about **-0.008 RMSE** versus the all-EC sensitivity reference, with intervals crossing zero. It is therefore an interpretability/representation result, **not a robust accuracy breakthrough**.
+## Reproducibility
 
-![Case Study B7 biological environmental representation](reports/figures/case_study_b7_process_kernel_ablation.png)
-
-## B8 — When does environmental information become useful?
-
-B8 keeps the B5 cold-start folds and the B6-R outer-fold representation settings fixed. It accumulates only non-target-proximal environmental information through successive source phenological intervals.
-
-| Decision-horizon representation | CV-E RMSE | CV-GE RMSE |
-|---|---:|---:|
-| Pre-season G only | 2.6876 | 2.6917 |
-| Pre-season training-location history | 2.7160 | 2.7177 |
-| Pre-flowering proxy — 44 ECs | 2.7653 | 2.7686 |
-| Through `EnJFlo` — 66 ECs | 2.8437 | 2.8465 |
-| **Through reproductive stage — 132 ECs** | **2.6108** | **2.6141** |
-| Full-season non-target-proximal — 197 ECs | **2.5772** | **2.5805** |
-
-The result is **not monotonic information accumulation**. Historical-location information does not improve RMSE over genomics alone, and the early current-year representations are weaker under the frozen model. The large transition occurs when the cumulative representation expands through the reproductive-stage intervals: RMSE falls by **8.19%** in CV-E and **8.16%** in CV-GE relative to the preceding 66-variable horizon.
-
-That transition is robust to the 2,000-replicate environment-cluster bootstrap. The reproductive-stage minus preceding-horizon RMSE difference is **-0.2329** with 95% interval **[-0.3688, -0.0933]** in CV-E and **-0.2324** with interval **[-0.3791, -0.0953]** in CV-GE. Improvement frequency is **1.000** in both regimes.
-
-The additional full-season improvement beyond the reproductive-stage representation is small and its environment-cluster interval crosses zero. Likewise, reproductive-stage performance is better than G-only in the pooled point estimate, but that comparison is not 95%-robust across environment clusters.
-
-A critical deployment boundary is explicit. The G2F ECOV source was constructed retrospectively with APSIM phenological intervals whose year-location flowering calibration used average observed silking. Therefore the current-year B8 horizons are **retrospective information-frontier proxies**, not prospective live forecasts. The pre-season history representation uses no held-out current-year ECOV row, but the frozen environment folds are not forward-time folds.
-
-![Case Study B8 decision-horizon information frontier](reports/figures/case_study_b8_decision_horizon.png)
-
-## B9 — Forecast-time-safe environmental states
-
-B9 does **not** fit a new predictor. It converts the deployment limitation exposed by B8 into a reproducible data and validation lock. The retrospective APSIM stage summaries are replaced, for this new experiment, by environmental states whose information is explicitly bounded by forecast issuance time.
-
-Three states are frozen:
-
-| Forecast state | Current-year realized weather admitted | Future weather | Observed anthesis/silking/yield |
-|---|---|---|---|
-| **T0 pre-season** | none | **No** | **No** |
-| **T1 — 30 DAP** | planting → 30 days after planting | **No** | **No** |
-| **T2 — 60 DAP fixed-time proxy** | planting → 60 days after planting | **No** | **No** |
-
-The executed audit covers **136 environments** from 2014–2021, resolves planting dates and coordinates for **100%** of environments, acquires NASA POWER weather at **113 unique coordinates** with zero missingness in the locked weather audit, obtains SSURGO point soil information at every queried coordinate, and produces **408** issuance-safe environment-state rows. The machine audit records **0 future-weather violations** and **0 observed-phenology violations**.
-
-B9 also preserves the original B5 CV-E/CV-GE manifests unchanged and registers a separate chronological validation before modeling:
-
-$$
-\max(year_{train}) < year_{test}.
-$$
-
-The locked forward-year tests cover **113 environments** across six test years, 2016–2021. B9 intentionally reports **no prediction-performance result**: the next model must consume these states and manifests without redefining the horizons after seeing performance.
-
-![Case Study B9 forecast-time input coverage](reports/figures/case_study_b9_input_coverage.png)
-
-A critical boundary remains: B9 reconstructs historical observations as if they were cut off at the issuance date. It is therefore a **retrospective forecast-time-safe backtest substrate**, not a live prospective trial and not an archived weather-forecast benchmark.
-
-## B10 — Forecast-time-safe prediction and Value of Waiting
-
-B10 consumes the frozen B9 issuance-safe states with no new hyperparameter search:
-
-$$
-G \rightarrow G+E_{T0} \rightarrow G+E_{T1} \rightarrow G+E_{T2}.
-$$
-
-The primary benchmark is the B9 forward-year lock, so every training year precedes its test year. B5 CV-E/CV-GE remain secondary continuity checks.
-
-| Primary forward-year model | RMSE | $R^2$ | Correlation |
-|---|---:|---:|---:|
-| G | 2.7642 | -0.0145 | 0.2847 |
-| **G+E_T0** | **2.6635** | 0.0581 | **0.3631** |
-| G+E_T1 | 2.6614 | **0.0595** | 0.3405 |
-| G+E_T2 | **3.2843** | **-0.4322** | **0.1977** |
-
-T0 improves pooled RMSE over G by about **3.64%**, but its cluster intervals cross zero. Waiting from T0 to 30 DAP changes pooled RMSE by only **0.08%**. The key result is non-monotonic: waiting from 30 to 60 DAP makes pooled forward-year RMSE **23.4% worse** under the frozen representation.
-
-The failure is concentrated in early forward backtests. In 2016, with only **23 prior training environments**, T2 RMSE reaches **6.6486**. The catastrophic behavior disappears as historical environmental support expands. B10 therefore identifies a **support-dependent transfer failure**, not evidence that 60-DAP weather is biologically harmful.
-
-For `T2 - T1`, the environment-cluster 95% RMSE-difference interval is **[0.2082, 1.0774]** with zero bootstrap improvement frequency. The year-cluster interval is much wider and crosses zero because only six forward test years are available and the effect is strongly heterogeneous.
-
-![Case Study B10 forecast-time-safe Value of Waiting](reports/figures/case_study_b10_value_of_waiting.png)
-
-## B10-R — Support-aware forward-time geometry diagnosis
-
-B10-R diagnoses the B10 T2 failure without changing the B9 horizons or promoting a post-hoc champion. Across 113 held-out environments, lower maximum training-kernel similarity and greater weather-space distance are associated with larger T2-minus-T1 error. The severe 2016 collapse is highly sensitive to environmental rank/bandwidth: the frozen rank-16/gamma-2 T2 model has RMSE 6.6486, while diagnostic-only alternatives reach roughly 2.23. However, 2017 remains worse than T1 across the tested geometry neighborhood, so the result is not reducible to one bad hyperparameter choice.
-
-The defensible conclusion is that later environmental information is **conditionally usable**: deployment risk depends jointly on historical support, spectral representation, and year-specific environmental state. The B10-R grid is diagnostic only and is not admitted for deployment selection.
-
-![Case Study B10-R support diagnostic](reports/figures/case_study_b10r_support_diagnostic.png)
-
-## B10-S — Training-only forward geometry selection
-
-B10-S asks whether the B10-R oracle insight can be converted into a valid selection rule using only earlier years. The candidate grid is frozen to the same 12 B10-R geometries. For outer year `t`, each candidate is scored only on chronological inner years `y < t`, and each inner year itself uses training years `< y`. The outer-year outcome is never used. Because 2016 has only one usable inner validation year, it is explicitly classified as `INSUFFICIENT_HISTORY_FALLBACK` and retains the frozen B10 geometry.
-
-| Forward model | RMSE | $R^2$ | Correlation |
-|---|---:|---:|---:|
-| Frozen T1 | **2.6614** | **0.0595** | **0.3405** |
-| Frozen T2 | 3.2843 | -0.4322 | 0.1977 |
-| **Training-only selected T2** | **3.4095** | **-0.5435** | **0.1457** |
-
-The result is deliberately preserved as a **negative finding**. Training-only expanding-window selection makes T2 worse than frozen T2 by **0.1252 RMSE**; the environment-cluster 95% interval is **[0.0303, 0.2323]**, and the six-year cluster interval is **[0.0231, 0.2865]**. It is also materially worse than frozen T1. Historical average predictive performance therefore does not reliably identify the next deployment year's best environmental spectral geometry.
-
-This blocks a naive adaptive T2 controller. The next methodological question is temporal stability: whether geometry rankings themselves are persistent enough to support any prospective selector.
-
-![Case Study B10-S training-only geometry selection](reports/figures/case_study_b10s_training_only_geometry.png)
-
-## B10-T — Temporal geometry stability audit
-
-B10-T asks whether the 12 B10-R environmental geometries are rank-persistent enough across the six locked forward years to justify any adaptive T2 controller. No new predictor is fitted.
-
-| Transition | Spearman rank $\rho$ | Top-3 overlap | Previous winner next-year rank | Lagged-winner regret |
-|---|---:|---:|---:|---:|
-| 2016→2017 | 0.014 | 0/3 | 7 | 0.4439 |
-| 2017→2018 | **-0.587** | 0/3 | **12** | 0.3402 |
-| 2018→2019 | 0.503 | 2/3 | 4 | 0.0715 |
-| 2019→2020 | **0.895** | **3/3** | **1** | **0.0000** |
-| 2020→2021 | **-0.874** | **0/3** | **12** | 0.4436 |
-
-Across the five adjacent transitions, mean Spearman rank correlation is **-0.0098**, mean Top-3 overlap is **33.3%**, and the annual winner persists only **20%** of the time. Carrying the previous year's winner forward has mean regret **0.2598 RMSE** and beats frozen T1 in only **2 of 5** transitions.
-
-The 2019→2020 period is a useful counterexample to simplistic narratives: geometry ranking appears highly stable in that transition, but the next transition nearly reverses the full ranking. The 2020 winner falls to rank **12 of 12** in 2021.
-
-Outcome-free support/kernel shifts are also audited, but only five transitions exist. Their correlations are therefore descriptive and do not justify a threshold or controller. The B10-T conclusion is that **rank persistence is not a defensible basis for T2 deployment under the current evidence**.
-
-![Case Study B10-T temporal geometry stability](reports/figures/case_study_b10t_temporal_stability.png)
-
-## B10-U — Geometry-agnostic robust T2 aggregation
-
-B10-U is the locked stopping experiment for the T2 adaptive-geometry branch. Instead of trying to identify one temporally unstable geometry, it symmetrically aggregates the exact 12 frozen B10-R T2 predictions using only two predeclared rules: an equal arithmetic mean and a coordinate-wise median. There are **no learned ensemble weights, no geometry selection, and no post-result tuning**.
-
-| Forward model | RMSE | $R^2$ | Correlation |
-|---|---:|---:|---:|
-| Frozen T1 | 2.6614 | 0.0595 | 0.3405 |
-| Frozen T2 | 3.2843 | -0.4322 | 0.1977 |
-| T2 Mean12 | 2.5892 | 0.1099 | 0.3838 |
-| **T2 Median12** | **2.5765** | **0.1186** | **0.3978** |
-
-Aggregation repairs the frozen-T2 collapse. Median12 lowers pooled RMSE by **0.7078** versus frozen T2 and reduces the worst forward-year RMSE from **6.6486** to **2.6953**. Mean12 shows the same qualitative stabilization.
-
-However, the predeclared admission rule requires robust superiority to frozen T1, not only repair of frozen T2. Median12 has a favorable point difference of **-0.0849 RMSE** versus T1, but its environment-cluster 95% interval is **[-0.1712, 0.0042]** and its six-year cluster interval is **[-0.1875, 0.0585]**. Mean12 likewise crosses zero in both views.
-
-Therefore neither aggregate is admitted. The machine decision is:
-
-`CLOSE_T2_ADAPTIVE_BRANCH_USE_SUPPORTED_T1`
-
-This closure is deliberately narrow. It does **not** mean that T2 contains no useful signal: geometry aggregation clearly recovers signal and removes catastrophic representation failure. It means that, on these same locked forward years, the repaired T2 representation still does not establish a reliable advantage over the safer T1 reference. No further post-hoc T2 geometry tuning is permitted on this dataset.
-
-![Case Study B10-U robust T2 aggregation](reports/figures/case_study_b10u_robust_aggregation.png)
-
-## B11 — Forward-time uncertainty and selective prediction
-
-B11 freezes the supported B10 T1 predictor and asks whether uncertainty can be calibrated **strictly from earlier forward-year residuals**. At least two earlier validation years are required, so 2016 and 2017 are explicitly `INSUFFICIENT_CALIBRATION_HISTORY`; intervals are evaluated only for 2018–2021.
-
-| Forward interval | Nominal | Empirical coverage | Environment-cluster 95% interval | Mean width |
-|---|---:|---:|---:|---:|
-| Global chronological | 80% | 77.54% | [72.59%, 81.89%] | 6.704 |
-| **Global chronological** | **90%** | **88.58%** | **[85.05%, 91.45%]** | **8.503** |
-| Global chronological | 95% | 94.47% | [92.38%, 96.25%] | 10.108 |
-
-The predeclared 90% calibration check passes, so the forward residual-interval layer is admitted. The outcome-free environmental-support abstention rule is **not** admitted: all 77 interval-eligible environments lie inside the training nearest-neighbour envelope, and progressively retaining only nominally closer environments actually worsens RMSE. The machine decision is `ADMIT_FORWARD_INTERVALS_KEEP_SUPPORT_ABSTENTION_DIAGNOSTIC`.
-
-This result is deliberately narrower than a generic conformal guarantee. Coverage varies materially by year, including 83.47% at the 90% nominal level in 2019 and 93.20% in 2021. B11 therefore supports a chronological uncertainty layer while preserving temporal calibration risk and refusing to invent a hard abstention threshold.
-
-![Case Study B11 forward-time coverage](reports/figures/case_study_b11_forward_coverage.png)
-
-![Case Study B11 selective risk](reports/figures/case_study_b11_selective_risk.png)
-
-Detailed Case Study B evidence:
-
-- [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 data and first transfer benchmark
-- [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md) — B6-R nested robustness and novelty audit
-- [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md) — B7 target-proximal audit, process/stage ablations, and multiple-kernel evidence
-- [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md) — B8 decision-horizon information ablation
-- [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md) — B9 forecast-time-safe input and forward-year validation lock
-- [`docs/case_study_b_forecast_time_prediction.md`](docs/case_study_b_forecast_time_prediction.md) — B10 forward-year prediction, Value of Waiting, and support-failure evidence
-- [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md) — B10-R support/spectral-geometry diagnosis
-- [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md) — B10-S training-only selection and negative deployment result
-- [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md) — B10-T year-to-year geometry ranking persistence and lagged-winner regret
-- [`docs/case_study_b_geometry_robust_aggregation.md`](docs/case_study_b_geometry_robust_aggregation.md) — B10-U symmetric T2 aggregation and locked branch-closing decision
-- [`docs/case_study_b_forward_uncertainty.md`](docs/case_study_b_forward_uncertainty.md) — B11 strictly chronological uncertainty calibration and support-aware reliability evidence
-
----
-
-# Grounded scientific interface
-
-The GenAI-facing layer is evidence-first:
-
-$$
-\boxed{
-\text{Question}
-\rightarrow
-\text{validated evidence}
-\rightarrow
-\text{grounding packet}
-\rightarrow
-\text{provider adapter}
-\rightarrow
-\text{claim verification}
-\rightarrow
-\text{answer / withholding}
-}
-$$
-
-The grounding packet carries selected quantitative evidence, exact source files, an answerability state, and instructions preserving uncertainty, retrospective-versus-prospective distinctions, and causality limits.
-
-A provider-independent adapter allows an external API, local model, or callable generator to be connected without changing the evidence layer. The deterministic reference adapter is used for reproducible CI validation; it is **not** presented as an external-LLM performance result.
-
-### Grounding benchmark — deterministic reference adapter
-
-| Metric | Result |
-|---|---:|
-| Benchmark cases | **11** |
-| Grounded Scientific Answer Rate | **100%** |
-| Supported-case pass rate | **100%** |
-| Unsupported safe-response rate | **100%** |
-| Source traceability rate | **100%** |
-| Numerical claims checked | **49** |
-| Verification failures | **0** |
-
-The benchmark validates the grounding/verification software contract, not the scientific accuracy of an arbitrary external LLM.
-
----
-
-# Public data foundation
-
-The repository uses only public research data:
-
-- **Case Study A:** 1001 Genomes + AraPheno, *Arabidopsis thaliana*.
-- **Case Study B wheat:** BGLR/CIMMYT multi-environment wheat benchmark.
-- **Case Study B environmental-transfer extension:** curated Genomes-to-Fields maize genotype, phenotype, and environmental-covariate resource.
-
-No proprietary biotechnology data are used.
-
-# Validation principles
-
-The project avoids naive random splitting when biological structure can leak between train and test partitions. Genotype-aware, environment-aware, sparse multi-environment, and double-cold-start manifests are defined explicitly for the deployment problem being tested.
-
-Feature transformations that learn from biological measurements are fitted on the relevant outer training partition. B6 uses a common fixed ridge penalty for the first information-ablation experiment. B6-R performs a deliberately small nested representation search **inside each outer training partition**. B7 freezes those B6-R choices and changes only the environmental information block, with the five target-proximal `yield_*` outputs excluded from every new candidate. B8 then measures retrospective information accumulation across source stages. B9 freezes three issuance-time states and a separate forward-year manifest before any prospective-input model is fitted. B10 then consumes those frozen states with no new hyperparameter search and makes the chronological forward-year benchmark primary. B10-R then diagnoses the T2 support/geometry failure without selecting a replacement model. B10-S finally converts that diagnostic grid into a strictly training-only expanding-window selection test and preserves its negative result when historical performance fails to transfer. B10-T then audits whether the geometry ranking itself is temporally persistent and rejects rank persistence as a sufficient basis for a T2 controller. B10-U finally tests whether representation uncertainty can be diversified without selecting a geometry; aggregation repairs frozen T2 but does not robustly beat T1, so the adaptive T2 branch closes under its locked stopping rule. B11 then freezes T1 and evaluates strictly chronological residual calibration, admitting the interval layer while keeping environmental-support abstention diagnostic.
-
-Core evaluation includes RMSE, MAE, $R^2$, predictive correlation, interval calibration, selective risk, environment-specific performance, paired cluster-bootstrap uncertainty, environmental-support diagnostics, biological information ablation, decision-horizon availability auditing, and grounded-answer verification.
-
-# Reproducibility
-
-GitHub Actions separates lightweight software checks from real-data executions. Current workflows include:
-
-- `ci.yml` — lightweight unit tests;
-- `grounded-ai-evaluation.yml` — grounded scientific answer evaluation;
-- `case-study-a.yml` — full Case Study A real-data rebuild;
-- `downstream-analysis.yml` — Case Study A uncertainty, selection and decision outputs;
-- `case-study-b-data-lock.yml` — wheat data lock;
-- `case-study-b-modeling.yml` — classical wheat G×E benchmark and robustness;
-- `case-study-b-ml.yml` — frozen-baseline high-dimensional ML challengers;
-- `case-study-b-uncertainty.yml` — wheat uncertainty and deployment boundaries;
-- `case-study-b5-data-lock.yml` — continuous-environment Genomes-to-Fields data lock;
-- `case-study-b6-environment-transfer.yml` — first unseen-environment and double-cold-start transfer benchmark;
-- `case-study-b6r-transfer-robustness.yml` — nested environmental-representation robustness and novelty audit;
-- `case-study-b7-process-kernels.yml` — target-proximal audit and biological process/phenology environmental representation;
-- `case-study-b8-decision-horizons.yml` — decision-time availability audit and temporal information-frontier benchmark.
-- `case-study-b9-prospective-environment.yml` — forecast-time-safe weather/soil/management data and forward-year validation lock.
-- `case-study-b10-forecast-time-prediction.yml` — frozen-horizon forward-year prediction and Value-of-Waiting benchmark.
-- `case-study-b10r-support-diagnostics.yml` — support-aware forward-time environmental geometry diagnosis.
-- `case-study-b10s-training-only-geometry.yml` — training-only chronological T2 geometry-selection reproduction.
-- `case-study-b10t-temporal-stability.yml` — temporal geometry ranking, Top-k persistence, lagged-winner regret, and outcome-free shift audit.
-- `case-study-b10u-robust-aggregation.yml` — equal-mean/median T2 geometry aggregation and predeclared stopping decision.
-- `case-study-b11-forward-uncertainty.yml` — frozen-T1 forward residual calibration, coverage, reliability, and selective-risk audit.
-
-Install the core package with:
+Install the core package:
 
 ```bash
 python -m pip install -e .
 ```
 
+Optional Case Study B dependency:
+
+```bash
+python -m pip install -e '.[case-study-b]'
+```
+
 Representative executions:
 
 ```bash
-python -m plant_intelligence.uncertainty.conformal
-python -m plant_intelligence.optimization.active_learning
-python -m plant_intelligence.optimization.decision_engine
-python -m plant_intelligence.ai.grounded_interface "What should I know about this case study?"
-python -m plant_intelligence.ai.evaluation --output-dir reports/results
-python -m pip install -e '.[case-study-b]'
 python -m plant_intelligence.data.wheat_gxe --output-root .
 python -m plant_intelligence.models.wheat_gxe_baseline --output-root .
 python -m plant_intelligence.data.maize_environment_transfer --output-root .
-python -m plant_intelligence.models.maize_environment_transfer --output-root .
-python -m plant_intelligence.models.maize_environment_transfer_robustness --output-root .
-python -m plant_intelligence.models.maize_environment_process_kernels --output-root .
-python -m plant_intelligence.models.maize_environment_decision_horizons --output-root .
 python -m plant_intelligence.data.maize_prospective_environment --output-root .
 python -m plant_intelligence.models.maize_forecast_time_prediction --output-root .
-python -m plant_intelligence.models.maize_forward_support_diagnostics --output-root .
-python -m plant_intelligence.models.maize_training_only_geometry_selection --output-root .
-python -m plant_intelligence.models.maize_geometry_temporal_stability --output-root .
-python -m plant_intelligence.models.maize_geometry_robust_aggregation --output-root .
 python -m plant_intelligence.uncertainty.maize_forward_uncertainty --output-root .
+python -m plant_intelligence.ai.evaluation --output-dir reports/results
 ```
 
-# Repository structure
+GitHub Actions separates lightweight unit checks from real-data workflows. Stage-specific workflows remain in `.github/workflows/` as part of the reproducible computational record.
+
+## Repository structure
 
 ```text
 plant-intelligence-lab/
-├── .github/workflows/       # lightweight and real-data CI pipelines
-├── data/                    # source documentation; raw data excluded from Git
-├── docs/                    # methodology, biological context, limits and transfer studies
-├── notebooks/               # Case Study A exploratory/reproducible notebooks
-├── reports/
-│   ├── figures/             # published empirical figures
-│   └── results/             # compact machine-readable evidence
-├── src/plant_intelligence/
-│   ├── ai/
-│   ├── data/
-│   ├── forecasting/
-│   ├── genetics/
-│   ├── models/
-│   ├── optimization/
-│   └── uncertainty/
-├── tests/
-├── CITATION.cff
-├── LICENSE
-├── pyproject.toml
-└── README.md
+|-- .github/workflows/       # CI and real-data execution workflows
+|-- data/                    # source notes; raw public data excluded from Git
+|-- docs/                    # methods, case-study evidence, limits, documentation map
+|-- notebooks/               # exploratory/reproducible notebooks
+|-- reports/
+|   |-- figures/             # empirical figures
+|   `-- results/             # machine-readable evidence, seals, audit records
+|-- src/plant_intelligence/  # data, models, diagnostics, forecasting, AI, uncertainty
+|-- tests/
+|-- CITATION.cff
+|-- LICENSE
+|-- pyproject.toml
+`-- README.md
 ```
 
-# Industrial relevance
+## Public data foundation
 
-The repository demonstrates a reusable decision architecture rather than one fitted model. The relevant industry problem is to determine which biological information is sufficient for a decision, whether a prediction is supported in the deployment context, whether additional complexity creates measurable value, **when new information becomes worth waiting for**, and where the model should decline to extrapolate.
+The repository uses public research resources only:
 
-The demonstrated capabilities are transferable to breeding, multi-environment testing, propagation/regeneration analytics, high-dimensional omics, treatment-response modelling, early biological monitoring, experimental prioritization, uncertainty-aware decision support, and evidence-grounded scientific interfaces.
+- 1001 Genomes and AraPheno for *Arabidopsis thaliana*;
+- BGLR/CIMMYT multi-environment wheat data;
+- Genomes-to-Fields maize genotype, phenotype, environment, and external-evaluation resources;
+- NASA POWER weather;
+- USDA-NRCS SSURGO soil information.
 
-# Limits on interpretation
+Raw source files are excluded from Git where reproducible retrieval, hashes, schema audits, and reconstruction code are sufficient to rebuild the analysis.
 
-Performance claims apply only to the evaluated public datasets, target definitions, and locked validation designs. In particular, the project does **not** claim:
+## Scientific boundaries
 
-- causal biological mechanisms from predictive associations;
-- prospective laboratory savings from retrospective experiment selection;
-- validated performance on proprietary commercial processes;
-- automatic transfer of fitted models across species, laboratories, breeding programs, or production conditions;
-- universal future-climate prediction;
-- that the B6-R continuous-environment gain is universal across environments: its 95% environment-cluster intervals still cross zero;
-- that environmental novelty is already strong enough to define a prospective abstention threshold;
-- that the B6/B6-R product kernel is a causal G×E decomposition or a robust RMSE improvement over additive environmental transfer;
-- that the five excluded crop-model `yield_*` variables prove direct target leakage; B7 treats them conservatively as target-proximal and reports a sensitivity analysis;
-- that the B7 process multiple kernel establishes a robust accuracy gain; its environment-cluster interval crosses zero;
-- that phenology-block predictive differences establish causal stage-specific mechanisms;
-- that B8 is prospective deployment validation: the source ECOV table is retrospective and the frozen environment folds are not forward-time folds;
-- that B8's reproductive-stage information jump proves early environmental conditions are biologically unimportant;
-- that historical-location environmental summaries improve pre-season RMSE in the current representation;
-- that B9 is prospective field validation: its inputs are reconstructed retrospectively with strict issuance cutoffs, T1/T2 use observed-to-date weather rather than archived forecasts, and T2 is a fixed 60-DAP proxy rather than observed reproductive phenology;
-- that B10 proves waiting to 60 DAP is generally harmful: the pooled forward-year failure is strongly year-dependent and concentrated when historical environmental support is thin;
-- that B10 establishes a final deployment horizon or an optimal environmental kernel: the 2016 T2 failure requires a support/geometry diagnostic before model complexity is changed;
-- that the six-year forward bootstrap provides a precise year-level uncertainty distribution;
-- that B10-R establishes a deployable spectral geometry or validated support threshold: its rank/bandwidth grid is diagnostic and uses held-out outcomes only for explanation;
-- that B10-S proves adaptive geometry selection is impossible: it rejects the tested expanding-window outcome-based selector, not every possible training-only stability criterion;
-- that the B10-S oracle-regret table is a prospective benchmark: oracle configurations explicitly use outer-year outcomes and are never admitted for deployment;
-- that B10-T establishes a deployable rank-persistence controller: mean adjacent-year rank correlation is near zero, annual winners rarely persist, and the outcome-free shift correlations have only five transitions;
-- that the strongest B10-T outcome-free shift correlation defines a biological mechanism or threshold: those associations are descriptive small-n diagnostics only;
-- that B11 establishes a universal conformal guarantee: its intervals are a strictly chronological residual-calibration backtest over four interval-eligible forward years;
-- that B11 validates environmental-support abstention: no interval-eligible environment crossed the predeclared nearest-neighbour support envelope, and softer support filtering worsened rather than improved retrospective risk;
-- that B10-U proves the median T2 aggregate is a deployment champion: its pooled point estimate is favorable but both paired 95% cluster intervals versus T1 cross zero;
-- that B10-U shows T2 information is useless: symmetric aggregation robustly repairs the frozen-T2 failure, but the predeclared stopping rule still closes the adaptive T2 branch because superiority to T1 is not established;
-- that further optimized T2 ensemble weights should be fitted on these same forward years: B10-U explicitly forbids post-result tuning after the stopping decision;
-- that genomic information is generally unimportant because it did not improve one Case Study A forecast;
-- that a language model may override or extrapolate beyond validated quantitative evidence;
-- that the deterministic grounding benchmark measures a real external LLM's scientific accuracy.
+Performance claims apply only to the evaluated public datasets, targets, and locked validation designs. In particular:
 
-See [`docs/limitations.md`](docs/limitations.md), [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md), [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md), [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md), [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md), and [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md), [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md), and [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md), and [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md), and [`docs/case_study_b_geometry_robust_aggregation.md`](docs/case_study_b_geometry_robust_aggregation.md) for the detailed boundaries.
+- predictive association is not a causal biological mechanism;
+- retrospective experiment prioritization is not a prospective laboratory trial;
+- historical forecast-time reconstruction is not an archived operational weather forecast;
+- the 2024 maize evaluation was sealed before repository outcome access, but was not calendar-time prospective;
+- the 2022 observable-case result is diagnostic because the 420-case primary cohort was incomplete;
+- 2023 provides no prediction-performance result;
+- Case Study B does not validate a support-based abstention threshold;
+- postoutcome diagnostics are explanatory, not deployable corrections;
+- fitted models should not be assumed to transfer automatically across breeding programs, species, or production environments.
 
-# Documentation
+Detailed boundaries are maintained in [`docs/limitations.md`](docs/limitations.md).
 
-- [`docs/methodology.md`](docs/methodology.md) — quantitative methodology and grounded-interface design
-- [`docs/biological_context.md`](docs/biological_context.md) — biological context
-- [`docs/case_study_b_data_lock.md`](docs/case_study_b_data_lock.md) — wheat source and validation design
-- [`docs/case_study_b_modeling.md`](docs/case_study_b_modeling.md) — classical wheat G×E benchmark
-- [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) — B5/B6 continuous-environment data lock and transfer evidence
-- [`docs/case_study_b_transfer_robustness.md`](docs/case_study_b_transfer_robustness.md) — B6-R environmental-representation robustness and novelty evidence
-- [`docs/case_study_b_biological_environment.md`](docs/case_study_b_biological_environment.md) — B7 process/phenology environmental ablation and target-proximal sensitivity
-- [`docs/case_study_b_decision_horizons.md`](docs/case_study_b_decision_horizons.md) — B8 decision-time information accumulation and source-level availability boundary
-- [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md) — B9 issuance-safe environmental inputs and forward-year validation lock
-- [`docs/case_study_b_forecast_time_prediction.md`](docs/case_study_b_forecast_time_prediction.md) — B10 forecast-time prediction, Value of Waiting, and forward-support diagnostics
-- [`docs/case_study_b_forward_uncertainty.md`](docs/case_study_b_forward_uncertainty.md) — B11 forward-time uncertainty calibration and selective prediction
-- [`docs/case_study_b_forward_support_diagnostics.md`](docs/case_study_b_forward_support_diagnostics.md) — B10-R support and spectral-geometry diagnosis
-- [`docs/case_study_b_training_only_geometry_selection.md`](docs/case_study_b_training_only_geometry_selection.md) — B10-S training-only geometry-selection test
-- [`docs/case_study_b_temporal_geometry_stability.md`](docs/case_study_b_temporal_geometry_stability.md) — B10-T temporal ranking-stability audit
-- [`docs/case_study_b_geometry_robust_aggregation.md`](docs/case_study_b_geometry_robust_aggregation.md) — B10-U robust geometry aggregation and branch closure
-- [`docs/limitations.md`](docs/limitations.md) — interpretation boundaries
-- [`docs/transferability.md`](docs/transferability.md) — transfer to biotechnology applications
-- [`docs/Plant_Intelligence_Lab_Technical_Architecture.pdf`](docs/Plant_Intelligence_Lab_Technical_Architecture.pdf) — technical architecture document
-- [`reports/Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf`](reports/Plant_Intelligence_Lab_Case_Study_A_Decision_Report.pdf) — validated Case Study A decision report
+## Documentation
 
-# Scientific principles
+Use [`docs/README.md`](docs/README.md) as the documentation map. Recommended entry points include:
 
-1. **Real data before synthetic demonstration.**
-2. **Generalization matters more than in-sample fit.**
-3. **Prediction is not causation.**
-4. **Biological, temporal, genotype and environment leakage must be prevented.**
-5. **Uncertainty is part of the prediction.**
-6. **A model should abstain when evidence is insufficient.**
-7. **Complexity must earn measurable value.**
-8. **Experimental recommendations must remain traceable to validated quantitative outputs.**
-9. **Retrospective evidence must not be presented as prospective validation.**
-10. **GenAI must remain downstream of verified evidence.**
-11. **Generated scientific claims must pass traceability and boundary checks before release.**
-12. **Results should be reproducible.**
+- [`docs/methodology.md`](docs/methodology.md) - quantitative methodology and software architecture;
+- [`docs/biological_context.md`](docs/biological_context.md) - biological context;
+- [`docs/case_study_b_data_lock.md`](docs/case_study_b_data_lock.md) - wheat data and validation design;
+- [`docs/case_study_b_environment_transfer.md`](docs/case_study_b_environment_transfer.md) - maize continuous-environment transfer;
+- [`docs/case_study_b_prospective_environment.md`](docs/case_study_b_prospective_environment.md) - forecast-time-safe environmental states;
+- [`docs/case_study_b_external_temporal_validation.md`](docs/case_study_b_external_temporal_validation.md) - sealed 2022 external evaluation and diagnostic boundary;
+- [`docs/case_study_b14c_2024_results.md`](docs/case_study_b14c_2024_results.md) - completed 2024 external results;
+- [`docs/case_study_b_closure_and_contribution_audit.md`](docs/case_study_b_closure_and_contribution_audit.md) - scientific closure and contribution boundary.
 
-# License
+Machine-readable evidence is under [`reports/results/`](reports/results/), and empirical figures are under [`reports/figures/`](reports/figures/).
 
-This repository is licensed under the **Apache License 2.0**. See [`LICENSE`](LICENSE).
+## License
 
-# Citation
+Licensed under the **Apache License 2.0**. See [`LICENSE`](LICENSE).
 
-Pereira, Rodolfo. (2026). *Plant Intelligence Lab: Genomic Prediction, Phenotype Forecasting & AI-Assisted Biological Decision Systems*. ShockBridge Pulse Research Lab. Python research software.
+## Citation
 
-See [`CITATION.cff`](https://github.com/rolffcoelho-bravo/plant-intelligence-lab/blob/main/CITATION.cff) for machine-readable citation metadata.
+Pereira, Rodolfo. (2026). *Plant Intelligence Lab: Applied Data Science for Genomic Prediction, Phenotype Forecasting and Biological Decision Support*. ShockBridge Pulse Research Lab. Python research software.
 
-# Disclaimer
-
-This project is for research, education, reproducible benchmarking, and professional portfolio demonstration. It does not provide biological, agronomic, breeding, laboratory, regulatory, production, or commercial recommendations; it does not establish prospective laboratory performance; and it is not a substitute for domain-specific experimental validation, biosafety review, or institution-specific decision processes.
+Machine-readable metadata are available in [`CITATION.cff`](CITATION.cff).
 
 ---
 
 **Plant Intelligence Lab**  
-Rodolfo Pereira · ShockBridge Pulse Research Lab
+Rodolfo Pereira - ShockBridge Pulse Research Lab

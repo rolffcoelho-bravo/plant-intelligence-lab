@@ -1,0 +1,21 @@
+claim,permitted,claim_class
+"Seal-first blinded external validation of a frozen early-season G+E_T1 system on the public 2024 G2F release.",True,PRIMARY_ALLOWED
+"The 2024 evaluation was calendar-time prospective before outcomes became public.",False,PROHIBITED_OVERCLAIM
+"The 2022 420-cell primary cohort completed and failed calibration.",False,PROHIBITED_B12_INFLATION
+"The 2022 available-case cohort supplied negative diagnostic evidence for interval transport.",True,ALLOWED_WITH_DIAGNOSTIC_LABEL
+"The 2023 target season was unevaluable under the fixed T1 information interface without inventing a planting-date proxy.",True,ALLOWED_SOURCE_INTERFACE_RESULT
+"The 2024 source-compatibility gate admitted a frozen 798-cell prediction universe before repository outcome access.",True,PRIMARY_ALLOWED
+"The 2024 primary observable sealed-key cohort contains 779 cells across 19 environments and 92 genotypes.",True,PRIMARY_ALLOWED
+"On the 2024 primary cohort the frozen G+E_T1 point predictor achieved RMSE 2.6197348509 and R2 0.1484401927.",True,PRIMARY_ALLOWED
+"The frozen B11 90% interval rule passed the inherited 2024 calibration criterion with environment-balanced coverage 0.8997721030.",True,PRIMARY_ALLOWED
+"The one-sided carry-forward widening rule failed the inherited 2024 calibration criterion with environment-balanced coverage 0.9521031534 and a worse mean interval score than the frozen control.",True,PRIMARY_ALLOWED
+"Case Study B establishes a general monotone or nonmonotone law of seasonal calibration error.",False,PROHIBITED_OVERGENERALIZATION
+"The direction of the previous observed calibration error was not sufficiently transport-stable to justify the predeclared one-sided next-season correction in this frozen sequence.",True,PRIMARY_ALLOWED
+"The 2024 postoutcome diagnostic shows mixed error structure including environment offsets, within-environment error, weak-to-moderate genotype ordering and prediction under-dispersion.",True,ALLOWED_DIAGNOSTIC_INTERPRETATION
+"The postoutcome error decomposition is a new methodology.",False,PROHIBITED_NOVELTY_INFLATION
+"For the deployed additive G+E architecture the environmental main effect cancels from same-environment genotype contrasts in exact arithmetic.",True,ALLOWED_STRUCTURAL_BACKGROUND
+"The additive-architecture audit establishes a new contraction theorem.",False,PROHIBITED_NOVELTY_INFLATION
+"Case Study B validates support-based abstention as a selective-risk mechanism.",False,PROHIBITED_UNSUPPORTED_CLAIM
+"Case Study B introduces a new state-of-the-art GxE predictive architecture.",False,PROHIBITED_UNSUPPORTED_CLAIM
+"The closed T2 adaptive branch may be reopened using the same revealed evidence.",False,PROHIBITED_PROTOCOL_VIOLATION
+"Case Study B is scientifically closed with external-validation contribution supported and predictive-method novelty not supported.",True,SCIENTIFIC_CLOSURE
