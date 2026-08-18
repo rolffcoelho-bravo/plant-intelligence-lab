@@ -1,0 +1,109 @@
+name: Case Study B15 - Calibration Transport Theory Lock
+
+on:
+  push:
+    branches:
+      - agent/b15-calibration-transportability-theory
+    paths:
+      - 'src/plant_intelligence/uncertainty/maize_b15_calibration_transport.py'
+      - 'tests/test_case_study_b15_calibration_transport.py'
+      - 'docs/case_study_b15_calibration_transportability_theory.md'
+      - 'docs/case_study_b15_literature_boundary.md'
+      - 'reports/results/case_study_b15_theory_lock.json'
+      - 'reports/results/case_study_b15_empirical_motivation.csv'
+      - '.github/workflows/case-study-b15-theory-lock.yml'
+  pull_request:
+    paths:
+      - 'src/plant_intelligence/uncertainty/maize_b15_calibration_transport.py'
+      - 'tests/test_case_study_b15_calibration_transport.py'
+      - 'docs/case_study_b15_calibration_transportability_theory.md'
+      - 'docs/case_study_b15_literature_boundary.md'
+      - 'reports/results/case_study_b15_theory_lock.json'
+      - 'reports/results/case_study_b15_empirical_motivation.csv'
+      - '.github/workflows/case-study-b15-theory-lock.yml'
+
+jobs:
+  theory-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install package and test dependency
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Run B15 theorem tests
+        run: pytest -q tests/test_case_study_b15_calibration_transport.py
+
+      - name: Verify B15 lock and historical motivation against merged evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+
+          root = Path('.')
+          results = root / 'reports' / 'results'
+          lock = json.loads((results / 'case_study_b15_theory_lock.json').read_text(encoding='utf-8'))
+          motivation = pd.read_csv(results / 'case_study_b15_empirical_motivation.csv')
+          b12 = pd.read_csv(results / 'case_study_b12_2022_available_case_coverage.csv')
+          b14 = pd.read_csv(results / 'case_study_b14c_2024_interval_summary.csv')
+
+          assert lock['stage'] == 'B15_CALIBRATION_TRANSPORTABILITY_THEORY'
+          assert lock['nominal_coverage'] == 0.9
+          assert lock['transport_identity'] == 'DELTA_T_MINUS_DELTA_S_EQUALS_GAMMA_MIX_PLUS_GAMMA_COND'
+          assert lock['new_outcome_access_permitted'] is False
+          assert lock['new_prediction_generation_permitted'] is False
+          assert lock['adaptive_rule_tuning_permitted'] is False
+          assert lock['adaptive_rule_promotion_permitted'] is False
+          assert lock['point_predictor_change_permitted'] is False
+          assert lock['b5_genotype_representation_change_permitted'] is False
+          assert lock['t1_clock_change_permitted'] is False
+          assert lock['t2_reopening_permitted'] is False
+          assert lock['support_threshold_tuning_permitted'] is False
+          assert lock['reseal_permitted'] is False
+
+          b12_90 = b12.loc[np.isclose(b12['nominal'], 0.9)].iloc[0]
+          b14_c0 = b14.loc[b14['rule'].eq('FROZEN_B11_90')].iloc[0]
+          b14_c1 = b14.loc[b14['rule'].eq('ONE_SIDED_CLUSTER_DRIFT_GUARD_90')].iloc[0]
+
+          expected = {
+              ('B12', 2022, 'FROZEN_B11_90'): (
+                  float(b12_90['empirical_coverage']),
+                  float(b12_90['environment_balanced_coverage']),
+              ),
+              ('B14C', 2024, 'FROZEN_B11_90'): (
+                  float(b14_c0['empirical_coverage']),
+                  float(b14_c0['environment_balanced_coverage']),
+              ),
+              ('B14C', 2024, 'ONE_SIDED_CLUSTER_DRIFT_GUARD_90'): (
+                  float(b14_c1['empirical_coverage']),
+                  float(b14_c1['environment_balanced_coverage']),
+              ),
+          }
+
+          assert len(motivation) == 3
+          for row in motivation.itertuples(index=False):
+              key = (row.source_stage, int(row.target_year), row.rule)
+              empirical, balanced = expected[key]
+              assert np.isclose(row.empirical_coverage_90, empirical, rtol=0, atol=1e-15)
+              assert np.isclose(row.environment_balanced_coverage_90, balanced, rtol=0, atol=1e-15)
+              assert np.isclose(
+                  row.signed_environment_balanced_gap_90,
+                  balanced - 0.9,
+                  rtol=0,
+                  atol=1e-15,
+              )
+              assert str(row.used_to_fit_b15_theory).lower() == 'false'
+              assert str(row.new_outcome_access).lower() == 'false'
+
+          print('B15 theory lock and historical motivation verified.')
+          PY
