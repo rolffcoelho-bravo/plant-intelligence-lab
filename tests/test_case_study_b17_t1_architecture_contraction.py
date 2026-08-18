@@ -3,6 +3,7 @@ import pandas as pd
 
 from plant_intelligence.diagnostics.maize_b17_t1_architecture_contraction import (
     DECISION,
+    FLOAT32_FOUR_TERM_ULP_BUDGET,
     additive_prediction,
     interaction_prediction,
     operator_equivalence_table,
@@ -11,15 +12,21 @@ from plant_intelligence.diagnostics.maize_b17_t1_architecture_contraction import
 )
 
 
-def _sealed_like(add_interaction: bool = False) -> pd.DataFrame:
+def _sealed_like(add_interaction: bool = False, as_float32: bool = False) -> pd.DataFrame:
     genotypes = ["G1", "G2", "G3", "G4"]
     g = np.array([-1.5, -0.5, 0.5, 2.0])
     rows = []
     for env, e in (("E1", 0.25), ("E2", 1.50), ("E3", -0.75)):
-        if add_interaction:
-            p = interaction_prediction(g, np.full_like(g, e), 0.8, 1.2, 0.6, intercept=4.0)
-        else:
-            p = interaction_prediction(g, np.full_like(g, e), 0.8, 1.2, 0.0, intercept=4.0)
+        p = interaction_prediction(
+            g,
+            np.full_like(g, e),
+            0.81234567,
+            1.23456789,
+            0.6 if add_interaction else 0.0,
+            intercept=9.87654321,
+        )
+        if as_float32:
+            p = p.astype(np.float32).astype(float)
         for genotype, pred in zip(genotypes, p):
             rows.append({"genotype": genotype, "environment": env, "predicted": pred})
     return pd.DataFrame(rows)
@@ -38,17 +45,27 @@ def test_additive_g_plus_e_pairwise_contrasts_are_environment_invariant():
             assert np.isclose(p1[i] - p1[j], p2[i] - p2[j], atol=1e-12, rtol=0.0)
 
 
-def test_pairwise_invariance_audit_accepts_additive_and_detects_interaction():
+def test_pairwise_invariance_audit_accepts_exact_additive_and_detects_interaction():
     additive = _sealed_like(add_interaction=False)
-    audit, summary = pairwise_invariance_audit(additive, tolerance=1e-12)
+    audit, summary = pairwise_invariance_audit(additive, csv_tolerance=1e-12)
     assert len(audit) == 3
-    assert summary.all_environment_pair_contrasts_invariant_within_seal_precision
+    assert summary.all_environment_pair_contrasts_invariant_within_csv_only_precision
+    assert summary.all_environment_pair_contrasts_consistent_with_float32_implementation
     assert summary.max_abs_pairwise_contrast_deviation < 1e-12
 
     interacting = _sealed_like(add_interaction=True)
-    _, interaction_summary = pairwise_invariance_audit(interacting, tolerance=1e-12)
-    assert not interaction_summary.all_environment_pair_contrasts_invariant_within_seal_precision
+    _, interaction_summary = pairwise_invariance_audit(interacting, csv_tolerance=1e-12)
+    assert not interaction_summary.all_environment_pair_contrasts_invariant_within_csv_only_precision
+    assert not interaction_summary.all_environment_pair_contrasts_consistent_with_float32_implementation
     assert interaction_summary.max_abs_pairwise_contrast_deviation > 0.0
+
+
+def test_float32_rounded_additive_predictions_use_fixed_four_term_ulp_budget():
+    additive32 = _sealed_like(add_interaction=False, as_float32=True)
+    audit, summary = pairwise_invariance_audit(additive32, csv_tolerance=0.0)
+    assert summary.all_environment_pair_contrasts_consistent_with_float32_implementation
+    assert (audit["max_pairwise_deviation_in_local_float32_ulp"] <= FLOAT32_FOUR_TERM_ULP_BUDGET).all()
+    assert FLOAT32_FOUR_TERM_ULP_BUDGET == 4.0
 
 
 def test_ridge_spectral_filter_is_standard_bounded_attenuation():
