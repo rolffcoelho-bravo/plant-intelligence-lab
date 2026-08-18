@@ -1,0 +1,2 @@
+support_group,reliability_state,n,n_environments,rmse,mae,control_coverage_90,adaptive_coverage_90,support_used_for_primary_selection,support_threshold_tuned_on_2024
+WITHIN_TRAINING_NN_ENVELOPE,RETAIN_SUPPORTED,779,19,2.6197348508709113,2.1234900139513737,0.9139922978177151,0.9576379974326059,False,False

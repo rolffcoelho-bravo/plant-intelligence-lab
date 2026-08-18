@@ -1,0 +1,8 @@
+primary_cohort: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14c_2024_primary_cohort.csv
+key_audit: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14c_2024_key_audit.csv
+interval_summary: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14c_2024_interval_summary.csv
+environment_summary: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14c_2024_environment_summary.csv
+support_diagnostic: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14c_2024_support_diagnostic.csv
+primary_summary: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14c_2024_primary_summary.csv
+decision: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14c_2024_decision.csv
+outcome_source_seal: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14c_2024_outcome_source_seal.json

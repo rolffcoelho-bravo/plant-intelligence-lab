@@ -1,0 +1,8 @@
+{
+  "candidate_universe_sha256": "32e4f308522ee849e498d2bf0614f3ec349574a27bb327fefeb80e0f4e05bf7f",
+  "gate": "B14C_B14B_SEAL_VERIFIED_BEFORE_OUTCOME_ACQUISITION",
+  "n_predictions": 798,
+  "outcome_accessed_at_gate": false,
+  "prediction_sha256": "91c765ea994f557db1911865309bca94ebc2110b87a5fea483a03c879d1fb19d",
+  "stage": "B14C_PRE_REVEAL_GATE"
+}
