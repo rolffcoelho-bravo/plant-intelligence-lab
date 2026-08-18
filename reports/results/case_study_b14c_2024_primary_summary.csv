@@ -1,0 +1,2 @@
+stage,target_year,primary_estimand,n_sealed,n_officially_observable,n_sealed_keys_absent_from_official,n_genotypes,n_environments,rmse,mae,r2,correlation,selection_uses_outcome_value,post_reveal_protocol_amendment,point_predictor_changed,b5_genotype_representation_changed,t1_clock_changed,t2_branch_reopened,post_result_tuning_permitted
+B14C,2024,OFFICIALLY_OBSERVABLE_SEALED_KEYS,798,779,19,92,19,2.6197348508709113,2.1234900139513737,0.14844019270495168,0.390901094352944,False,False,False,False,False,False,False

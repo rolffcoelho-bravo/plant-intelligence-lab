@@ -1,0 +1,13 @@
+{
+  "cohort_selection_uses_outcome_value": false,
+  "official_object": "/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Testing_data/7_Testing_Observed_Values.csv",
+  "official_release_doi": "10.25739/78mn-4394",
+  "outcome_accessed": true,
+  "post_result_tuning_permitted": false,
+  "prediction_sha256_verified_before_outcome_read": "91c765ea994f557db1911865309bca94ebc2110b87a5fea483a03c879d1fb19d",
+  "schema": "plant-intelligence-lab/b14c-2024-outcome-source-seal/v1",
+  "sha256": "8bd354c44bce50abd09a9839272112fdb34bdb96ec6e37ae644eda916aeeabcc",
+  "size_bytes": 420463,
+  "stage": "B14C_2024_EXTERNAL_REVEAL",
+  "target_year": 2024
+}

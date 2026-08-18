@@ -1,0 +1,253 @@
+name: Case Study B14C - Seal-First 2024 Reveal
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/plant_intelligence/uncertainty/maize_b14c_2024_sealed_reveal.py'
+      - 'tests/test_case_study_b14c_2024_sealed_reveal.py'
+      - 'docs/case_study_b14c_2024_sealed_reveal.md'
+      - 'reports/results/.b14c_protocol_locked'
+      - 'reports/results/case_study_b14c_pre_reveal_lock.json'
+      - '.github/workflows/case-study-b14c-2024-sealed-reveal.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sealed-2024-reveal:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/b14c-2024-sealed-reveal'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Python environment only
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Validate B14C pre-reveal guardrails
+        run: |
+          pytest -q tests/test_case_study_b14c_2024_sealed_reveal.py
+
+      - name: Verify protocol and immutable B14B seal before any external outcome tooling
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          from plant_intelligence.uncertainty import maize_b14c_2024_sealed_reveal as b14c
+
+          root = Path('.')
+          lock = b14c.verify_pre_reveal_lock(root)
+          sealed = b14c.verify_b14b_before_outcome(root)
+          assert len(sealed) == 798
+          assert sealed['genotype'].nunique() == 92
+          assert sealed['environment'].nunique() == 19
+          assert lock['primary_estimand'] == 'OFFICIALLY_OBSERVABLE_SEALED_KEYS'
+          assert lock['outcome_value_used_for_selection'] is False
+          assert lock['post_result_tuning_permitted'] is False
+          gate = {
+              'stage': 'B14C_PRE_REVEAL_GATE',
+              'gate': 'B14C_B14B_SEAL_VERIFIED_BEFORE_OUTCOME_ACQUISITION',
+              'prediction_sha256': b14c.EXPECTED_PREDICTION_SHA256,
+              'candidate_universe_sha256': b14c.EXPECTED_CANDIDATE_SHA256,
+              'n_predictions': 798,
+              'outcome_accessed_at_gate': False,
+          }
+          Path('reports/results/case_study_b14c_pre_reveal_gate.json').write_text(
+              json.dumps(gate, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(gate, indent=2, sort_keys=True))
+          PY
+
+      - name: Install CyVerse GoCommands after scientific gate
+        run: |
+          set -euo pipefail
+          rm -f gocmd gocmd.tar.gz
+          GOCMD_VER=$(curl -fL --retry 3 --retry-delay 2 --connect-timeout 20 \
+            https://raw.githubusercontent.com/cyverse/gocommands/main/VERSION.txt)
+          test -n "$GOCMD_VER"
+          curl -fL --retry 3 --retry-delay 2 --connect-timeout 20 \
+            -o gocmd.tar.gz \
+            "https://github.com/cyverse/gocommands/releases/download/${GOCMD_VER}/gocmd-${GOCMD_VER}-linux-amd64.tar.gz"
+          tar xzf gocmd.tar.gz
+          chmod +x gocmd
+          test -x ./gocmd
+
+      - name: Acquire exactly the locked official 2024 observed-values object
+        env:
+          IRODS_HOST: data.cyverse.org
+          IRODS_PORT: '1247'
+          IRODS_ZONE_NAME: iplant
+          IRODS_USER_NAME: anonymous
+          IRODS_USER_PASSWORD: ''
+        run: |
+          set -euo pipefail
+          REVEAL_DIR='data/raw/case_study_b14c_2024_reveal'
+          ROOT='/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2025/Testing_data'
+          EXPECTED_FIRST_REVEAL_SHA='8bd354c44bce50abd09a9839272112fdb34bdb96ec6e37ae644eda916aeeabcc'
+          rm -rf "$REVEAL_DIR"
+          mkdir -p "$REVEAL_DIR"
+          ./gocmd env
+          acquired=false
+          for attempt in 1 2 3; do
+            rm -f "$REVEAL_DIR/7_Testing_Observed_Values.csv"
+            if ./gocmd get -f -k "$ROOT/7_Testing_Observed_Values.csv" "$REVEAL_DIR/7_Testing_Observed_Values.csv"; then
+              acquired=true
+              break
+            fi
+            sleep $((attempt * 2))
+          done
+          test "$acquired" = true
+          test -s "$REVEAL_DIR/7_Testing_Observed_Values.csv"
+          test "$(find "$REVEAL_DIR" -maxdepth 1 -type f | wc -l)" -eq 1
+          test "$(basename "$(find "$REVEAL_DIR" -maxdepth 1 -type f)")" = '7_Testing_Observed_Values.csv'
+          echo "$EXPECTED_FIRST_REVEAL_SHA  $REVEAL_DIR/7_Testing_Observed_Values.csv" | sha256sum -c -
+
+      - name: Run locked B14C external reveal
+        run: |
+          set -o pipefail
+          python -u -m plant_intelligence.uncertainty.maize_b14c_2024_sealed_reveal \
+            --output-root . \
+            --outcome-file data/raw/case_study_b14c_2024_reveal/7_Testing_Observed_Values.csv \
+            2>&1 | tee reports/results/case_study_b14c_2024_execution.log
+
+      - name: Verify B14C result without retuning and reproduce first reveal
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from plant_intelligence.uncertainty import maize_b14c_2024_sealed_reveal as b14c
+
+          results = Path('reports/results')
+          decision = pd.read_csv(results / 'case_study_b14c_2024_decision.csv')
+          summary = pd.read_csv(results / 'case_study_b14c_2024_primary_summary.csv')
+          intervals = pd.read_csv(results / 'case_study_b14c_2024_interval_summary.csv')
+          audit = pd.read_csv(results / 'case_study_b14c_2024_key_audit.csv')
+          source = json.loads((results / 'case_study_b14c_2024_outcome_source_seal.json').read_text(encoding='utf-8'))
+          first = json.loads((results / 'case_study_b14c_2024_first_reveal_record.json').read_text(encoding='utf-8'))
+
+          assert len(decision) == 1
+          allowed = {
+              b14c.DECISION_ADAPTIVE_PROMOTED,
+              b14c.DECISION_ADAPTIVE_INEFFICIENT,
+              b14c.DECISION_KEEP_CONTROL,
+              b14c.DECISION_BOTH_FAIL,
+          }
+          assert decision.iloc[0]['decision'] in allowed
+          assert decision.iloc[0]['decision'] == first['decision_label']
+          assert decision.iloc[0]['prediction_sha256'] == b14c.EXPECTED_PREDICTION_SHA256
+          assert decision.iloc[0]['outcome_sha256'] == first['outcome_sha256']
+          assert str(decision.iloc[0]['selection_uses_outcome_value']).lower() == 'false'
+          assert str(decision.iloc[0]['post_result_tuning_permitted']).lower() == 'false'
+
+          assert len(summary) == 1
+          assert int(summary.iloc[0]['n_sealed']) == 798
+          assert int(summary.iloc[0]['n_officially_observable']) == first['n_officially_observable'] == 779
+          assert int(summary.iloc[0]['n_sealed_keys_absent_from_official']) == first['n_sealed_keys_absent_from_official'] == 19
+          assert str(summary.iloc[0]['selection_uses_outcome_value']).lower() == 'false'
+          assert str(summary.iloc[0]['post_reveal_protocol_amendment']).lower() == 'false'
+          assert str(summary.iloc[0]['point_predictor_changed']).lower() == 'false'
+          assert str(summary.iloc[0]['b5_genotype_representation_changed']).lower() == 'false'
+          assert str(summary.iloc[0]['t1_clock_changed']).lower() == 'false'
+          assert str(summary.iloc[0]['t2_branch_reopened']).lower() == 'false'
+          assert str(summary.iloc[0]['post_result_tuning_permitted']).lower() == 'false'
+          for metric in ('rmse', 'mae', 'r2', 'correlation'):
+              assert np.isclose(float(summary.iloc[0][metric]), float(first['point_metrics'][metric]), rtol=0, atol=5e-6)
+
+          assert len(audit) == 798
+          assert not audit['selection_uses_outcome_value'].astype(bool).any()
+          assert not audit['post_reveal_protocol_amendment'].astype(bool).any()
+          assert set(intervals['rule']) == {b14c.CONTROL, b14c.ADAPTIVE}
+          indexed = intervals.set_index('rule')
+          assert bool(indexed.loc[b14c.CONTROL, 'calibration_pass']) is first['control']['calibration_pass']
+          assert bool(indexed.loc[b14c.ADAPTIVE, 'calibration_pass']) is first['adaptive']['calibration_pass']
+          for rule, key in ((b14c.CONTROL, 'control'), (b14c.ADAPTIVE, 'adaptive')):
+              for column, recorded_key in (
+                  ('empirical_coverage', 'empirical_coverage'),
+                  ('environment_balanced_coverage', 'environment_balanced_coverage'),
+                  ('cluster_ci_low', 'cluster_ci_low'),
+                  ('cluster_ci_high', 'cluster_ci_high'),
+                  ('mean_half_width', 'mean_half_width'),
+                  ('mean_interval_score', 'mean_interval_score'),
+              ):
+                  assert np.isclose(float(indexed.loc[rule, column]), float(first[key][recorded_key]), rtol=0, atol=5e-6)
+
+          assert source['sha256'] == first['outcome_sha256']
+          assert source['prediction_sha256_verified_before_outcome_read'] == b14c.EXPECTED_PREDICTION_SHA256
+          assert source['outcome_accessed'] is True
+          assert source['cohort_selection_uses_outcome_value'] is False
+          assert source['post_result_tuning_permitted'] is False
+
+          outcome = Path('data/raw/case_study_b14c_2024_reveal/7_Testing_Observed_Values.csv')
+          assert b14c.sha256_file(outcome) == first['outcome_sha256']
+          assert b14c.sha256_file(results / 'case_study_b14b_2024_sealed_predictions.csv') == b14c.EXPECTED_PREDICTION_SHA256
+          print(decision.to_string(index=False))
+          print(summary.to_string(index=False))
+          print(intervals.to_string(index=False))
+          PY
+
+      - name: Publish B14C reveal evidence without raw outcome redistribution
+        run: |
+          set -euo pipefail
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git rm -f reports/results/case_study_b14c_2024_failure_state.txt || true
+          git add \
+            reports/results/case_study_b14c_pre_reveal_gate.json \
+            reports/results/case_study_b14c_2024_outcome_source_seal.json \
+            reports/results/case_study_b14c_2024_key_audit.csv \
+            reports/results/case_study_b14c_2024_primary_cohort.csv \
+            reports/results/case_study_b14c_2024_primary_summary.csv \
+            reports/results/case_study_b14c_2024_interval_summary.csv \
+            reports/results/case_study_b14c_2024_environment_summary.csv \
+            reports/results/case_study_b14c_2024_support_diagnostic.csv \
+            reports/results/case_study_b14c_2024_decision.csv \
+            reports/results/case_study_b14c_2024_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B14C 2024 sealed external reveal [skip ci]'
+            git push origin HEAD:${{ github.head_ref || github.ref_name }}
+          fi
+
+      - name: Preserve failed B14C execution state
+        if: failure()
+        run: |
+          set +e
+          mkdir -p reports/results
+          OUTCOME='data/raw/case_study_b14c_2024_reveal/7_Testing_Observed_Values.csv'
+          OUTCOME_PRESENT=false
+          OUTCOME_SHA=''
+          if test -f "$OUTCOME"; then
+            OUTCOME_PRESENT=true
+            OUTCOME_SHA=$(sha256sum "$OUTCOME" | awk '{print $1}')
+          fi
+          {
+            echo 'B14C_WORKFLOW_FAILED'
+            echo "OUTCOME_FILE_ACQUIRED=$OUTCOME_PRESENT"
+            echo "OUTCOME_SHA256=$OUTCOME_SHA"
+            echo 'POST_RESULT_TUNING_PERMITTED=false'
+            echo 'RESEAL_PERMITTED=false'
+            echo "EXECUTION_LOG_PRESENT=$(test -f reports/results/case_study_b14c_2024_execution.log && echo true || echo false)"
+            echo "PRE_REVEAL_GATE_PRESENT=$(test -f reports/results/case_study_b14c_pre_reveal_gate.json && echo true || echo false)"
+          } > reports/results/case_study_b14c_2024_failure_state.txt
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add reports/results/case_study_b14c_2024_failure_state.txt
+          test -f reports/results/case_study_b14c_pre_reveal_gate.json && git add reports/results/case_study_b14c_pre_reveal_gate.json
+          test -f reports/results/case_study_b14c_2024_execution.log && git add reports/results/case_study_b14c_2024_execution.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'Preserve failed B14C reveal evidence [skip ci]'
+            git push origin HEAD:${{ github.head_ref || github.ref_name }}
+          fi
