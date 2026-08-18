@@ -1,0 +1,64 @@
+name: Case Study B PUB-B1 Publication Lock
+
+on:
+  pull_request:
+    paths:
+      - 'docs/case_study_b_pub_b1_publication_synthesis_lock.md'
+      - 'reports/results/case_study_b_pub_b1_lock.json'
+      - 'reports/results/case_study_b_pub_b1_claim_ledger.csv'
+      - 'reports/results/case_study_b_pub_b1_evidence_hierarchy.csv'
+      - 'tests/test_case_study_b_pub_b1_publication_lock.py'
+      - '.github/workflows/case-study-b-pub-b1-publication-lock.yml'
+  push:
+    branches:
+      - agent/pub-b1-case-study-b-publication-lock
+    paths:
+      - 'docs/case_study_b_pub_b1_publication_synthesis_lock.md'
+      - 'reports/results/case_study_b_pub_b1_lock.json'
+      - 'reports/results/case_study_b_pub_b1_claim_ledger.csv'
+      - 'reports/results/case_study_b_pub_b1_evidence_hierarchy.csv'
+      - 'tests/test_case_study_b_pub_b1_publication_lock.py'
+      - '.github/workflows/case-study-b-pub-b1-publication-lock.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pub-b1-publication-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install package and pytest
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Verify PUB-B1 publication lock
+        run: pytest -q tests/test_case_study_b_pub_b1_publication_lock.py
+
+      - name: Verify no scientific reopening is authorized
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          lock = json.loads(Path('reports/results/case_study_b_pub_b1_lock.json').read_text())
+          assert lock['publication_only'] is True
+          assert lock['b19_authorized'] is False
+          assert lock['new_outcome_access_permitted'] is False
+          assert lock['new_prediction_generation_permitted'] is False
+          assert lock['model_fitting_permitted'] is False
+          assert lock['hyperparameter_search_permitted'] is False
+          assert lock['point_predictor_change_permitted'] is False
+          assert lock['t2_reopening_permitted'] is False
+          assert lock['interval_or_support_tuning_permitted'] is False
+          assert lock['post_result_tuning_permitted'] is False
+          assert lock['pub_b2_authorized'] is True
+          PY
