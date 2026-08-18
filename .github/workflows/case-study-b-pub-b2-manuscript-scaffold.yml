@@ -12,6 +12,7 @@ on:
       - 'reports/results/case_study_b_pub_b2_lock.json'
       - 'reports/results/case_study_b_pub_b2_source_map.csv'
       - 'tests/test_case_study_b_pub_b2.py'
+      - 'tests/test_case_study_b_pub_b2_determinism.py'
       - '.github/workflows/case-study-b-pub-b2-manuscript-scaffold.yml'
   pull_request:
     paths:
@@ -22,6 +23,7 @@ on:
       - 'reports/results/case_study_b_pub_b2_source_map.csv'
       - 'reports/publication/case_study_b/**'
       - 'tests/test_case_study_b_pub_b2.py'
+      - 'tests/test_case_study_b_pub_b2_determinism.py'
       - '.github/workflows/case-study-b-pub-b2-manuscript-scaffold.yml'
 
 permissions:
@@ -47,7 +49,7 @@ jobs:
           python -m pip install pytest
 
       - name: Verify PUB-B2 locks and deterministic builder
-        run: pytest -q tests/test_case_study_b_pub_b2.py
+        run: pytest -q tests/test_case_study_b_pub_b2.py tests/test_case_study_b_pub_b2_determinism.py
 
       - name: Materialize frozen publication tables and figures
         run: python -u -m plant_intelligence.publication.case_study_b_pub_b2 --repo-root .
@@ -81,12 +83,12 @@ jobs:
           PY
 
       - name: Publish deterministic PUB-B2 assets
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'push'
         run: |
           git config user.name plant-intelligence-lab-bot
           git config user.email actions@users.noreply.github.com
           git add reports/publication/case_study_b
           if ! git diff --cached --quiet; then
             git commit -m 'Publish PUB-B2 frozen manuscript assets [skip ci]'
-            git push origin HEAD:${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+            git push origin HEAD:${{ github.ref_name }}
           fi
