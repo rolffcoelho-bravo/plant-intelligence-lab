@@ -291,18 +291,20 @@ def plot_stability(ranked: pd.DataFrame, stability: pd.DataFrame, output: Path) 
     ordered = pivot.mean(axis=1).sort_values().index
     pivot = pivot.loc[ordered]
 
-    fig = plt.figure(figsize=(12.5, 8.0))
-    gs = fig.add_gridspec(2, 1, height_ratios=[2.1, 1.0], hspace=0.42)
+    # Give the legend/x-label block its own vertical breathing room so the
+    # lower-panel title never collides with the upper-panel annotations.
+    fig = plt.figure(figsize=(12.5, 9.4))
+    gs = fig.add_gridspec(2, 1, height_ratios=[2.1, 1.0], hspace=1.05)
     ax1 = fig.add_subplot(gs[0, 0])
     for config, row in pivot.iterrows():
         ax1.plot(pivot.columns, row.values, marker="o", linewidth=1.2, alpha=0.8, label=config)
     ax1.invert_yaxis()
     ax1.set_title("Case Study B10-T — environmental geometry rank trajectories")
     ax1.set_ylabel("RMSE rank (1 = best)")
-    ax1.set_xlabel("Forward test year")
+    ax1.set_xlabel("Forward test year", labelpad=8)
     ax1.set_xticks(list(EXPECTED_YEARS))
     ax1.grid(alpha=0.2)
-    ax1.legend(loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=4, frameon=False, fontsize=8)
+    ax1.legend(loc="upper center", bbox_to_anchor=(0.5, -0.17), ncol=4, frameon=False, fontsize=8)
 
     ax2 = fig.add_subplot(gs[1, 0])
     labels = [f"{int(a)}→{int(b)}" for a, b in zip(stability["from_year"], stability["to_year"])]
@@ -312,10 +314,10 @@ def plot_stability(ranked: pd.DataFrame, stability: pd.DataFrame, output: Path) 
     ax2.set_ylim(-1.0, 1.0)
     ax2.set_ylabel("Adjacent-year Spearman ρ")
     ax2.set_xticks(x, labels)
-    ax2.set_title("Year-to-year rank persistence")
+    ax2.set_title("Year-to-year rank persistence", pad=12)
     ax2.grid(axis="y", alpha=0.2)
 
-    fig.subplots_adjust(bottom=0.20)
+    fig.subplots_adjust(top=0.95, bottom=0.08, left=0.09, right=0.98)
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=220, bbox_inches="tight")
     plt.close(fig)
