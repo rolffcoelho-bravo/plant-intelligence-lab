@@ -1,0 +1,151 @@
+name: Case Study B18 - Forecast-Time Hypothesis Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/b18-forecast-time-hypothesis-audit
+    paths:
+      - 'src/plant_intelligence/diagnostics/maize_b18_forecast_time_hypothesis.py'
+      - 'tests/test_case_study_b18_forecast_time_hypothesis.py'
+      - 'docs/case_study_b18_forecast_time_hypothesis_audit.md'
+      - 'reports/results/case_study_b18_hypothesis_lock.json'
+      - '.github/workflows/case-study-b18-forecast-time-hypothesis-audit.yml'
+  pull_request:
+    paths:
+      - 'src/plant_intelligence/diagnostics/maize_b18_forecast_time_hypothesis.py'
+      - 'tests/test_case_study_b18_forecast_time_hypothesis.py'
+      - 'docs/case_study_b18_forecast_time_hypothesis_audit.md'
+      - 'reports/results/case_study_b18_hypothesis_lock.json'
+      - '.github/workflows/case-study-b18-forecast-time-hypothesis-audit.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  b18-hypothesis-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install package and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Run B18 tests
+        run: pytest -q tests/test_case_study_b18_forecast_time_hypothesis.py
+
+      - name: Verify hypothesis lock and no-model boundary
+        run: |
+          test -s reports/results/case_study_b18_hypothesis_lock.json
+          test -s reports/results/case_study_b_closure_decision.csv
+          test -s reports/results/case_study_b_b18_gate.csv
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          lock = json.loads(Path('reports/results/case_study_b18_hypothesis_lock.json').read_text())
+          assert lock['status'] == 'LOCKED_BEFORE_MODEL_DEVELOPMENT'
+          assert lock['parent_closure_decision'] == 'CASE_STUDY_B_CLOSED_EXTERNAL_VALIDATION_CONTRIBUTION_SUPPORTED_METHOD_NOVELTY_NOT_SUPPORTED_B18_SEPARATE_HYPOTHESIS_GATE_ONLY'
+          assert lock['frozen_parent_predictor'] == 'G+E_T1'
+          assert lock['frozen_parent_horizon'] == 'T1_30DAP'
+          forbidden = [
+              'new_outcome_access_permitted',
+              'new_prediction_generation_permitted',
+              'model_fitting_permitted',
+              'hyperparameter_search_permitted',
+              'point_predictor_change_permitted',
+              'b5_genotype_representation_change_permitted',
+              't1_clock_change_permitted',
+              't2_reopening_permitted',
+              'interval_or_support_tuning_permitted',
+              'reseal_permitted',
+              'post_result_tuning_permitted',
+          ]
+          assert all(lock[name] is False for name in forbidden)
+          assert lock['novelty_must_survive_primary_literature_before_model_code'] is True
+          assert lock['predeclared_terminal_decision_if_any_kill_condition_holds'] == 'B18_FORECAST_TIME_INFORMATION_NOVELTY_REJECTED_NO_MODEL_DEVELOPMENT'
+          PY
+
+          # B18 audit source may use only the closure/gate as repository state.
+          # It must not ingest revealed B14C outcome cohorts or sealed prediction files.
+          if grep -q 'case_study_b14c_2024_primary_cohort' src/plant_intelligence/diagnostics/maize_b18_forecast_time_hypothesis.py; then
+            echo 'B18 audit source illegally references the B14C outcome cohort'
+            exit 1
+          fi
+          if grep -q 'case_study_b14b_2024_sealed_predictions' src/plant_intelligence/diagnostics/maize_b18_forecast_time_hypothesis.py; then
+            echo 'B18 audit source illegally consumes B14B prediction cells'
+            exit 1
+          fi
+
+      - name: Execute B18 hostile novelty audit
+        run: python -u -m plant_intelligence.diagnostics.maize_b18_forecast_time_hypothesis --output-root .
+
+      - name: Verify terminal evidence
+        run: |
+          python - <<'PY'
+          import pandas as pd
+
+          d = pd.read_csv('reports/results/case_study_b18_decision.csv').iloc[0]
+          f = pd.read_csv('reports/results/case_study_b18_formal_audit.csv')
+          l = pd.read_csv('reports/results/case_study_b18_literature_boundary.csv')
+          r = pd.read_csv('reports/results/case_study_b18_ranking_witness.csv')
+
+          assert d['decision'] == 'B18_FORECAST_TIME_INFORMATION_NOVELTY_REJECTED_NO_MODEL_DEVELOPMENT'
+          assert int(d['direct_primary_prior_art_collisions']) >= 3
+          assert int(d['surviving_novel_formal_objects']) == 0
+          for field in [
+              'method_novelty_supported',
+              'model_development_permitted',
+              'new_outcome_access',
+              'new_prediction_generation',
+              'model_fitting',
+              'hyperparameter_search',
+              'point_predictor_changed',
+              'b5_genotype_representation_changed',
+              't1_clock_changed',
+              't2_reopened',
+              'interval_or_support_tuning',
+              'reseal',
+              'post_result_tuning_permitted',
+          ]:
+              assert str(d[field]).lower() == 'false'
+          assert d['next_action'] == 'RETURN_TO_REPOSITORY_ROADMAP_OR_MANUSCRIPT_WITH_B18_RECORDED_AS_NEGATIVE_NOVELTY_AUDIT'
+
+          assert f['method_novelty'].astype(str).str.lower().eq('false').all()
+          assert 'BACKGROUND_IDENTITY_NOT_NOVEL' in set(f['status'])
+          assert 'STANDARD_CONDITIONAL_EXPECTATION_LOGIC' in set(f['status'])
+          assert 'DIRECT_PRIOR_ART_COLLISION' in set(f['status'])
+
+          direct = l[l['collision'].eq('DIRECT')]
+          assert len(direct) >= 3
+          assert '10.1093/bioinformatics/btz197' in set(direct['doi'])
+          assert '10.1038/s41467-020-18480-y' in set(direct['doi'])
+          assert '10.1007/s00122-026-05280-z' in set(direct['doi'])
+          assert r['ranking_differs_from_forecast_time'].astype(str).str.lower().eq('true').sum() == 1
+          print(d.to_string())
+          PY
+
+      - name: Publish B18 audit evidence
+        if: github.event_name == 'push'
+        run: |
+          git config user.name plant-intelligence-lab-bot
+          git config user.email actions@users.noreply.github.com
+          git add \
+            reports/results/case_study_b18_formal_audit.csv \
+            reports/results/case_study_b18_literature_boundary.csv \
+            reports/results/case_study_b18_ranking_witness.csv \
+            reports/results/case_study_b18_decision.csv
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish B18 hostile novelty audit [skip ci]'
+            git push origin HEAD:${{ github.ref_name }}
+          fi
