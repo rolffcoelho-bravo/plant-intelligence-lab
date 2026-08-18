@@ -6,6 +6,9 @@ on:
       - agent/b17-t1-architecture-contraction-novelty
     paths:
       - '.github/workflows/b17-t1-invariance-probe.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/b17-t1-invariance-probe.yml'
 
 jobs:
   probe:
