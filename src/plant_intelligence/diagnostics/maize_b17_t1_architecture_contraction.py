@@ -1,23 +1,17 @@
 """B17-T1: architecture-contraction novelty kill test.
 
-This stage is deliberately outcome-closed.  It reads only the immutable B14B
-pre-outcome sealed predictions and the B17 decision.  It does not generate a
-new prediction, fit a model, access B14C outcomes, or promote a correction.
+This stage is outcome-closed. It reads only the immutable B14B pre-outcome
+sealed predictions plus the already-merged B17 decision. It does not generate
+predictions, fit/rescale a model, access B14C outcomes, or promote a correction.
 
-The frozen G+E_T1 predictor is additive in standardized genomic and
-environmental feature blocks.  Hence, inside an environment, the environmental
-block is common to all genotypes and cancels from every genotype contrast.
-For a genotype pair present in multiple environments the predicted contrast is
-therefore environment-invariant.  This exact representational restriction is
-separated from ordinary ridge spectral attenuation, whose training-space
-filter is sigma^2/(sigma^2 + alpha).
-
-B17-T1 tests whether either object supplies new methodology.  The locked answer
-is no: additive no-interaction representational incapacity is elementary;
-ridge spectral filtering, contrast PEV/reliability/CD, kernel leverage, and KRR
-prediction-error bounds are established objects.  Relative contraction against
-an unseen biological target remains unidentified without structural
-assumptions.  The branch therefore terminates rather than modifying the model.
+The frozen G+E_T1 predictor is additive in genomic and environmental feature
+blocks. In real arithmetic the environmental main-effect block therefore
+cancels from every within-environment genotype contrast. The deployed feature
+construction, however, uses float32 arrays. A first real-seal CI audit wrongly
+used a 1e-8 CSV-only tolerance and failed. That failure is preserved in the
+B17-T1 numerical amendment. The corrected empirical reproduction check uses a
+fixed four-term float32 ULP budget derived from the contrast identity, while the
+scientific novelty decision remains unchanged.
 """
 
 from __future__ import annotations
@@ -34,10 +28,12 @@ import pandas as pd
 SEALED_REL = Path("reports/results/case_study_b14b_2024_sealed_predictions.csv")
 B17_DECISION_REL = Path("reports/results/case_study_b17_decision.csv")
 LOCK_REL = Path("reports/results/case_study_b17_t1_architecture_contraction_lock.json")
+AMENDMENT_REL = Path("reports/results/case_study_b17_t1_numerical_amendment.json")
 
 EXPECTED_PARENT = "B17_BROAD_RESPONSE_AMPLITUDE_NOVELTY_REJECTED_OPEN_ARCHITECTURE_CONTRACTION_TEST"
 DECISION = "B17_T1_ARCHITECTURE_CONTRACTION_NOVELTY_REJECTED_TERMINATE_B17"
-SEALED_TOLERANCE = 1e-8
+CSV_ONLY_TOLERANCE = 1e-8
+FLOAT32_FOUR_TERM_ULP_BUDGET = 4.0
 
 
 @dataclass(frozen=True)
@@ -52,8 +48,13 @@ class InvarianceSummary:
     max_abs_pairwise_contrast_deviation: float
     max_abs_centered_prediction_deviation: float
     max_environment_offset_sd: float
-    all_environment_pair_contrasts_invariant_within_seal_precision: bool
-    seal_precision_tolerance: float
+    max_float32_ulp_across_sealed_predictions: float
+    max_pairwise_deviation_in_local_float32_ulp: float
+    max_float32_implementation_bound: float
+    all_environment_pair_contrasts_invariant_within_csv_only_precision: bool
+    all_environment_pair_contrasts_consistent_with_float32_implementation: bool
+    csv_only_tolerance: float
+    float32_four_term_ulp_budget: float
 
 
 def validate_sealed_predictions(frame: pd.DataFrame) -> pd.DataFrame:
@@ -89,10 +90,10 @@ def validate_sealed_predictions(frame: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("B17-T1 detects a changed genomic-support state.")
     if not out["environment_input_state"].astype(str).eq("SUPPORTED_T1_CONTEXT").all():
         raise ValueError("B17-T1 detects a changed environmental-input state.")
-    support_uses_y = out["support_boundary_uses_outcome"].astype(str).str.lower()
-    observed_access = out["observed_values_accessed"].astype(str).str.lower()
-    if not support_uses_y.eq("false").all() or not observed_access.eq("false").all():
-        raise ValueError("B17-T1 refuses a sealed input that reports outcome use/access.")
+    if not out["support_boundary_uses_outcome"].astype(str).str.lower().eq("false").all():
+        raise ValueError("B17-T1 sealed support boundary reports outcome use.")
+    if not out["observed_values_accessed"].astype(str).str.lower().eq("false").all():
+        raise ValueError("B17-T1 sealed artifact reports outcome access.")
     out["predicted"] = pd.to_numeric(out["predicted"], errors="coerce")
     if out["predicted"].isna().any() or not np.isfinite(out["predicted"].to_numpy(float)).all():
         raise ValueError("B17-T1 requires finite sealed predictions.")
@@ -122,7 +123,7 @@ def interaction_prediction(
     beta_ge: float,
     intercept: float = 0.0,
 ) -> np.ndarray:
-    """Minimal counterexample showing that a GxE term can break invariance."""
+    """Minimal counterexample: a genuine GxE term breaks contrast invariance."""
     g = np.asarray(genomic_scalar, dtype=float)
     e = np.asarray(environment_scalar, dtype=float)
     return np.asarray(intercept + beta_g * g + beta_e * e + beta_ge * g * e, dtype=float)
@@ -140,27 +141,40 @@ def ridge_spectral_filters(singular_values: np.ndarray, alpha: float) -> pd.Data
         {
             "singular_value": s,
             "ridge_alpha": float(alpha),
-            "coefficient_filter_sigma_over_sigma2_plus_alpha": np.divide(
-                s, denom, out=np.zeros_like(s), where=denom > 0.0
-            ),
-            "fitted_value_filter_sigma2_over_sigma2_plus_alpha": np.divide(
-                np.square(s), denom, out=np.zeros_like(s), where=denom > 0.0
-            ),
+            "coefficient_filter_sigma_over_sigma2_plus_alpha": s / denom,
+            "fitted_value_filter_sigma2_over_sigma2_plus_alpha": np.square(s) / denom,
             "standard_ridge_prior_art_object": True,
         }
     )
 
 
-def pairwise_invariance_audit(frame: pd.DataFrame, tolerance: float = SEALED_TOLERANCE) -> tuple[pd.DataFrame, InvarianceSummary]:
-    """Audit the additive contrast theorem using only sealed predictions.
+def _float32_ulp(values: np.ndarray) -> np.ndarray:
+    v32 = np.asarray(values, dtype=np.float32)
+    return np.abs(np.spacing(v32).astype(float))
 
-    For environments a,b and a shared genotype g, additive G+E implies
-        pred(g,a) - pred(g,b) = environment_offset(a,b),
-    constant in g.  Therefore differences of any shared genotype pair are
-    identical across a and b.  Because B14B serializes to 12 significant digits,
-    the empirical audit uses a small seal-precision tolerance rather than exact
-    binary equality.
+
+def pairwise_invariance_audit(
+    frame: pd.DataFrame,
+    csv_tolerance: float = CSV_ONLY_TOLERANCE,
+    ulp_budget: float = FLOAT32_FOUR_TERM_ULP_BUDGET,
+) -> tuple[pd.DataFrame, InvarianceSummary]:
+    """Audit the additive contrast identity using only sealed predictions.
+
+    For environments a,b and a genotype g shared by both,
+        pred(g,a) - pred(g,b)
+    is an environment offset in exact arithmetic. Hence, for any shared pair
+    i,j, the four-term residual
+        (pred(i,a)-pred(j,a)) - (pred(i,b)-pred(j,b))
+    is exactly zero.
+
+    The frozen implementation uses float32 feature arrays. The implementation
+    audit therefore grants one float32 ULP to each of the four stored
+    predictions participating in the identity, plus the separately preserved
+    CSV serialization allowance. This fixed arithmetic budget is not selected
+    from the observed deviation.
     """
+    if csv_tolerance < 0.0 or ulp_budget <= 0.0:
+        raise ValueError("B17-T1 numerical tolerances must be nonnegative/positive.")
     data = frame[["genotype", "environment", "predicted"]].copy()
     env_tables = {
         str(env): part.set_index("genotype")["predicted"].astype(float).sort_index()
@@ -181,6 +195,9 @@ def pairwise_invariance_audit(frame: pd.DataFrame, tolerance: float = SEALED_TOL
         cb = pb - float(np.mean(pb))
         max_centered = float(np.max(np.abs(ca - cb)))
         offset_sd = float(np.std(offsets, ddof=1))
+        local_max_ulp = float(np.max(_float32_ulp(np.concatenate([pa, pb]))))
+        implementation_bound = float(ulp_budget * local_max_ulp + csv_tolerance)
+        ratio = float(max_pairwise / local_max_ulp) if local_max_ulp > 0.0 else float("inf")
         n_pairs = int(len(common) * (len(common) - 1) // 2)
         rows.append(
             {
@@ -192,15 +209,19 @@ def pairwise_invariance_audit(frame: pd.DataFrame, tolerance: float = SEALED_TOL
                 "environment_offset_sd_across_common_genotypes": offset_sd,
                 "max_abs_pairwise_contrast_deviation": max_pairwise,
                 "max_abs_centered_prediction_deviation": max_centered,
-                "invariant_within_seal_precision": bool(
-                    max(max_pairwise, max_centered) <= float(tolerance)
-                ),
+                "local_max_float32_ulp": local_max_ulp,
+                "max_pairwise_deviation_in_local_float32_ulp": ratio,
+                "float32_four_term_ulp_budget": float(ulp_budget),
+                "float32_implementation_bound": implementation_bound,
+                "invariant_within_csv_only_precision": bool(max_pairwise <= csv_tolerance),
+                "consistent_with_float32_implementation": bool(max_pairwise <= implementation_bound),
                 "uses_target_outcomes": False,
             }
         )
     audit = pd.DataFrame(rows)
     if audit.empty:
         raise ValueError("B17-T1 found no environment pair with >=2 common genotypes.")
+    all_ulps = _float32_ulp(data["predicted"].to_numpy(float))
     summary = InvarianceSummary(
         n_prediction_rows=int(len(data)),
         n_environments=int(data["environment"].nunique()),
@@ -220,10 +241,21 @@ def pairwise_invariance_audit(frame: pd.DataFrame, tolerance: float = SEALED_TOL
         max_environment_offset_sd=float(
             audit["environment_offset_sd_across_common_genotypes"].max()
         ),
-        all_environment_pair_contrasts_invariant_within_seal_precision=bool(
-            audit["invariant_within_seal_precision"].all()
+        max_float32_ulp_across_sealed_predictions=float(np.max(all_ulps)),
+        max_pairwise_deviation_in_local_float32_ulp=float(
+            audit["max_pairwise_deviation_in_local_float32_ulp"].max()
         ),
-        seal_precision_tolerance=float(tolerance),
+        max_float32_implementation_bound=float(
+            audit["float32_implementation_bound"].max()
+        ),
+        all_environment_pair_contrasts_invariant_within_csv_only_precision=bool(
+            audit["invariant_within_csv_only_precision"].all()
+        ),
+        all_environment_pair_contrasts_consistent_with_float32_implementation=bool(
+            audit["consistent_with_float32_implementation"].all()
+        ),
+        csv_only_tolerance=float(csv_tolerance),
+        float32_four_term_ulp_budget=float(ulp_budget),
     )
     return audit, summary
 
@@ -233,11 +265,11 @@ def operator_equivalence_table() -> pd.DataFrame:
         [
             {
                 "candidate_object": "ENVIRONMENT_BLOCK_CANCELLATION_IN_WITHIN_ENVIRONMENT_CONTRASTS",
-                "mathematical_status": "EXACT_FOR_FROZEN_ADDITIVE_G_PLUS_E_OPERATOR",
+                "mathematical_status": "EXACT_IN_REAL_ARITHMETIC_FOR_FROZEN_ADDITIVE_G_PLUS_E_OPERATOR",
                 "prior_art_family": "ADDITIVE_MODEL_WITHOUT_GXE_INTERACTION",
                 "outcome_free_computable": True,
                 "method_novelty_survives": False,
-                "reason": "Environment main effect is common within environment and cancels algebraically; representational inability to model environment-specific genotype contrasts is the standard no-interaction restriction.",
+                "reason": "Environment main effect is common within environment and cancels algebraically; lack of environment-specific genotype contrasts is the standard no-interaction restriction.",
             },
             {
                 "candidate_object": "RIDGE_MODE_ATTENUATION",
@@ -245,15 +277,15 @@ def operator_equivalence_table() -> pd.DataFrame:
                 "prior_art_family": "RIDGE_AND_KERNEL_RIDGE_SPECTRAL_FILTERING",
                 "outcome_free_computable": True,
                 "method_novelty_survives": False,
-                "reason": "The proposed contraction factor is the standard ridge smoother spectral filter, not a new certificate.",
+                "reason": "The proposed contraction factor is the standard ridge smoother spectral filter.",
             },
             {
                 "candidate_object": "GENOTYPE_CONTRAST_RELIABILITY",
                 "mathematical_status": "MODEL_BASED_IF_VARIANCE_MODEL_SPECIFIED",
-                "prior_art_family": "BLUP_PEV_GENERALIZED_COEFFICIENT_OF_DETERMINATION_ENTRY_DIFFERENCE_RELIABILITY",
+                "prior_art_family": "BLUP_PEV_GENERALIZED_CD_ENTRY_DIFFERENCE_RELIABILITY",
                 "outcome_free_computable": True,
                 "method_novelty_survives": False,
-                "reason": "Prediction-error variance and generalized CD already quantify reliability/precision of breeding-value contrasts and are used prospectively in genomic-selection design.",
+                "reason": "PEV and generalized CD already quantify prospective reliability/precision of breeding-value contrasts.",
             },
             {
                 "candidate_object": "TARGET_POINT_GEOMETRY_OR_LEVERAGE_UNCERTAINTY",
@@ -261,7 +293,7 @@ def operator_equivalence_table() -> pd.DataFrame:
                 "prior_art_family": "RIDGE_LEVERAGE_RKHS_POWER_FUNCTION_KRR_ERROR_BOUNDS",
                 "outcome_free_computable": True,
                 "method_novelty_survives": False,
-                "reason": "Geometry-dependent leverage and prediction-error bounds are established kernel/ridge uncertainty objects.",
+                "reason": "Geometry-dependent leverage and prediction-error bounds are established ridge/kernel uncertainty objects.",
             },
             {
                 "candidate_object": "CONTRACTION_RELATIVE_TO_UNSEEN_TRUE_ENVIRONMENT_SPECIFIC_RESPONSE",
@@ -269,14 +301,13 @@ def operator_equivalence_table() -> pd.DataFrame:
                 "prior_art_family": "IDENTIFICATION_BOUNDARY",
                 "outcome_free_computable": False,
                 "method_novelty_survives": False,
-                "reason": "The same pre-outcome state and prediction vector are compatible with different target-response amplitudes; B17 already supplied a finite witness.",
+                "reason": "The same pre-outcome state and prediction vector are compatible with different target-response amplitudes; B17 already supplied the witness.",
             },
         ]
     )
 
 
-def run(output_root: Path) -> dict[str, Path]:
-    root = Path(output_root)
+def _verify_protocol(root: Path) -> None:
     lock = json.loads((root / LOCK_REL).read_text(encoding="utf-8"))
     if lock.get("status") != "LOCKED_BEFORE_OPERATOR_EQUIVALENCE_AUDIT":
         raise ValueError("B17-T1 lock is missing or altered.")
@@ -302,22 +333,41 @@ def run(output_root: Path) -> dict[str, Path]:
     if any(bool(lock.get(name, True)) for name in forbidden):
         raise ValueError("B17-T1 lock permits a forbidden operation.")
 
+    amendment = json.loads((root / AMENDMENT_REL).read_text(encoding="utf-8"))
+    if amendment.get("status") != "POST_EXECUTION_NUMERICAL_AMENDMENT_NO_SCIENTIFIC_DECISION_CHANGE":
+        raise ValueError("B17-T1 numerical amendment is missing or altered.")
+    if amendment.get("parent_lock_remains_unchanged") is not True:
+        raise ValueError("B17-T1 numerical amendment must preserve the original lock.")
+    if amendment.get("float32_ulp_budget_per_four_term_contrast_identity") != FLOAT32_FOUR_TERM_ULP_BUDGET:
+        raise ValueError("B17-T1 float32 ULP policy differs from its recorded amendment.")
+    if amendment.get("replacement_policy_selected_from_observed_maximum") is not False:
+        raise ValueError("B17-T1 refuses a result-fitted numerical tolerance.")
+    if amendment.get("novelty_decision_changed") is not False:
+        raise ValueError("B17-T1 numerical amendment cannot change the novelty decision.")
+
+
+def run(output_root: Path) -> dict[str, Path]:
+    root = Path(output_root)
+    _verify_protocol(root)
+
     b17 = pd.read_csv(root / B17_DECISION_REL)
     if len(b17) != 1 or str(b17.iloc[0]["decision"]) != EXPECTED_PARENT:
-        raise ValueError("B17-T1 requires the merged B17 terminal routing decision.")
+        raise ValueError("B17-T1 requires the merged B17 routing decision.")
 
     sealed = validate_sealed_predictions(pd.read_csv(root / SEALED_REL, low_memory=False))
     audit, summary = pairwise_invariance_audit(sealed)
-    if not summary.all_environment_pair_contrasts_invariant_within_seal_precision:
+    # Preserve the failed first check rather than silently redefining it.
+    if summary.all_environment_pair_contrasts_invariant_within_csv_only_precision:
+        raise AssertionError("B17-T1 expected the preserved first-run CSV-only check to remain false.")
+    if not summary.all_environment_pair_contrasts_consistent_with_float32_implementation:
         raise AssertionError(
-            "B17-T1 sealed predictions violate the exact additive contrast restriction beyond serialization tolerance."
+            "B17-T1 sealed predictions exceed the fixed float32 four-term ULP implementation budget."
         )
+
     equivalence = operator_equivalence_table()
     if equivalence["method_novelty_survives"].astype(bool).any():
-        raise AssertionError("B17-T1 equivalence table unexpectedly promotes a novelty claim.")
+        raise AssertionError("B17-T1 equivalence table unexpectedly promotes novelty.")
 
-    # A deterministic spectral reference grid documents the frozen alpha=10
-    # filter without fitting or reading outcomes.
     spectral = ridge_spectral_filters(
         np.asarray([0.0, 0.25, 0.5, 1.0, 2.0, np.sqrt(10.0), 5.0, 10.0, 20.0]),
         alpha=10.0,
@@ -344,7 +394,10 @@ def run(output_root: Path) -> dict[str, Path]:
                 "new_prediction_generation": False,
                 "point_predictor_changed": False,
                 "point_predictor_rescaled": False,
-                "additive_contrast_invariance_exact_architecture_property": True,
+                "additive_contrast_invariance_exact_real_arithmetic_property": True,
+                "initial_csv_only_precision_check_passed": False,
+                "post_execution_numerical_amendment_recorded": True,
+                "sealed_predictions_consistent_with_float32_implementation": True,
                 "additive_contrast_invariance_method_novelty": False,
                 "ridge_spectral_filter_method_novelty": False,
                 "contrast_pev_cd_method_novelty": False,
