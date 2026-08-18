@@ -1,0 +1,31 @@
+{
+  "schema": "plant-intelligence-lab/case-study-b18-hypothesis-lock/v1",
+  "stage": "B18_FORECAST_TIME_INFORMATION_HYPOTHESIS_AUDIT",
+  "status": "LOCKED_BEFORE_MODEL_DEVELOPMENT",
+  "parent_closure_decision": "CASE_STUDY_B_CLOSED_EXTERNAL_VALIDATION_CONTRIBUTION_SUPPORTED_METHOD_NOVELTY_NOT_SUPPORTED_B18_SEPARATE_HYPOTHESIS_GATE_ONLY",
+  "candidate_question": "DOES_ENFORCING_A_FORECAST_TIME_INFORMATION_SET_CHANGE_THE_LEARNABLE_GXE_CONTRAST_OPERATOR_AND_EXTERNAL_RANKING_OF_INTERACTION_CAPABLE_MODELS_RELATIVE_TO_ORACLE_OR_LATER_SEASON_ENVIRONMENTAL_INFORMATION",
+  "frozen_parent_predictor": "G+E_T1",
+  "frozen_parent_horizon": "T1_30DAP",
+  "b14c_outcomes_may_motivate_but_not_SELECT_OR_TUNE_B18_HYPOTHESIS": true,
+  "new_outcome_access_permitted": false,
+  "new_prediction_generation_permitted": false,
+  "model_fitting_permitted": false,
+  "hyperparameter_search_permitted": false,
+  "point_predictor_change_permitted": false,
+  "b5_genotype_representation_change_permitted": false,
+  "t1_clock_change_permitted": false,
+  "t2_reopening_permitted": false,
+  "interval_or_support_tuning_permitted": false,
+  "reseal_permitted": false,
+  "post_result_tuning_permitted": false,
+  "novelty_must_survive_primary_literature_before_model_code": true,
+  "predeclared_kill_conditions": [
+    "DIRECT_PRIOR_ART_COMPARES_DECISION_TIME_LEGAL_ENVIRONMENTAL_INFORMATION_WITH_IN_SEASON_ORACLE_INFORMATION_FOR_GXE_PREDICTION",
+    "DIRECT_PRIOR_ART_MODELS_FUTURE_CULTIVAR_PERFORMANCE_UNDER_UNCERTAIN_WEATHER",
+    "DIRECT_PRIOR_ART_USES_WEATHER_FORECASTS_OR_HISTORICAL_WEATHER_FOR_VARIETY_SELECTION_OR_RANKING",
+    "CANDIDATE_DECOMPOSITION_REDUCES_TO_ELEMENTARY_RISK_TELESCOPING_OR_STANDARD_CONDITIONAL_EXPECTATION",
+    "NARROWER_DECISION_VALUE_ROUTE_REDUCES_TO_EXISTING_VALUE_OF_INFORMATION_OR_RISK_SENSITIVE_CULTIVAR_SELECTION"
+  ],
+  "predeclared_terminal_decision_if_any_kill_condition_holds": "B18_FORECAST_TIME_INFORMATION_NOVELTY_REJECTED_NO_MODEL_DEVELOPMENT",
+  "survival_requirement": "A_DISTINCT_METHOD_OR_THEOREM_NOT_EQUIVALENT_TO_EXISTING_GXE_UNCERTAIN_WEATHER_PREDICTION_VALUE_OF_INFORMATION_OR_STANDARD_NONANTICIPATION_LOGIC"
+}
