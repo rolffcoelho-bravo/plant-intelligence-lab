@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from plant_intelligence.publication.case_study_b_pub_b2 import build_publication_assets
 
@@ -12,6 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _load_json(rel: str):
     return json.loads((ROOT / rel).read_text())
+
+
+def _assert_csv_float_roundtrip(got, expected) -> None:
+    """Accept only machine-precision CSV round-trip differences."""
+    assert float(got) == pytest.approx(float(expected), rel=1e-14, abs=1e-14)
 
 
 def test_pub_b2_lock_inherits_pub_b1_and_forbids_scientific_reopening():
@@ -94,16 +100,16 @@ def test_external_validation_publication_table_matches_authoritative_sources(tmp
     row12 = table.loc[table["stage"].eq("B12_AVAILABLE_CASE")].iloc[0]
     assert bool(row12["confirmatory"]) is False
     assert int(row12["n"]) == int(b12["n_evaluated_available_cases"]) == 387
-    assert float(row12["rmse"]) == float(b12["rmse"])
-    assert float(row12["coverage_90"]) == float(b12cov["empirical_coverage"])
-    assert float(row12["environment_balanced_coverage_90"]) == float(b12cov["environment_balanced_coverage"])
+    _assert_csv_float_roundtrip(row12["rmse"], b12["rmse"])
+    _assert_csv_float_roundtrip(row12["coverage_90"], b12cov["empirical_coverage"])
+    _assert_csv_float_roundtrip(row12["environment_balanced_coverage_90"], b12cov["environment_balanced_coverage"])
 
     row14 = table.loc[table["stage"].eq("B14C")].iloc[0]
     assert bool(row14["confirmatory"]) is True
     assert int(row14["n"]) == int(b14["n_officially_observable"]) == 779
-    assert float(row14["rmse"]) == float(b14["rmse"])
-    assert float(row14["coverage_90"]) == float(b14cov["empirical_coverage"])
-    assert float(row14["environment_balanced_coverage_90"]) == float(b14cov["environment_balanced_coverage"])
+    _assert_csv_float_roundtrip(row14["rmse"], b14["rmse"])
+    _assert_csv_float_roundtrip(row14["coverage_90"], b14cov["empirical_coverage"])
+    _assert_csv_float_roundtrip(row14["environment_balanced_coverage_90"], b14cov["environment_balanced_coverage"])
 
 
 def test_uncertainty_and_failure_tables_preserve_authoritative_values(tmp_path):
@@ -121,9 +127,9 @@ def test_uncertainty_and_failure_tables_preserve_authoritative_values(tmp_path):
 
     t4 = pd.read_csv(outputs["table_04_2024_failure_structure"]).iloc[0]
     src4 = pd.read_csv(ROOT / "reports/results/case_study_b16_2024_error_structure_summary.csv").iloc[0]
-    assert float(t4["environment_bias_sse_fraction"]) == float(src4["environment_bias_sse_fraction"])
-    assert float(t4["within_environment_sse_fraction"]) == float(src4["within_environment_sse_fraction"])
-    assert float(t4["median_predicted_to_observed_sd_ratio"]) == float(src4["median_predicted_to_observed_sd_ratio"])
+    _assert_csv_float_roundtrip(t4["environment_bias_sse_fraction"], src4["environment_bias_sse_fraction"])
+    _assert_csv_float_roundtrip(t4["within_environment_sse_fraction"], src4["within_environment_sse_fraction"])
+    _assert_csv_float_roundtrip(t4["median_predicted_to_observed_sd_ratio"], src4["median_predicted_to_observed_sd_ratio"])
 
 
 def test_pub_b2_assets_manifest_hashes_every_frozen_input(tmp_path):
