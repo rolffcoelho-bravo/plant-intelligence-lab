@@ -1,0 +1,6 @@
+gate,permitted,reason
+B18_BROAD_FORECAST_TIME_GXE_METHOD_NOVELTY,False,Directly occupied by Gillberg et al. 2019 and reinforced by future-year ranking work in 2026.
+B18_ADD_INTERACTION_ARCHITECTURE,False,Interaction-capable GxE architectures are heavily occupied and Case Study B closure explicitly forbids this as a starting claim.
+B18_PARTIAL_WEATHER_PREFIX_IS_NOVEL_BY_ITSELF,False,Issue-date/partial-weather crop forecasting and DAP-window prediction are established outside and inside crop prediction literature.
+B18_INFORMATION_PARITY_BENCHMARK_HYPOTHESIS,True,A narrower question remains uneliminated: compare multiple GxE model classes under identical nested decision-time information sets and test ranking/contrast instability. This is benchmark/protocol novelty only and remains unestablished.
+B18_MODEL_FITTING_AFTER_T0,False,B18-T1 must first determine whether the information-parity benchmark itself is already present in primary GxE literature.
