@@ -4,7 +4,7 @@ The 2024 evaluation was calendar-time prospective before outcomes became public.
 The 2022 420-cell confirmatory cohort failed calibration.,False,PROHIBITED_B12_INFLATION
 The 2022 available-case cohort supplied negative diagnostic evidence for interval transport.,True,ALLOWED_WITH_DIAGNOSTIC_LABEL
 The frozen B11 90% interval rule recovered admissible 2024 calibration while the carried-forward one-sided guard over-covered and was less efficient.,True,PRIMARY_ALLOWED
-Calibration error evolves monotonically from season to season.,False,CONTRADICTED_BY_CASE_STUDY_B
+Case Study B establishes a general nonmonotone law of seasonal calibration error.,False,PROHIBITED_OVERGENERALIZATION
 The 2023 target season was unevaluable under the fixed T1 information interface without inventing a planting-date proxy.,True,ALLOWED_SOURCE_INTERFACE_RESULT
 B16 establishes a new error-decomposition methodology.,False,PROHIBITED_NOVELTY_INFLATION
 B16 shows that 2024 failure is mixed: environment offsets plus substantial within-environment error and under-dispersion.,True,ALLOWED_DIAGNOSTIC_INTERPRETATION
