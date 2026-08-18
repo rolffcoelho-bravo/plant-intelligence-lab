@@ -1,0 +1,46 @@
+{
+  "schema": "plant-intelligence-lab/b15-calibration-transportability-theory-lock/v1",
+  "stage": "B15_CALIBRATION_TRANSPORTABILITY_THEORY",
+  "status": "THEORY_FIRST_NO_NEW_OUTCOME_ACCESS",
+  "nominal_coverage": 0.9,
+  "fixed_threshold_semantics": "Q_FIXED_WITHIN_TRANSPORT_IDENTITY",
+  "primary_object": "SIGNED_CALIBRATION_GAP_TRANSPORTABILITY",
+  "signed_gap_definition": "DELTA_T_EQUALS_C_T_MINUS_TAU",
+  "transport_identity": "DELTA_T_MINUS_DELTA_S_EQUALS_GAMMA_MIX_PLUS_GAMMA_COND",
+  "mixture_term": "INTEGRAL_F_S_D_MU_T_MINUS_MU_S",
+  "conditional_drift_term": "INTEGRAL_F_T_MINUS_F_S_D_MU_T",
+  "theorems_locked": [
+    "B15_THEOREM_1_EXACT_CALIBRATION_TRANSPORT_DECOMPOSITION",
+    "B15_THEOREM_2_NO_FREE_TRANSPORT_SIGN_NONIDENTIFIABILITY",
+    "B15_THEOREM_3_BOUNDED_CONDITIONAL_DRIFT_TRANSPORT_CERTIFICATE"
+  ],
+  "certificate_rule": {
+    "center": "DELTA_S_PLUS_GAMMA_MIX",
+    "radius": "EPSILON_COND",
+    "undercoverage_sign_identified_only_if": "CERTIFICATE_UPPER_LT_ZERO",
+    "overcoverage_sign_identified_only_if": "CERTIFICATE_LOWER_GT_ZERO",
+    "zero_inside_certificate": "TARGET_SIGN_NOT_IDENTIFIED"
+  },
+  "overlap_requirement": "SOURCE_CONDITIONAL_SCORE_LAW_MUST_BE_SUPPORTED_OR_BOUNDED_ON_TARGET_RELEVANT_ENVIRONMENT_REGION",
+  "population_not_sample_equivalence": true,
+  "finite_sample_uncertainty_not_yet_solved": true,
+  "conditional_drift_bound_estimation_not_yet_solved": true,
+  "uses_only_outcomes_already_revealed_through_stage": "B14C",
+  "new_outcome_access_permitted": false,
+  "new_prediction_generation_permitted": false,
+  "adaptive_rule_tuning_permitted": false,
+  "adaptive_rule_promotion_permitted": false,
+  "point_predictor_change_permitted": false,
+  "b5_genotype_representation_change_permitted": false,
+  "t1_clock_change_permitted": false,
+  "t2_reopening_permitted": false,
+  "support_threshold_tuning_permitted": false,
+  "reseal_permitted": false,
+  "next_theorem_order": [
+    "OVERLAP_BOUND",
+    "FINITE_SAMPLE_CLUSTERED_TRANSPORT_BOUND",
+    "PROSPECTIVE_TESTABILITY_OF_CONDITIONAL_DRIFT_BOUND",
+    "PROPER_LOSS_DECISION_THEOREM"
+  ],
+  "novelty_claim_status": "CANDIDATE_ONLY_PENDING_HOSTILE_THEOREM_AUDIT"
+}
