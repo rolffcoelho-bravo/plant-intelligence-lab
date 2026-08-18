@@ -1,0 +1,51 @@
+{
+  "adaptive": {
+    "calibration_pass": false,
+    "cluster_ci_high": 0.978606,
+    "cluster_ci_low": 0.931604,
+    "empirical_coverage": 0.957638,
+    "environment_balanced_coverage": 0.952103,
+    "mean_half_width": 5.141229,
+    "mean_interval_score": 11.106252,
+    "quantile_level_semantic": 0.9512813317177465,
+    "rule": "ONE_SIDED_CLUSTER_DRIFT_GUARD_90"
+  },
+  "control": {
+    "calibration_pass": true,
+    "cluster_ci_high": 0.944120,
+    "cluster_ci_low": 0.878486,
+    "empirical_coverage": 0.913992,
+    "environment_balanced_coverage": 0.899772,
+    "mean_half_width": 4.351707,
+    "mean_interval_score": 10.530072,
+    "rule": "FROZEN_B11_90"
+  },
+  "decision_label": "B14C_BOTH_INTERVAL_RULES_PASS_KEEP_FROZEN_B11",
+  "decision_label_audit_note": "The predeclared legacy label is semantically broader than the realized branch. The authoritative booleans are control_calibration_pass=true and adaptive_calibration_pass=false. The label is preserved unchanged because renaming a terminal state after reveal is forbidden.",
+  "first_authorized_reveal": true,
+  "github_actions_job_id": 95558265061,
+  "github_actions_run_id": 32085906023,
+  "n_environments": 19,
+  "n_genotypes": 92,
+  "n_officially_observable": 779,
+  "n_sealed": 798,
+  "n_sealed_keys_absent_from_official": 19,
+  "outcome_sha256": "8bd354c44bce50abd09a9839272112fdb34bdb96ec6e37ae644eda916aeeabcc",
+  "point_metrics": {
+    "correlation": 0.390901,
+    "mae": 2.12349,
+    "r2": 0.14844,
+    "rmse": 2.619735
+  },
+  "post_result_tuning_permitted": false,
+  "prediction_sha256": "91c765ea994f557db1911865309bca94ebc2110b87a5fea483a03c879d1fb19d",
+  "primary_estimand": "OFFICIALLY_OBSERVABLE_SEALED_KEYS",
+  "publication_failed_after_scientific_verification": true,
+  "publication_failure_reason": "The PR-triggered workflow checked out GitHub's synthetic merge commit and git pull --rebase conflicted with an unrelated Case Study A PDF added on main. This occurred after outcome acquisition, locked evaluation, and no-retuning verification had all succeeded.",
+  "schema": "plant-intelligence-lab/b14c-2024-first-reveal-record/v1",
+  "scientific_evaluation_completed": true,
+  "scientific_verification_completed": true,
+  "selection_uses_outcome_value": false,
+  "stage": "B14C_2024_EXTERNAL_REVEAL",
+  "target_year": 2024
+}
