@@ -1,0 +1,12 @@
+stage,evidence_class,scientific_status,confirmatory_external_anchor,closure_interpretation
+B12_PRIMARY,ABORTED_CONFIRMATORY_EXTERNAL_TEST,NEGATIVE_DATA_COMPLETENESS,False,420-row seal preserved; 33 sealed keys absent from official answer; confirmatory primary cohort not evaluable.
+B12_AVAILABLE_CASE,POST_REVEAL_DIAGNOSTIC,NEGATIVE_CALIBRATION_TRANSPORT_SIGNAL,False,387 observable sealed keys; 90% environment-balanced coverage 0.8487186683; inherited criterion not met.
+B13,PREOUTCOME_PROTOCOL_LOCK,UNEVALUATED_2023_CALIBRATION_EXPERIMENT,False,C0/C1 locked before any 2023 outcome; adaptive level fixed at 0.9512813317177465.
+B13A,SOURCE_COMPATIBILITY_GATE,NEGATIVE_INFORMATION_INTERFACE_RESULT,False,No explicit planting date in allow-listed 2023 pre-outcome sources; zero T1-feasible environments.
+B13S,PROVENANCE_RECOVERY_AUDIT,NEGATIVE_INFORMATION_INTERFACE_RESULT,False,Independent authoritative metadata still yielded zero admissible exact planting dates; 2023 path closed.
+B14A,SOURCE_COMPATIBILITY_GATE,POSITIVE_PRESEAL_FEASIBILITY,False,Frozen T1 reconstruction feasible for 19 environments; 798-cell candidate universe fixed without outcomes.
+B14B,BLINDED_PREOUTCOME_SEAL,IMMUTABLE_EXTERNAL_PREDICTION_ARTIFACT,False,798 predictions sealed before repository outcome access; predictor and uncertainty rules frozen.
+B14C,SEAL_FIRST_BLINDED_EXTERNAL_TEST,CONFIRMATORY_EXTERNAL_EVALUATION,True,779 officially observable sealed keys; point and interval metrics evaluated with no outcome-value selection or amendment.
+B15_B15T1,HOSTILE_THEORY_NOVELTY_AUDIT,NEGATIVE_METHOD_NOVELTY_RESULT,False,Calibration-transport and feedback-decision objects reduced to existing partial-identification/robust-decision theory.
+B16,POSTOUTCOME_DIAGNOSTIC,SUPPORTED_MIXED_FAILURE_MECHANISM,False,Outcome-closed decomposition: 42.96% environment-offset SSE and 57.04% centered within-environment SSE.
+B17_B17T1,HOSTILE_MECHANISM_NOVELTY_AUDIT,NEGATIVE_METHOD_NOVELTY_WITH_STRUCTURAL_INTERPRETATION,False,"Response-amplitude novelty rejected; additive G+E contrast invariance is exact real-arithmetic no-interaction structure, not new theory."
