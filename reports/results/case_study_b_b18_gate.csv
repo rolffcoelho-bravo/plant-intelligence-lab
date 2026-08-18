@@ -1,0 +1,6 @@
+gate,permitted,reason
+B18_AUTOMATIC_MODEL_DEVELOPMENT,False,"Interaction-capable GxE models, reaction norms, latent-factor methods, deep multimodal models and GNNs already occupy the obvious repair space."
+B18_SEPARATE_HYPOTHESIS_AND_NOVELTY_AUDIT,True,"A new branch may ask a sharply distinct question, but must survive primary-literature and identifiability audit before code/model fitting."
+B18_ACCEPTABLE_STARTING_QUESTION,True,"Test whether enforcing a forecast-time information set changes the learnable GxE contrast operator and external ranking relative to full-season methods, without claiming that interaction modeling itself is new."
+B18_FORBIDDEN_STARTING_QUESTION_ADD_GXE,False,Adding GxE interactions after B17 is an obvious repair and is heavily covered by existing literature.
+B18_FORBIDDEN_STARTING_QUESTION_TUNE_2024_FAILURE,False,No B18 hypothesis may be tuned against B14C outcomes and then presented as prospective evidence.

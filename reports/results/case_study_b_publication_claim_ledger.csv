@@ -1,0 +1,14 @@
+claim,permitted,claim_class
+Seal-first blinded external validation of a frozen early-season G+E_T1 system on the public 2024 G2F release.,True,PRIMARY_ALLOWED
+The 2024 evaluation was calendar-time prospective before outcomes became public.,False,PROHIBITED_OVERCLAIM
+The 2022 420-cell confirmatory cohort failed calibration.,False,PROHIBITED_B12_INFLATION
+The 2022 available-case cohort supplied negative diagnostic evidence for interval transport.,True,ALLOWED_WITH_DIAGNOSTIC_LABEL
+The frozen B11 90% interval rule recovered admissible 2024 calibration while the carried-forward one-sided guard over-covered and was less efficient.,True,PRIMARY_ALLOWED
+Calibration error evolves monotonically from season to season.,False,CONTRADICTED_BY_CASE_STUDY_B
+The 2023 target season was unevaluable under the fixed T1 information interface without inventing a planting-date proxy.,True,ALLOWED_SOURCE_INTERFACE_RESULT
+B16 establishes a new error-decomposition methodology.,False,PROHIBITED_NOVELTY_INFLATION
+B16 shows that 2024 failure is mixed: environment offsets plus substantial within-environment error and under-dispersion.,True,ALLOWED_DIAGNOSTIC_INTERPRETATION
+B17 establishes a new response-amplitude transport method.,False,PROHIBITED_NOVELTY_INFLATION
+The additive G+E architecture cannot modulate genotype contrasts by environment in exact arithmetic.,True,ALLOWED_STRUCTURAL_BACKGROUND
+Case Study B validates support-based abstention as a selective-risk mechanism.,False,PROHIBITED_UNSUPPORTED_CLAIM
+Case Study B introduces a new state-of-the-art GxE predictive architecture.,False,PROHIBITED_UNSUPPORTED_CLAIM
