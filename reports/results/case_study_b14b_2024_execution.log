@@ -1,0 +1,6 @@
+Case Study B14B sealed 2024 prediction issuance complete
+predictions: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14b_2024_sealed_predictions.csv
+seal: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14b_2024_prediction_seal.json
+decision: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14b_2024_seal_decision.csv
+t1_reconstruction_audit: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14b_2024_t1_reconstruction_audit.csv
+source_manifest: /home/runner/work/plant-intelligence-lab/plant-intelligence-lab/reports/results/case_study_b14b_2024_source_manifest.csv

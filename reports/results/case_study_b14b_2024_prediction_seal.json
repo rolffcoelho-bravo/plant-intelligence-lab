@@ -1,0 +1,28 @@
+{
+  "adaptive_quantile_level": 0.9512813317177465,
+  "adaptive_rule": "ONE_SIDED_CLUSTER_DRIFT_GUARD_90",
+  "b5_genotype_representation_changed": false,
+  "calibration_feedback_state": "NO_2023_FEEDBACK_AVAILABLE_CARRY_FORWARD_2022_DRIFT_STATE",
+  "calibration_years": "2016-2021",
+  "candidate_universe_sha256": "32e4f308522ee849e498d2bf0614f3ec349574a27bb327fefeb80e0f4e05bf7f",
+  "control_quantile_level": 0.9,
+  "control_rule": "FROZEN_B11_90",
+  "n_environments": 19,
+  "n_genotypes": 92,
+  "n_predictions": 798,
+  "observed_values_accessed": false,
+  "point_predictor_changed": false,
+  "post_result_tuning_permitted": false,
+  "prediction_file": "case_study_b14b_2024_sealed_predictions.csv",
+  "prediction_generated_pre_outcome": true,
+  "prediction_sha256": "91c765ea994f557db1911865309bca94ebc2110b87a5fea483a03c879d1fb19d",
+  "schema": "plant-intelligence-lab/b14b-2024-prediction-seal/v1",
+  "source_sha256": {
+    "metadata": "10bdecd20bc15bfe7354a6b1ee39eb0b9d206f0dfe4d220386c17dea86fffdab",
+    "submission": "80969670ef0f61c16d3dcaa1c410b1f1c628a2d0ca3ad21d444236e7ce8c4178"
+  },
+  "stage": "B14B_2024_SEALED_PREDICTION_ISSUANCE",
+  "t1_clock_changed": false,
+  "t2_branch_reopened": false,
+  "target_year": 2024
+}
