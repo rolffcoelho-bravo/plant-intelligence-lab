@@ -1,0 +1,3 @@
+late_state,probability,genotype_contrast_g1_minus_g2,forecast_time_expected_contrast,forecast_time_ranking,late_state_ranking,ranking_differs_from_forecast_time
+S0,0.5,-2.0,1.0,G1_GT_G2,G2_GT_G1,True
+S1,0.5,4.0,1.0,G1_GT_G2,G1_GT_G2,False
